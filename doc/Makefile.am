@@ -65,11 +65,11 @@ GENERATED_DOCS =
 	@true
 
 GENERATED_DOCS += ftydiscovery.txt ftydiscovery.doc
-ftydiscovery.txt: $(top_srcdir)/src/ftydiscovery.c
+ftydiscovery.txt: $(top_srcdir)/src/ftydiscovery.cc
 	"$(srcdir)/mkman" "ftydiscovery" "$(builddir)/ftydiscovery.txt" "$(srcdir)/.."
 
 GENERATED_DOCS += fty-discovery.txt fty-discovery.doc
-fty-discovery.txt: $(top_srcdir)/src/fty_discovery.c
+fty-discovery.txt: $(top_srcdir)/src/fty_discovery.cc
 	"$(srcdir)/mkman" "fty_discovery" "$(builddir)/fty-discovery.txt" "$(srcdir)/.."
 
 

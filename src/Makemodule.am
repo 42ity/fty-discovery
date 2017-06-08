@@ -18,16 +18,17 @@ include_HEADERS = \
     include/fty_discovery_library.h
 
 src_libfty_discovery_la_SOURCES = \
-    src/range_scan.c \
-    src/ftydiscovery.c \
+    src/range_scan.cc \
+    src/ftydiscovery.cc \
     src/platform.h
 
 if ENABLE_DRAFTS
 src_libfty_discovery_la_SOURCES += \
-    src/fty_discovery_private_selftest.c
+    src/fty_discovery_private_selftest.cc
 endif
 
 src_libfty_discovery_la_CPPFLAGS = ${AM_CPPFLAGS}
+src_libfty_discovery_la_CXXFLAGS = ${AM_CXXFLAGS}
 
 src_libfty_discovery_la_LDFLAGS = \
     -version-info @LTVER@ \
@@ -55,7 +56,7 @@ if ENABLE_FTY_DISCOVERY
 bin_PROGRAMS += src/fty-discovery
 src_fty_discovery_CPPFLAGS = ${AM_CPPFLAGS}
 src_fty_discovery_LDADD = ${program_libs}
-src_fty_discovery_SOURCES = src/fty_discovery.c
+src_fty_discovery_SOURCES = src/fty_discovery.cc
 src_fty_discovery_config_DATA =
 src_fty_discovery_config_DATA += src/fty-discovery.cfg
 src_fty_discovery_configdir = $(sysconfdir)/fty-discovery
@@ -69,7 +70,7 @@ check_PROGRAMS += src/fty_discovery_selftest
 noinst_PROGRAMS += src/fty_discovery_selftest
 src_fty_discovery_selftest_CPPFLAGS = ${AM_CPPFLAGS}
 src_fty_discovery_selftest_LDADD = ${program_libs}
-src_fty_discovery_selftest_SOURCES = src/fty_discovery_selftest.c
+src_fty_discovery_selftest_SOURCES = src/fty_discovery_selftest.cc
 endif #ENABLE_FTY_DISCOVERY_SELFTEST
 
 # define custom target for all products of /src
