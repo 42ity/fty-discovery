@@ -49,6 +49,7 @@ BuildRequires:  systemd-devel
 BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
+BuildRequires:  gcc-c++
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
