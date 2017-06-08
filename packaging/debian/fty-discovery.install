@@ -1,0 +1,5 @@
+usr/bin/fty-discovery
+usr/share/man/man1/fty-discovery.1
+etc/fty-discovery/fty-discovery.cfg
+lib/systemd/system/fty-discovery.service
+

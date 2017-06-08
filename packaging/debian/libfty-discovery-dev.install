@@ -1,0 +1,5 @@
+usr/include/*
+usr/lib/*/libfty_discovery.so
+usr/lib/*/pkgconfig/libfty_discovery.pc
+usr/share/man/man3/*
+usr/share/man/man7/*
