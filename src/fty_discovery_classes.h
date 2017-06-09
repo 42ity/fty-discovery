@@ -35,13 +35,28 @@
 //  Extra headers
 
 //  Opaque class structures to allow forward references
+#ifndef CIDR_T_DEFINED
+typedef struct _cidr_t cidr_t;
+#define CIDR_T_DEFINED
+#endif
+#ifndef SUBPROCESS_T_DEFINED
+typedef struct _subprocess_t subprocess_t;
+#define SUBPROCESS_T_DEFINED
+#endif
 #ifndef RANGE_SCAN_T_DEFINED
 typedef struct _range_scan_t range_scan_t;
 #define RANGE_SCAN_T_DEFINED
 #endif
+#ifndef DEVICE_SCAN_T_DEFINED
+typedef struct _device_scan_t device_scan_t;
+#define DEVICE_SCAN_T_DEFINED
+#endif
 
 //  Internal API
+#include "cidr.h"
+#include "subprocess.h"
 #include "range_scan.h"
+#include "device_scan.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_DISCOVERY_BUILD_DRAFT_API
@@ -49,7 +64,22 @@ typedef struct _range_scan_t range_scan_t;
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_DISCOVERY_PRIVATE void
+    cidr_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
+    subprocess_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
     range_scan_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
+    device_scan_test (bool verbose);
 
 //  Self test for private classes
 FTY_DISCOVERY_PRIVATE void

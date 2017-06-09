@@ -28,6 +28,8 @@ Build-Depends: debhelper (>= 9),
     libczmq-dev,
     libmlm-dev,
     libfty-proto-dev,
+    libcidr0-dev,
+    libcxxtools-dev,
     systemd,
     dh-systemd,
     asciidoc-base | asciidoc, xmlto,
@@ -47,6 +49,8 @@ Depends:
     libczmq-dev,
     libmlm-dev,
     libfty-proto-dev,
+    libcidr0-dev,
+    libcxxtools-dev,
     libfty-discovery0 (= ${binary:Version})
 Description: 42ity service for discovering devices development tools
  This package contains development files for fty-discovery: 42ity service for discovering devices

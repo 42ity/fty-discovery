@@ -441,6 +441,180 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_proto
 dnl END of enabled attempts to search for libfty_proto
 
 
+was_cidr_check_lib_detected=no
+
+search_cidr="yes"
+
+AC_ARG_WITH([cidr],
+    [
+        AS_HELP_STRING([--with-cidr],
+        [yes or no. Optionally specify cidr prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_cidr="yes"
+    ],
+    [])
+AS_CASE([x"${with_cidr}"],
+    [xyes], [search_cidr="yes"],
+    [xno],  [search_cidr="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_cidr}" = xno],
+    [AC_MSG_WARN([Required dependency on cidr was explicitly disabled during configuration by '--with-cidr=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_cidr}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    found_linkname=""
+    PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cidr_LIBS"
+        was_cidr_check_lib_detected=pkgcfg
+        found_pkgconfig="cidr"
+    ],
+    [
+        AC_MSG_NOTICE([Package cidr not found; falling back to defined compilability tests])
+
+        cidr_synthetic_cflags=""
+        cidr_synthetic_libs="-lcidr"
+
+        if test -n "${with_cidr}" && test x"${with_cidr}" != xyes && test x"${with_cidr}" != xno; then
+            if test -r "${with_cidr}/include/libcidr.h"; then
+                cidr_synthetic_cflags="-I${with_cidr}/include"
+                cidr_synthetic_libs="-L${with_cidr}/lib -lcidr"
+            else
+            AC_MSG_ERROR([Header file ${with_cidr}/include/libcidr.h was not found. Please check cidr prefix])
+            fi
+        else
+            AC_CHECK_HEADER([libcidr.h], [],
+            AC_MSG_ERROR([Header file libcidr.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([cidr], [cidr_alloc],
+            [
+                was_cidr_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcidr"
+                found_linkname="cidr"
+            ],
+            [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
+    AS_CASE(["x${was_cidr_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_cidr],[${found_pkgconfig}])
+                CFLAGS="${cidr_CFLAGS} ${CFLAGS}"
+                LIBS="${cidr_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_cidr],[${found_linkname}])
+                CFLAGS="${cidr_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${cidr_synthetic_libs} ${LDFLAGS}"
+                LIBS="${cidr_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([cidr_CFLAGS],[${cidr_synthetic_cflags}])
+                AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_cidr],[cidr])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for cidr 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for cidr
+
+
+was_cxxtools_check_lib_detected=no
+
+search_cxxtools="yes"
+
+AC_ARG_WITH([cxxtools],
+    [
+        AS_HELP_STRING([--with-cxxtools],
+        [yes or no. Optionally specify cxxtools prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_cxxtools="yes"
+    ],
+    [])
+AS_CASE([x"${with_cxxtools}"],
+    [xyes], [search_cxxtools="yes"],
+    [xno],  [search_cxxtools="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_cxxtools}" = xno],
+    [AC_MSG_WARN([Required dependency on cxxtools was explicitly disabled during configuration by '--with-cxxtools=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_cxxtools}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    found_linkname=""
+    PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cxxtools_LIBS"
+        was_cxxtools_check_lib_detected=pkgcfg
+        found_pkgconfig="cxxtools"
+    ],
+    [
+        AC_MSG_NOTICE([Package cxxtools not found; falling back to defined compilability tests])
+
+        cxxtools_synthetic_cflags=""
+        cxxtools_synthetic_libs="-lcxxtools"
+
+        if test -n "${with_cxxtools}" && test x"${with_cxxtools}" != xyes && test x"${with_cxxtools}" != xno; then
+            if test -r "${with_cxxtools}/include/cxxtools/allocator.h"; then
+                cxxtools_synthetic_cflags="-I${with_cxxtools}/include"
+                cxxtools_synthetic_libs="-L${with_cxxtools}/lib -lcxxtools"
+            else
+            AC_MSG_ERROR([Header file ${with_cxxtools}/include/cxxtools/allocator.h was not found. Please check cxxtools prefix])
+            fi
+        else
+            AC_CHECK_HEADER([cxxtools/allocator.h], [],
+            AC_MSG_ERROR([Header file cxxtools/allocator.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([cxxtools], [cxxtools::Utf8Codec::Utf8Codec],
+            [
+                was_cxxtools_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcxxtools"
+                found_linkname="cxxtools"
+            ],
+            [AC_MSG_ERROR([cannot link with -lcxxtools, install cxxtools])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
+    AS_CASE(["x${was_cxxtools_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_cxxtools],[${found_pkgconfig}])
+                CFLAGS="${cxxtools_CFLAGS} ${CFLAGS}"
+                LIBS="${cxxtools_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_cxxtools],[${found_linkname}])
+                CFLAGS="${cxxtools_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${cxxtools_synthetic_libs} ${LDFLAGS}"
+                LIBS="${cxxtools_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([cxxtools_CFLAGS],[${cxxtools_synthetic_cflags}])
+                AC_SUBST([cxxtools_LIBS],[${cxxtools_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_cxxtools],[cxxtools])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for cxxtools 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for cxxtools
+
+
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 
