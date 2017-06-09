@@ -28,15 +28,9 @@ extern "C" {
 
 //  @interface
 
-typedef struct _device_scan_args_t {
-    zconfig_t *config;
-    CIDRAddress addr;
-} device_scan_args_t;
-
-
 //  Create a new device_scan
 FTY_DISCOVERY_PRIVATE zactor_t *
-    device_scan_new (device_scan_args_t *args);
+    device_scan_new (zconfig_t *args);
 
 //  Self test of this class
 FTY_DISCOVERY_PRIVATE void
