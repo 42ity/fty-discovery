@@ -4,7 +4,7 @@
     script = "zproject.gsl"
     email = "EatonIPCOpenSource@eaton.com"
     url = "https://42ity.org/"
-    repo = "https://github.com/42ity/fty-discovery"
+    repository = "https://github.com/42ity/fty-discovery"
     license = "GPL-2.0+"
     >
 
