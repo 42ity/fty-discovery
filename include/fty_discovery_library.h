@@ -30,6 +30,7 @@
 //  Set up environment for the application
 
 //  External dependencies
+#include <czmq.h>
 #include <malamute.h>
 #include <ftyproto.h>
 #include <libcidr.h>

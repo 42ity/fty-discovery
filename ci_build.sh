@@ -25,7 +25,8 @@ case "$CI_TRACE" in
         set -x ;;
 esac
 
-if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ "$BUILD_TYPE" == "valgrind" ]; then
+case "$BUILD_TYPE" in
+default|default-Werror|default-with-docs|valgrind)
     LANG=C
     LC_ALL=C
     export LANG LC_ALL
@@ -111,7 +112,6 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
     CONFIG_OPTS+=("LDFLAGS=-L${BUILD_PREFIX}/lib")
     CONFIG_OPTS+=("PKG_CONFIG_PATH=${BUILD_PREFIX}/lib/pkgconfig")
     CONFIG_OPTS+=("--prefix=${BUILD_PREFIX}")
-    CONFIG_OPTS+=("--with-docs=no")
     if [ -z "${CI_CONFIG_QUIET-}" ] || [ "${CI_CONFIG_QUIET-}" = yes ] || [ "${CI_CONFIG_QUIET-}" = true ]; then
         CONFIG_OPTS+=("--quiet")
     fi
@@ -167,6 +167,9 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         CONFIG_OPTS+=("CPP=${CPP}")
     fi
 
+    CONFIG_OPTS_COMMON=$CONFIG_OPTS
+    CONFIG_OPTS+=("--with-docs=no")
+
     # Clone and build dependencies, if not yet installed to Travis env as DEBs
     # or MacOS packages; other OSes are not currently supported by Travis cloud
     [ -z "$CI_TIME" ] || echo "`date`: Starting build of dependencies (if any)..."
@@ -210,7 +213,7 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         echo ""
         BASE_PWD=${PWD}
         echo "`date`: INFO: Building prerequisite 'czmq' from Git repository..." >&2
-        $CI_TIME git clone --quiet --depth 1 https://github.com/zeromq/czmq.git czmq
+        $CI_TIME git clone --quiet --depth 1 -b v3.0.2 https://github.com/42ity/czmq.git czmq
         cd czmq
         CCACHE_BASEDIR=${PWD}
         export CCACHE_BASEDIR
@@ -368,6 +371,13 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
     echo "`date`: INFO: Starting build of currently tested project with DRAFT APIs..."
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
+    if [ "$BUILD_TYPE" = "default-with-docs" ]; then
+        CONFIG_OPTS=$CONFIG_OPTS_COMMON
+        CONFIG_OPTS+=("--with-docs=yes")
+    fi
+    if [ -n "$ADDRESS_SANITIZER" ] && [ "$ADDRESS_SANITIZER" == "enabled" ]; then
+        CONFIG_OPTS+=("--enable-address-sanitizer=yes")
+    fi
     # Only use --enable-Werror on projects that are expected to have it
     # (and it is not our duty to check prerequisite projects anyway)
     CONFIG_OPTS+=("${CONFIG_OPT_WERROR}")
@@ -419,9 +429,11 @@ if [ "$BUILD_TYPE" == "default" ] || [ "$BUILD_TYPE" == "default-Werror" ] || [ 
         echo "CCache stats after build:"
         ccache -s
     fi
-
-elif [ "$BUILD_TYPE" == "bindings" ]; then
+    ;;
+bindings)
     pushd "./bindings/${BINDING}" && ./ci_build.sh
-else
+    ;;
+*)
     pushd "./builds/${BUILD_TYPE}" && REPO_DIR="$(dirs -l +1)" ./ci_build.sh
-fi
+    ;;
+esac

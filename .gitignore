@@ -23,6 +23,7 @@ save.xml
 # Executables
 src/fty-discovery_selftest
 src/fty-discovery
+src/fty_discovery_selftest
 *.exe
 *.out
 *.app
@@ -76,6 +77,8 @@ libzmq/
 czmq/
 malamute/
 fty-proto/
+cidr/
+cxxtools/
 
 # Travis build area
 tmp/
