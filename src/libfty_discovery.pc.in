@@ -12,7 +12,7 @@ Name: libfty_discovery
 Description: 42ity service for discovering devices
 Version: @VERSION@
 
-Requires:@pkgconfig_name_libzmq@ @pkgconfig_name_libczmq@ @pkgconfig_name_libmlm@ @pkgconfig_name_libfty_proto@ @pkgconfig_name_cidr@ @pkgconfig_name_cxxtools@
+Requires:@pkgconfig_name_libzmq@ @pkgconfig_name_libczmq@ >= 3.0.0 @pkgconfig_name_libmlm@ @pkgconfig_name_libfty_proto@ @pkgconfig_name_cidr@ @pkgconfig_name_cxxtools@
 
 Libs: -L${libdir} -lfty_discovery
 Cflags: -I${includedir} @pkg_config_defines@
