@@ -22,7 +22,7 @@
 #ifndef NUTSCAN_H_INCLUDED
 #define NUTSCAN_H_INCLUDED
 
-#include "src/fty_nut_classes.h"
+#include "src/fty_discovery_classes.h"
 
 /**
  * \brief call nut scan over SNMP
@@ -61,7 +61,7 @@ nut_scan_xml_http(
         std::vector<std::string>& out);
 
 //  Self test of this class
-FTY_NUT_EXPORT void
+void
     nutscan_test (bool verbose);
 
 

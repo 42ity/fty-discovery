@@ -26,7 +26,7 @@
 @end
 */
 
-#include "fty_nut_classes.h"
+#include "fty_discovery_classes.h"
 
 #include <string>
 #include <sstream>
@@ -123,9 +123,9 @@ s_run_nut_scaner(
 {
     std::string o;
     std::string e;
-    log_debug ("START: nut-scanner with timeout 10 ...");
+    zsys_debug ("START: nut-scanner with timeout 10 ...");
     int ret = output(args, o, e, 10);
-    log_debug ("       done with code %d", ret);
+    zsys_debug ("       done with code %d", ret);
 
     if (ret != 0)
         return -1;
@@ -154,7 +154,7 @@ nut_scan_snmp(
     comm = community;
     if (comm.empty())
         comm = "public";
-    
+
     int r = -1;
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
@@ -163,7 +163,7 @@ nut_scan_snmp(
                 args,
                 name,
                 out);
-        
+
         if (r != -1)
             return r;
     }

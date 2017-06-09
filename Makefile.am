@@ -55,6 +55,7 @@ endif
 EXTRA_DIST += \
     src/cidr.h \
     src/subprocess.h \
+    src/nutscan.h \
     src/range_scan.h \
     src/device_scan.h \
     README.md \
