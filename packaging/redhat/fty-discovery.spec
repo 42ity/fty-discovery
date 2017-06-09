@@ -54,6 +54,8 @@ BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
 BuildRequires:  fty-proto-devel
+BuildRequires:  libcidr-devel
+BuildRequires:  cxxtools-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -81,6 +83,8 @@ Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
 Requires:       fty-proto-devel
+Requires:       libcidr-devel
+Requires:       cxxtools-devel
 
 %description devel
 42ity service for discovering devices development tools

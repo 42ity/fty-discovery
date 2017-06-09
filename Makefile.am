@@ -20,10 +20,12 @@ AM_CPPFLAGS = \
     ${czmq_CFLAGS} \
     ${malamute_CFLAGS} \
     ${fty_proto_CFLAGS} \
+    ${cidr_CFLAGS} \
+    ${cxxtools_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS}
+project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS}
 
 SUBDIRS = doc
 DIST_SUBDIRS = doc
@@ -45,11 +47,16 @@ EXTRA_DIST += \
     Findczmq.cmake \
     Findmalamute.cmake \
     Findfty_proto.cmake \
+    Findcidr.cmake \
+    Findcxxtools.cmake \
     CMakeLists.txt
 endif
 
 EXTRA_DIST += \
+    src/cidr.h \
+    src/subprocess.h \
     src/range_scan.h \
+    src/device_scan.h \
     README.md \
     src/fty_discovery_classes.h
 

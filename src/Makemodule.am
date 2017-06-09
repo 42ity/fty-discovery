@@ -18,7 +18,10 @@ include_HEADERS = \
     include/fty_discovery_library.h
 
 src_libfty_discovery_la_SOURCES = \
+    src/cidr.cc \
+    src/subprocess.cc \
     src/range_scan.cc \
+    src/device_scan.cc \
     src/ftydiscovery.cc \
     src/platform.h
 

@@ -22,8 +22,17 @@
         test = "fty_proto_test">
         <use project = "malamute"/>
     </use>
+    <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
+        debian_name = "libcidr0-dev" redhat_name = "libcidr-devel"
+        repository = "https://github.com/42ity/libcidr"/>
+    <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
+        repository = "https://github.com/42ity/cxxtools"
+        release = "42ity"/>
 
-    <class name = "range_scan" private = "1">Perform one range scan</class>
+    <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
+    <class name = "subprocess"   private = "1">C++ Wrapper around cxxtools::Fork</class>
+    <class name = "range_scan"   private = "1">Perform one range scan</class>
+    <class name = "device_scan"  private = "1">Perform one IP address scan</class>
     <class name = "ftydiscovery" state = "stable">Manages discovery requests, provides feedback</class>
     <main name = "fty-discovery" service = "1">
         Agent performing device discovery in network
