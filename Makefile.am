@@ -55,8 +55,11 @@ endif
 EXTRA_DIST += \
     src/cidr.h \
     src/subprocess.h \
+    src/nutscan.h \
     src/range_scan.h \
     src/device_scan.h \
+    src/scan_dns.h \
+    src/scan_nut.h \
     README.md \
     src/fty_discovery_classes.h
 

@@ -43,6 +43,10 @@ typedef struct _cidr_t cidr_t;
 typedef struct _subprocess_t subprocess_t;
 #define SUBPROCESS_T_DEFINED
 #endif
+#ifndef NUTSCAN_T_DEFINED
+typedef struct _nutscan_t nutscan_t;
+#define NUTSCAN_T_DEFINED
+#endif
 #ifndef RANGE_SCAN_T_DEFINED
 typedef struct _range_scan_t range_scan_t;
 #define RANGE_SCAN_T_DEFINED
@@ -51,12 +55,23 @@ typedef struct _range_scan_t range_scan_t;
 typedef struct _device_scan_t device_scan_t;
 #define DEVICE_SCAN_T_DEFINED
 #endif
+#ifndef SCAN_DNS_T_DEFINED
+typedef struct _scan_dns_t scan_dns_t;
+#define SCAN_DNS_T_DEFINED
+#endif
+#ifndef SCAN_NUT_T_DEFINED
+typedef struct _scan_nut_t scan_nut_t;
+#define SCAN_NUT_T_DEFINED
+#endif
 
 //  Internal API
 #include "cidr.h"
 #include "subprocess.h"
+#include "nutscan.h"
 #include "range_scan.h"
 #include "device_scan.h"
+#include "scan_dns.h"
+#include "scan_nut.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_DISCOVERY_BUILD_DRAFT_API
@@ -74,12 +89,27 @@ FTY_DISCOVERY_PRIVATE void
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_DISCOVERY_PRIVATE void
+    nutscan_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
     range_scan_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
 FTY_DISCOVERY_PRIVATE void
     device_scan_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
+    scan_dns_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
+    scan_nut_test (bool verbose);
 
 //  Self test for private classes
 FTY_DISCOVERY_PRIVATE void

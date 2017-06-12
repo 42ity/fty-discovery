@@ -1,5 +1,5 @@
 /*  =========================================================================
-    device_scan - Perform one IP address scan
+    scan_nut - collect information from DNS
 
     Copyright (C) 2014 - 2017 Eaton
 
@@ -19,22 +19,21 @@
     =========================================================================
 */
 
-#ifndef DEVICE_SCAN_H_INCLUDED
-#define DEVICE_SCAN_H_INCLUDED
+#ifndef SCAN_NUT_H_INCLUDED
+#define SCAN_NUT_H_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //  @interface
-
-//  Create a new device_scan
-FTY_DISCOVERY_PRIVATE zactor_t *
-    device_scan_new (zconfig_t *args);
+//  Scan IP address using nut-scanner
+FTY_DISCOVERY_PRIVATE bool
+    scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config);
 
 //  Self test of this class
 FTY_DISCOVERY_PRIVATE void
-    device_scan_test (bool verbose);
+    scan_nut_test (bool verbose);
 
 //  @end
 

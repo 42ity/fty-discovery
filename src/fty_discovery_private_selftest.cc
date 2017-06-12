@@ -40,8 +40,11 @@ fty_discovery_private_selftest (bool verbose)
 // Tests for stable private classes:
     cidr_test (verbose);
     subprocess_test (verbose);
+    nutscan_test (verbose);
     range_scan_test (verbose);
     device_scan_test (verbose);
+    scan_dns_test (verbose);
+    scan_nut_test (verbose);
 }
 /*
 ################################################################################

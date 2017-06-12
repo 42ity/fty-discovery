@@ -33,8 +33,11 @@
 
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "subprocess"   private = "1">C++ Wrapper around cxxtools::Fork</class>
+    <class name = "nutscan"      private = "1">Wrapper around nut-scanner tool</class>
     <class name = "range_scan"   private = "1">Perform one range scan</class>
     <class name = "device_scan"  private = "1">Perform one IP address scan</class>
+    <class name = "scan_dns"     private = "1">collect information from DNS</class>
+    <class name = "scan_nut"     private = "1">collect information from DNS</class>
     <class name = "ftydiscovery" state = "stable">Manages discovery requests, provides feedback</class>
     <main name = "fty-discovery" service = "1">
         Agent performing device discovery in network

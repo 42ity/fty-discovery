@@ -28,6 +28,25 @@
 
 #include "fty_discovery_classes.h"
 
+zmsg_t * device_scan_scan (const char *addr, zconfig_t *config)
+{
+    fty_proto_t *asset = fty_proto_new (FTY_PROTO_ASSET);
+    bool found = false;
+
+    found |= scan_nut (asset, addr, config);
+    scan_dns (asset, addr, config);
+
+    if (found) {
+        zmsg_t *result = fty_proto_encode (&asset);
+        zmsg_pushstr (result, "FOUND");
+        return result;
+    } else {
+        fty_proto_destroy (&asset);
+        zmsg_t *result = zmsg_new ();
+        zmsg_pushstr (result, "NOTFOUND");
+        return result;
+    }
+}
 
 //  --------------------------------------------------------------------------
 //  One device scan actor
@@ -36,6 +55,26 @@ void
 device_scan_actor (zsock_t *pipe, void *args)
 {
     zsock_signal (pipe, 0);
+    if (! args) return;
+    zconfig_t *config = (zconfig_t *)args;
+
+    while (!zsys_interrupted) {
+        zmsg_t *msg = zmsg_recv (pipe);
+        if (msg) {
+            char *cmd = zmsg_popstr (msg);
+            if (streq (cmd, "$TERM")) {
+                zstr_free (&cmd);
+                break;
+            }
+            else if (streq (cmd, "SCAN")) {
+                char *addr = zmsg_popstr (msg);
+                zmsg_t *reply = device_scan_scan (addr, config);
+                zmsg_send (&reply, pipe);
+                zstr_free (&addr);
+            }
+            zmsg_destroy (&msg);
+        }
+    }
 }
 
 
@@ -43,7 +82,7 @@ device_scan_actor (zsock_t *pipe, void *args)
 //  Create a new device_scan actor
 
 zactor_t *
-device_scan_new (device_scan_args_t *args)
+device_scan_new (zconfig_t *args)
 {
     return zactor_new (device_scan_actor, (void *)args);
 }
@@ -77,6 +116,19 @@ device_scan_test (bool verbose)
 
     zactor_t *self = device_scan_new (NULL);
     assert (self);
+
+    // zconfig /etc/default/fty.cfg
+    // snmp
+    //    community
+    //        0 = "public"
+    zconfig_t *cfg = zconfig_new ("root", NULL);
+    zconfig_put (cfg, "/snmp/community/0", "public");
+    zconfig_put (cfg, "/snmp/community/1", "private");
+
+    zmsg_t *msg = device_scan_scan ("10.231.107.40", cfg);
+    zmsg_destroy (&msg);
+
+    zconfig_destroy (&cfg);
     zactor_destroy (&self);
     //  @end
     printf ("OK\n");
