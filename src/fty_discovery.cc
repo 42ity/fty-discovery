@@ -69,10 +69,23 @@ int main (int argc, char *argv [])
         zsys_info ("fty_discovery - Agent performing device discovery in network");
         zsys_debug ("range: %s, agent %i", range ? range : "none", agent);
     }
+    if (!agent && !range) {
+        zsys_error ("Scanning range not set");
+        return 1;
+    }
 
+    // configure actor
     zactor_t *discovery = zactor_new (ftydiscovery_actor, NULL);
-    zstr_sendx (discovery, "BIND", ENDPOINT, ACTOR_NAME, NULL);
+    if (! agent) {
+        zstr_sendx (discovery, "BIND", ENDPOINT, ACTOR_NAME, NULL);
+    } else {
+        char *name = zsys_sprintf ("%s.%i", ACTOR_NAME, getpid());
+        zstr_sendx (discovery, "BIND", ENDPOINT, name, NULL);
+        zstr_free (&name);
+    }
+    if (range) zstr_sendx (discovery, "SCAN", range, NULL);
 
+    // main loop
     while (!zsys_interrupted) {
         zmsg_t *msg = zmsg_recv (discovery);
         zmsg_destroy (&msg);
