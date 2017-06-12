@@ -1,5 +1,5 @@
 /*  =========================================================================
-    scan_dns - collect information from DNS
+    scan_nut - collect information from DNS
 
     Copyright (C) 2014 - 2017 Eaton
 
@@ -19,21 +19,21 @@
     =========================================================================
 */
 
-#ifndef SCAN_DNS_H_INCLUDED
-#define SCAN_DNS_H_INCLUDED
+#ifndef SCAN_NUT_H_INCLUDED
+#define SCAN_NUT_H_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //  @interface
-//  Do dns resolving
+//  Scan IP address using nut-scanner
 FTY_DISCOVERY_PRIVATE bool
-    scan_dns (fty_proto_t *msg, const char *address, zconfig_t *config);
+    scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config);
 
 //  Self test of this class
 FTY_DISCOVERY_PRIVATE void
-    scan_dns_test (bool verbose);
+    scan_nut_test (bool verbose);
 
 //  @end
 

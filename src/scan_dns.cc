@@ -31,13 +31,10 @@
 #include <sys/socket.h>       /* for AF_INET */
 
 
-void
-scan_dns (fty_proto_t *msg)
+bool
+scan_dns (fty_proto_t *msg, const char *address, zconfig_t *config)
 {
-    if (!msg) return;
-
-    const char *ip = fty_proto_ext_string (msg, "ip.1", NULL);
-    if (! ip) return;
+    if (!msg || !address) return false;
 
     struct sockaddr_in sa_in;
     struct sockaddr *sa = (sockaddr *)&sa_in;    /* input */
@@ -46,7 +43,7 @@ scan_dns (fty_proto_t *msg)
     char dns_name[NI_MAXHOST];
 
     sa_in.sin_family = AF_INET;
-    if (! inet_aton (ip, &sa_in.sin_addr)) return;
+    if (! inet_aton (address, &sa_in.sin_addr)) return false;
 
     if (! getnameinfo(sa, len, dns_name, sizeof(dns_name), NULL, 0, NI_NAMEREQD)) {
         fty_proto_ext_insert (msg, "dns.1", "%s", dns_name);
@@ -55,7 +52,9 @@ scan_dns (fty_proto_t *msg)
             *p = 0;
         }
         fty_proto_ext_insert (msg, "hostname", "%s", dns_name);
+        return true;
     }
+    return false;
 }
 
 //  --------------------------------------------------------------------------
@@ -85,7 +84,7 @@ scan_dns_test (bool verbose)
     // NOTE that for "char*" context you need (str_SELFTEST_DIR_RO + "/myfilename").c_str()
     fty_proto_t *msg = fty_proto_new (FTY_PROTO_ASSET);
     fty_proto_ext_insert (msg, "ip.1", "%s", "127.0.0.1");
-    scan_dns (msg);
+    scan_dns (msg, "127.0.0.1", NULL);
     fty_proto_print (msg);
     assert (fty_proto_ext_string (msg, "dns.1", NULL));
     assert (fty_proto_ext_string (msg, "hostname", NULL));

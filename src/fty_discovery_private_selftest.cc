@@ -44,6 +44,7 @@ fty_discovery_private_selftest (bool verbose)
     range_scan_test (verbose);
     device_scan_test (verbose);
     scan_dns_test (verbose);
+    scan_nut_test (verbose);
 }
 /*
 ################################################################################
