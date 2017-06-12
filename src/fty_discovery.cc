@@ -64,6 +64,7 @@ int main (int argc, char *argv [])
             return 1;
         }
     }
+    zsys_init ();
     if (verbose) {
         zsys_info ("fty_discovery - Agent performing device discovery in network");
         zsys_debug ("range: %s, agent %i", range ? range : "none", agent);
