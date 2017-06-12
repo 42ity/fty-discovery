@@ -58,6 +58,7 @@ EXTRA_DIST += \
     src/nutscan.h \
     src/range_scan.h \
     src/device_scan.h \
+    src/scan_dns.h \
     README.md \
     src/fty_discovery_classes.h
 
