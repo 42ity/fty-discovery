@@ -1,21 +1,21 @@
 /*  =========================================================================
     fty_discovery - Agent performing device discovery in network
 
-    Copyright (C) 2014 - 2017 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2017 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -28,9 +28,14 @@
 
 #include "fty_discovery_classes.h"
 
+static const char *ACTOR_NAME = "fty-discovery";
+static const char *ENDPOINT = "ipc://@/malamute";
+
 int main (int argc, char *argv [])
 {
     bool verbose = false;
+    bool agent = false;
+    const char *range = NULL;
     int argn;
     for (argn = 1; argn < argc; argn++) {
         if (streq (argv [argn], "--help")
@@ -38,19 +43,40 @@ int main (int argc, char *argv [])
             puts ("fty-discovery [options] ...");
             puts ("  --verbose / -v         verbose test output");
             puts ("  --help / -h            this information");
+            puts ("  --agent / -a           stay running, listen to rest api commands");
+            puts ("  --range / -r           scan this range (192.168.1.0/24 format)");
             return 0;
         }
-        else
-        if (streq (argv [argn], "--verbose")
-        ||  streq (argv [argn], "-v"))
+        else if (streq (argv [argn], "--verbose") ||  streq (argv [argn], "-v")) {
             verbose = true;
+        }
+        else if (streq (argv [argn], "--agent") ||  streq (argv [argn], "-a")) {
+            agent = true;
+        }
+        else if (streq (argv [argn], "--range") ||  streq (argv [argn], "-r")) {
+            ++argn;
+            if (argn < argc) {
+                range = argv [argn];
+            }
+        }
         else {
             printf ("Unknown option: %s\n", argv [argn]);
             return 1;
         }
     }
-    //  Insert main code here
-    if (verbose)
+    zsys_init ();
+    if (verbose) {
         zsys_info ("fty_discovery - Agent performing device discovery in network");
+        zsys_debug ("range: %s, agent %i", range ? range : "none", agent);
+    }
+
+    zactor_t *discovery = zactor_new (ftydiscovery_actor, NULL);
+    zstr_sendx (discovery, "BIND", ENDPOINT, ACTOR_NAME, NULL);
+
+    while (!zsys_interrupted) {
+        zmsg_t *msg = zmsg_recv (discovery);
+        zmsg_destroy (&msg);
+    }
+    zactor_destroy (&discovery);
     return 0;
 }
