@@ -36,6 +36,8 @@ int main (int argc, char *argv [])
     bool verbose = false;
     bool agent = false;
     const char *range = NULL;
+    const char *config = "/etc/default/fty.cfg";
+
     int argn;
     for (argn = 1; argn < argc; argn++) {
         if (streq (argv [argn], "--help")
@@ -45,6 +47,7 @@ int main (int argc, char *argv [])
             puts ("  --help / -h            this information");
             puts ("  --agent / -a           stay running, listen to rest api commands");
             puts ("  --range / -r           scan this range (192.168.1.0/24 format)");
+            puts ("  --config / -c          config file [/etc/default/fty.cfg]");
             return 0;
         }
         else if (streq (argv [argn], "--verbose") ||  streq (argv [argn], "-v")) {
@@ -57,6 +60,12 @@ int main (int argc, char *argv [])
             ++argn;
             if (argn < argc) {
                 range = argv [argn];
+            }
+        }
+        else if (streq (argv [argn], "--config") ||  streq (argv [argn], "-c")) {
+            ++argn;
+            if (argn < argc) {
+                config = argv [argn];
             }
         }
         else {
@@ -83,12 +92,25 @@ int main (int argc, char *argv [])
         zstr_sendx (discovery, "BIND", ENDPOINT, name, NULL);
         zstr_free (&name);
     }
+    zstr_sendx (discovery, "CONFIG", config, NULL);
     if (range) zstr_sendx (discovery, "SCAN", range, NULL);
 
     // main loop
     while (!zsys_interrupted) {
         zmsg_t *msg = zmsg_recv (discovery);
-        zmsg_destroy (&msg);
+        if (msg) {
+            char *cmd = zmsg_popstr (msg);
+            zsys_debug ("main: %s command received", cmd ? cmd : "(null)");
+            if (cmd) {
+                if (!agent && streq (cmd, "DONE")) {
+                    zstr_free (&cmd);
+                    zmsg_destroy (&msg);
+                    break;
+                }
+                zstr_free (&cmd);
+            }
+            zmsg_destroy (&msg);
+        }
     }
     zactor_destroy (&discovery);
     return 0;
