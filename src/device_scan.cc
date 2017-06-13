@@ -55,9 +55,13 @@ void
 device_scan_actor (zsock_t *pipe, void *args)
 {
     zsock_signal (pipe, 0);
-    if (! args) return;
+    if (! args) {
+        zsys_error ("dsa: actor created without config");
+        return;
+    }
     zconfig_t *config = (zconfig_t *)args;
 
+    zsys_debug ("dsa: device scan actor created");
     while (!zsys_interrupted) {
         zmsg_t *msg = zmsg_recv (pipe);
         if (msg) {
@@ -68,6 +72,7 @@ device_scan_actor (zsock_t *pipe, void *args)
             }
             else if (streq (cmd, "SCAN")) {
                 char *addr = zmsg_popstr (msg);
+                zsys_debug ("ds: scan request for %s", addr ? addr : "(null)");
                 zmsg_t *reply = device_scan_scan (addr, config);
                 zmsg_send (&reply, pipe);
                 zstr_free (&addr);
@@ -75,6 +80,7 @@ device_scan_actor (zsock_t *pipe, void *args)
             zmsg_destroy (&msg);
         }
     }
+    zsys_debug ("dsa: device scan actor exited");
 }
 
 

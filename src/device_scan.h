@@ -32,6 +32,10 @@ extern "C" {
 FTY_DISCOVERY_PRIVATE zactor_t *
     device_scan_new (zconfig_t *args);
 
+//  One device scan actor
+FTY_DISCOVERY_PRIVATE void
+    device_scan_actor (zsock_t *pipe, void *args);
+
 //  Self test of this class
 FTY_DISCOVERY_PRIVATE void
     device_scan_test (bool verbose);
