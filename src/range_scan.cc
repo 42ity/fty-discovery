@@ -66,7 +66,9 @@ range_scan_new (const char *range)
 int
 range_scan_progress (range_scan_t *self)
 {
-    return (self->cursor * 100 / self->size);
+    int result = self->cursor * 100 / self->size;
+    if (result > 100) result = 100;
+    return result;
 }
 
 //  --------------------------------------------------------------------------

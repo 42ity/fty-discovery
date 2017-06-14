@@ -37,6 +37,39 @@ struct _ftydiscovery_t {
 };
 
 //  --------------------------------------------------------------------------
+//  send create asses if it is new
+void
+ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
+{
+    if (!self || !msg_p) return;
+    if (!is_fty_proto (*msg_p)) return;
+
+    fty_proto_t *asset = fty_proto_decode (msg_p);
+    fty_proto_print (asset);
+    const char *ip = fty_proto_ext_string (asset, "ip.1", NULL);
+    if (!ip) return;
+
+    if (assets_find (self->assets, "ip", ip)) {
+        // TODO: check also calculated guid
+        zsys_info ("Asset with IP address %s already exists", ip);
+        return;
+    }
+
+    fty_proto_aux_insert (asset, "status", "%s", "nonactive");
+
+    // set name
+    const char *name = fty_proto_ext_string (asset, "hostname", NULL);
+    if (!name) name = fty_proto_aux_string (asset, "subtype", NULL);
+    if (!name) name = ip; // for admin even IP is better than nothing or uuid
+    fty_proto_ext_insert (asset, "name", "%s", name);
+
+    zsys_info ("Found new asset %s with IP address %s", name, ip);
+    fty_proto_set_operation (asset, "create");
+    zmsg_t *msg = fty_proto_encode (&asset);
+    mlm_client_sendto (self->mlm, "asset-agent", "ASSET_MANIPULATION", NULL, 1000, &msg);
+}
+
+//  --------------------------------------------------------------------------
 //  ftydiscovery actor
 
 void
@@ -122,9 +155,13 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
             if (msg) {
                 zmsg_print (msg);
                 char *cmd = zmsg_popstr (msg);
+                zsys_debug ("Range scanner message: %s", cmd);
                 if (cmd) {
                     if (streq (cmd, "DONE")) {
                         zstr_send (pipe, "DONE");
+                    }
+                    else if (streq (cmd, "FOUND")) {
+                        ftydiscovery_create_asset (self, &msg);
                     }
                     zstr_free (&cmd);
                 }
@@ -137,6 +174,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 // no asset change for last 5 secs => we can start range scan
                 zsys_debug ("Range scanner start for %s with config file %s", range_scan_config.range, range_scan_config.config);
                 // create range scanner
+                // TODO: send list of IPs to skip
                 range_scanner = zactor_new (range_scan_actor, &range_scan_config);
                 zpoller_add (poller, range_scanner);
             }

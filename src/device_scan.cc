@@ -32,6 +32,7 @@ zmsg_t * device_scan_scan (const char *addr, zconfig_t *config)
 {
     fty_proto_t *asset = fty_proto_new (FTY_PROTO_ASSET);
     bool found = false;
+    fty_proto_ext_insert (asset, "ip.1", "%s", addr);
 
     found |= scan_nut (asset, addr, config);
     scan_dns (asset, addr, config);

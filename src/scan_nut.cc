@@ -56,13 +56,13 @@ void s_nut_output_to_fty_message (fty_proto_t *asset, std::vector <std::string> 
             auto parsed = s_nut_key_and_value (l);
             if (parsed.first == "driver") {
                 fty_proto_aux_insert (asset, "type", "%s", "device");
-                if (parsed.first.find ("ups") != std::string::npos) {
+                if (parsed.second.find ("ups") != std::string::npos) {
                     fty_proto_aux_insert (asset, "subtype", "%s", "ups");
                 }
-                else if (parsed.first.find ("pdu") != std::string::npos) {
+                else if (parsed.second.find ("pdu") != std::string::npos) {
                     fty_proto_aux_insert (asset, "subtype", "%s", "epdu");
                 }
-                else if (parsed.first.find ("sts") != std::string::npos || parsed.first.find ("ats") != std::string::npos) {
+                else if (parsed.second.find ("sts") != std::string::npos || parsed.second.find ("ats") != std::string::npos) {
                     fty_proto_aux_insert (asset, "subtype", "%s", "sts");
                 }
             }
@@ -72,8 +72,6 @@ void s_nut_output_to_fty_message (fty_proto_t *asset, std::vector <std::string> 
         }
     }
 }
-
-
 
 //  --------------------------------------------------------------------------
 //  Scan IP address using nut-scanner
