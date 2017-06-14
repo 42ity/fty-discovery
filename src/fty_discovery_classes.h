@@ -72,6 +72,7 @@ typedef struct _assets_t assets_t;
 #include "cidr.h"
 #include "subprocess.h"
 #include "nutscan.h"
+#include "nutdumpdata.h"
 #include "range_scan.h"
 #include "device_scan.h"
 #include "scan_dns.h"
@@ -95,6 +96,11 @@ FTY_DISCOVERY_PRIVATE void
 //  Self test of this class.
 FTY_DISCOVERY_PRIVATE void
     nutscan_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
+    nutdumpdata_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.
