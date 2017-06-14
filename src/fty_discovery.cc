@@ -93,6 +93,7 @@ int main (int argc, char *argv [])
         zstr_free (&name);
     }
     zstr_sendx (discovery, "CONFIG", config, NULL);
+    zstr_sendx (discovery, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
     if (range) zstr_sendx (discovery, "SCAN", range, NULL);
 
     // main loop
