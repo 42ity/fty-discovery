@@ -33,6 +33,7 @@
 struct _ftydiscovery_t {
     mlm_client_t *mlm;
     zactor_t *scanner;
+    assets_t *assets;
 };
 
 //  --------------------------------------------------------------------------
@@ -48,9 +49,10 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
     range_scan_args_t range_scan_config;
     range_scan_config.config = NULL;
     range_scan_config.range = NULL;
+    zmsg_t *range_stack = zmsg_new ();
 
     while (!zsys_interrupted) {
-        void *which = zpoller_wait (poller, -1);
+        void *which = zpoller_wait (poller, 5000);
         if (which == pipe) {
             zmsg_t *msg = zmsg_recv (pipe);
             if (msg) {
@@ -70,23 +72,29 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zstr_free (&endpoint);
                         zstr_free (&myname);
                     }
+                    else if (streq (cmd, "CONSUMER")) {
+                        char *stream = zmsg_popstr (msg);
+                        char *pattern = zmsg_popstr (msg);
+                        assert (stream && pattern);
+                        mlm_client_set_consumer (self->mlm, stream, pattern);
+                        zstr_free (&stream);
+                        zstr_free (&pattern);
+                        // ask for assets now
+                        zmsg_t *republish = zmsg_new ();
+                        zmsg_addstr (republish, "$all");
+                        mlm_client_sendto (self->mlm, "asset-agent", "REPUBLISH", NULL, 1000, &republish);
+                    }
                     else if (streq (cmd, "CONFIG")) {
                         zstr_free (&range_scan_config.config);
                         range_scan_config.config = zmsg_popstr (msg);
                     }
                     else if (streq (cmd, "SCAN")) {
+                        if (range_scanner) {
+                            zpoller_remove (poller, range_scanner);
+                            zactor_destroy (&range_scanner);
+                        }
                         zstr_free (&range_scan_config.range);
                         range_scan_config.range = zmsg_popstr (msg);
-                        if (range_scan_config.range) {
-                            zsys_debug ("Range scanner requested for %s with config file %s", range_scan_config.range, range_scan_config.config);
-                            // create range scanner
-                            if (range_scanner) {
-                                zpoller_remove (poller, range_scanner);
-                                zactor_destroy (&range_scanner);
-                            }
-                            range_scanner = zactor_new (range_scan_actor, &range_scan_config);
-                            zpoller_add (poller, range_scanner);
-                        }
                     }
                     zstr_free (&cmd);
                 }
@@ -96,7 +104,9 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
         else if (which == mlm_client_msgpipe (self->mlm)) {
             zmsg_t *msg = mlm_client_recv (self->mlm);
             if (is_fty_proto (msg)) {
-                // TODO: receive assets to get IP addresses
+                fty_proto_t *fmsg = fty_proto_decode (&msg);
+                assets_put (self->assets, &fmsg);
+                fty_proto_destroy (&fmsg);
             } else {
                 char *cmd = zmsg_popstr (msg);
                 if (cmd) {
@@ -121,10 +131,21 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 zmsg_destroy (&msg);
             }
         }
+        // check that scanner is NULL && we have to do scan
+        if (range_scan_config.range && !range_scanner) {
+            if (zclock_mono () - assets_last_change (self->assets) > 5000) {
+                // no asset change for last 5 secs => we can start range scan
+                zsys_debug ("Range scanner start for %s with config file %s", range_scan_config.range, range_scan_config.config);
+                // create range scanner
+                range_scanner = zactor_new (range_scan_actor, &range_scan_config);
+                zpoller_add (poller, range_scanner);
+            }
+        }
     }
 
     zstr_free (&range_scan_config.config);
     zstr_free (&range_scan_config.range);
+    zmsg_destroy (&range_stack);
     zactor_destroy (&range_scanner);
     ftydiscovery_destroy (&self);
     zpoller_destroy (&poller);
@@ -141,6 +162,7 @@ ftydiscovery_new ()
     //  Initialize class properties here
     self->mlm = mlm_client_new ();
     self->scanner = NULL;
+    self->assets = assets_new ();
     return self;
 }
 
@@ -153,6 +175,7 @@ ftydiscovery_destroy (ftydiscovery_t **self_p)
         //  Free class properties here
         zactor_destroy (&self->scanner);
         mlm_client_destroy (&self->mlm);
+        assets_destroy (&self->assets);
         //  Free object itself
         free (self);
         *self_p = NULL;
