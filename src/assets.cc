@@ -32,6 +32,7 @@
 
 struct _assets_t {
     zhashx_t *assets;
+    int64_t lastupdate;
 };
 
 
@@ -46,6 +47,7 @@ assets_new (void)
     //  Initialize class properties here
     self->assets = zhashx_new();
     zhashx_set_destructor (self->assets, (void (*)(void**))fty_proto_destroy);
+    self->lastupdate = zclock_mono ();
     return self;
 }
 
@@ -85,6 +87,10 @@ assets_put (assets_t *self, fty_proto_t **msg_p)
     }
     if (streq (operation, "create") || streq (operation, "update")) {
         // create, update
+        if (! zhashx_lookup (self->assets, iname)) {
+            // new for us
+            self->lastupdate = zclock_mono ();
+        }
         zhashx_update (self->assets, iname, msg);
         *msg_p = NULL;
         return;
@@ -93,8 +99,10 @@ assets_put (assets_t *self, fty_proto_t **msg_p)
         // delete
         zhashx_delete (self->assets, iname);
         fty_proto_destroy (msg_p);
+        self->lastupdate = zclock_mono ();
         return;
     }
+    fty_proto_destroy (msg_p);
 }
 
 bool
@@ -132,6 +140,17 @@ assets_find (assets_t *self, const char *key, const char *value)
         asset = (fty_proto_t *) zhashx_next (self->assets);
     }
     return NULL;
+}
+
+//  --------------------------------------------------------------------------
+//  return the zclock_mono time in ms when last change happened (create or
+//  delete, not update)
+
+int64_t
+assets_last_change (assets_t *self)
+{
+    if (!self) return 0;
+    return self->lastupdate;
 }
 
 //  --------------------------------------------------------------------------
