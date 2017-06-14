@@ -60,6 +60,7 @@ EXTRA_DIST += \
     src/device_scan.h \
     src/scan_dns.h \
     src/scan_nut.h \
+    src/assets.h \
     README.md \
     src/fty_discovery_classes.h
 
