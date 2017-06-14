@@ -34,6 +34,7 @@
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "subprocess"   private = "1">C++ Wrapper around cxxtools::Fork</class>
     <class name = "nutscan"      private = "1">Wrapper around nut-scanner tool</class>
+    <class name = "nutdumpdata"  private = "1">Wrapper around nut --dump-data tool</class>
     <class name = "range_scan"   private = "1">Perform one range scan</class>
     <class name = "device_scan"  private = "1">Perform one IP address scan</class>
     <class name = "scan_dns"     private = "1">collect information from DNS</class>

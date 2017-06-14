@@ -41,6 +41,7 @@ fty_discovery_private_selftest (bool verbose)
     cidr_test (verbose);
     subprocess_test (verbose);
     nutscan_test (verbose);
+    nutdumpdata_test (verbose);
     range_scan_test (verbose);
     device_scan_test (verbose);
     scan_dns_test (verbose);

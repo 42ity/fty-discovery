@@ -56,6 +56,7 @@ EXTRA_DIST += \
     src/cidr.h \
     src/subprocess.h \
     src/nutscan.h \
+    src/nutdumpdata.h \
     src/range_scan.h \
     src/device_scan.h \
     src/scan_dns.h \
