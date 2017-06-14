@@ -25,6 +25,7 @@ src_libfty_discovery_la_SOURCES = \
     src/device_scan.cc \
     src/scan_dns.cc \
     src/scan_nut.cc \
+    src/assets.cc \
     src/ftydiscovery.cc \
     src/platform.h
 
