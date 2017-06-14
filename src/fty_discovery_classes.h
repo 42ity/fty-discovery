@@ -63,6 +63,10 @@ typedef struct _scan_dns_t scan_dns_t;
 typedef struct _scan_nut_t scan_nut_t;
 #define SCAN_NUT_T_DEFINED
 #endif
+#ifndef ASSETS_T_DEFINED
+typedef struct _assets_t assets_t;
+#define ASSETS_T_DEFINED
+#endif
 
 //  Internal API
 #include "cidr.h"
@@ -72,6 +76,7 @@ typedef struct _scan_nut_t scan_nut_t;
 #include "device_scan.h"
 #include "scan_dns.h"
 #include "scan_nut.h"
+#include "assets.h"
 
 //  *** To avoid double-definitions, only define if building without draft ***
 #ifndef FTY_DISCOVERY_BUILD_DRAFT_API
@@ -110,6 +115,11 @@ FTY_DISCOVERY_PRIVATE void
 //  Self test of this class.
 FTY_DISCOVERY_PRIVATE void
     scan_nut_test (bool verbose);
+
+//  *** Draft method, defined for internal use only ***
+//  Self test of this class.
+FTY_DISCOVERY_PRIVATE void
+    assets_test (bool verbose);
 
 //  Self test for private classes
 FTY_DISCOVERY_PRIVATE void
