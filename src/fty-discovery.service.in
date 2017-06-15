@@ -3,19 +3,18 @@
 
 [Unit]
 Description=fty-discovery service
-After=network.target
-# Requires=network.target
-# Conflicts=shutdown.target
-# PartOf=fty-discovery.target
+After=malamute.service network.target 
+Requires=malamute.service network.target 
+PartOf=bios.target
 
 [Service]
 Type=simple
-# User=@uid@
+User=bios
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut:"
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 ExecStart=@prefix@/bin/fty-discovery @sysconfdir@/@PACKAGE@/fty-discovery.cfg
 Restart=always
 
 [Install]
-WantedBy=multi-user.target
-# WantedBy=fty-discovery.target
+WantedBy=bios.target
