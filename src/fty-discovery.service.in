@@ -3,8 +3,8 @@
 
 [Unit]
 Description=fty-discovery service
-After=malamute.service network.target 
-Requires=malamute.service network.target 
+After=malamute.service network.target bios-db-init.service 
+Requires=malamute.service network.target bios-db-init.service
 PartOf=bios.target
 
 [Service]
