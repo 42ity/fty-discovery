@@ -141,9 +141,41 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 assets_put (self->assets, &fmsg);
                 fty_proto_destroy (&fmsg);
             } else {
+                // handle REST API requests
                 char *cmd = zmsg_popstr (msg);
                 if (cmd) {
-                    // TODO: handle protocol
+                    // RUNSCAN
+                    // <uuid>
+                    // <config> (can be empty - then default config is used)
+                    // <range>
+                    if (streq (cmd, "RUNSCAN")) {
+                        char *zuuid = zmsg_popstr (msg);
+                        zmsg_t *reply = zmsg_new ();
+                        zmsg_addstr (reply, zuuid);
+
+                        zstr_free (&range_scan_config.config);
+                        range_scan_config.config = zmsg_popstr (msg);
+                        if (streq (range_scan_config.config, ""))
+                            range_scan_config.config = strdup ("/etc/default/fty.cfg");
+                        zstr_free (&range_scan_config.range);
+                        range_scan_config.range = zmsg_popstr (msg);
+
+                        if (range_scan_config.range) {
+                            zsys_debug ("Range scanner requested for %s with config file %s", range_scan_config.range, range_scan_config.config);
+                            // create range scanner
+                            if (range_scanner) {
+                                zpoller_remove (poller, range_scanner);
+                                zactor_destroy (&range_scanner);
+                            }
+                            range_scanner = zactor_new (range_scan_actor, &range_scan_config);
+                            zpoller_add (poller, range_scanner);
+
+                            zmsg_addstr (reply, "OK");
+                        }
+                        else
+                            zmsg_addstr (reply, "ERROR");
+                        mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
+                    }
                     zstr_free (&cmd);
                 }
             }
