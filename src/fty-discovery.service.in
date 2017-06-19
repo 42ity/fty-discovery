@@ -1,10 +1,8 @@
-# This is a skeleton created by zproject.
-# You can add hand-written code here.
-
 [Unit]
 Description=fty-discovery service
-After=malamute.service network.target bios-db-init.service 
-Requires=malamute.service network.target bios-db-init.service
+After=malamute.service network.target
+Requires=malamute.service network.target
+Before=fty-asset.service
 PartOf=bios.target
 
 [Service]
@@ -13,7 +11,7 @@ User=bios
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut:"
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
-ExecStart=@prefix@/bin/fty-discovery @sysconfdir@/@PACKAGE@/fty-discovery.cfg
+ExecStart=@prefix@/bin/fty-discovery --agent
 Restart=always
 
 [Install]
