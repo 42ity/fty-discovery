@@ -83,6 +83,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
     range_scan_config.config = NULL;
     range_scan_config.range = NULL;
     zmsg_t *range_stack = zmsg_new ();
+    char *percent = NULL;
 
     while (!zsys_interrupted) {
         void *which = zpoller_wait (poller, 5000);
@@ -129,6 +130,11 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zstr_free (&range_scan_config.range);
                         range_scan_config.range = zmsg_popstr (msg);
                     }
+                    else if (streq (cmd, "PROGRESS")) {
+                        if (percent)
+                            zstr_free (&percent);
+                        percent = zmsg_popstr (msg);
+                    }
                     zstr_free (&cmd);
                 }
                 zmsg_destroy (&msg);
@@ -149,6 +155,9 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                     // <config> (can be empty - then default config is used)
                     // <range>
                     if (streq (cmd, "RUNSCAN")) {
+                        if (percent)
+                            zstr_free (&percent);
+                        percent = strdup ("0");
                         char *zuuid = zmsg_popstr (msg);
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
@@ -171,6 +180,18 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                             zpoller_add (poller, range_scanner);
 
                             zmsg_addstr (reply, "OK");
+                        }
+                        else
+                            zmsg_addstr (reply, "ERROR");
+                        mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
+                    }
+                    else if (streq (cmd, "PROGRESS")) {
+                        char *zuuid = zmsg_popstr (msg);
+                        zmsg_t *reply = zmsg_new ();
+                        zmsg_addstr (reply, zuuid);
+                        if (percent) {
+                            zmsg_addstr (reply, "OK");
+                            zmsg_addstr (reply, percent);
                         }
                         else
                             zmsg_addstr (reply, "ERROR");
@@ -213,6 +234,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
         }
     }
 
+    zstr_free (&percent);
     zstr_free (&range_scan_config.config);
     zstr_free (&range_scan_config.range);
     zmsg_destroy (&range_stack);
