@@ -73,6 +73,44 @@ void s_nut_output_to_fty_message (fty_proto_t *asset, std::vector <std::string> 
     }
 }
 
+void
+s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::string> &dump)
+{
+    if (! fmsg) return;
+
+    static std::map <std::string, std::string> mapping = {
+        {"device.model", "model"},
+        {"ups.model", "model"},
+        {"device.mfr", "manufacturer"},
+        {"ups.mfr", "manufacturer"},
+        {"device.serial", "serial_no"},
+        {"device.description", "device.description"},
+        {"device.contact", "device.contact"},
+        {"device.location", "device.location"},
+        {"device.part", "device.part"},
+        {"ups.serial", "serial_no"},
+        {"ups.firmware", "firmware"},
+    };
+
+    for (auto it: mapping) {
+        auto item = dump.find (it.first);
+        if (item != dump.end ()) {
+            // item found
+            fty_proto_ext_insert (fmsg, it.second.c_str (), "%s", item->second.c_str ());
+        }
+    }
+    {
+        // get type from dump is safer than parsing driver name
+        auto item = dump.find ("device.type");
+        if (item != dump.end ()) {
+            const char *device = item->second.c_str ();
+            if (streq (device, "pdu")) device = "epdu";
+            if (streq (device, "ats")) device = "sts";
+            fty_proto_aux_insert (fmsg, "subtype", "%s", device);
+        }
+    }
+}
+
 //  --------------------------------------------------------------------------
 //  Scan IP address using nut-scanner
 
@@ -106,6 +144,11 @@ scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config)
         nut_scan_snmp ("device", addr, it, false, output);
         if (! output.empty ()) {
             s_nut_output_to_fty_message (msg, output);
+
+            map_string_t nutdata;
+            if (nut_dumpdata_snmp_ups (addr.toString (), it,  nutdata) == 0) {
+                s_nut_dumpdata_to_fty_message (msg, nutdata);
+            }
             return true;
         }
     }
@@ -115,6 +158,11 @@ scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config)
         nut_scan_xml_http ("device", addr, output);
         if (! output.empty ()) {
             s_nut_output_to_fty_message (msg, output);
+
+            map_string_t nutdata;
+            if (nut_dumpdata_netxml_ups (addr.toString (), nutdata) == 0) {
+                s_nut_dumpdata_to_fty_message (msg, nutdata);
+            }
             return true;
         }
     }
