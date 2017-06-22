@@ -45,7 +45,6 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
     if (!is_fty_proto (*msg_p)) return;
 
     fty_proto_t *asset = fty_proto_decode (msg_p);
-    fty_proto_print (asset);
     const char *ip = fty_proto_ext_string (asset, "ip.1", NULL);
     if (!ip) return;
 
@@ -59,14 +58,29 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
 
     // set name
     const char *name = fty_proto_ext_string (asset, "hostname", NULL);
-    if (!name) name = fty_proto_aux_string (asset, "subtype", NULL);
-    if (!name) name = ip; // for admin even IP is better than nothing or uuid
-    fty_proto_ext_insert (asset, "name", "%s", name);
+    if (name) {
+        fty_proto_ext_insert (asset, "name", "%s", name);
+    } else {
+        name = fty_proto_aux_string (asset, "subtype", NULL);
+        if (name) {
+            fty_proto_ext_insert (asset, "name", "%s (%s)", name, ip);
+        } else {
+            fty_proto_ext_insert (asset, "name", "%s", ip);
+        }
+    }
 
-    zsys_info ("Found new asset %s with IP address %s", name, ip);
+    fty_proto_print (asset);
+
+    zsys_info ("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
     fty_proto_set_operation (asset, "create");
     zmsg_t *msg = fty_proto_encode (&asset);
-    mlm_client_sendto (self->mlm, "asset-agent", "ASSET_MANIPULATION", NULL, 1000, &msg);
+    zsys_debug ("about to send create message");
+    int rv = mlm_client_sendto (self->mlm, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
+    if (rv == -1) {
+        zsys_error ("Failed to send ASSET_MANIPULATION message to asset-agent");
+    } else {
+        zsys_info ("Create message has been sent to asset-agent (rv = %i)", rv);
+    }
 }
 
 //  --------------------------------------------------------------------------

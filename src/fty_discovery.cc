@@ -85,7 +85,7 @@ int main (int argc, char *argv [])
 
     // configure actor
     zactor_t *discovery = zactor_new (ftydiscovery_actor, NULL);
-    if (! agent) {
+    if (agent) {
         zstr_sendx (discovery, "BIND", ENDPOINT, ACTOR_NAME, NULL);
     } else {
         char *name = zsys_sprintf ("%s.%i", ACTOR_NAME, getpid());
