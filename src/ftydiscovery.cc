@@ -26,6 +26,7 @@
 @end
 */
 
+#include <ctime>
 #include "fty_discovery_classes.h"
 
 //  Structure of our class
@@ -34,6 +35,7 @@ struct _ftydiscovery_t {
     mlm_client_t *mlm;
     zactor_t *scanner;
     assets_t *assets;
+    int64_t nb_discovered;
 };
 
 //  --------------------------------------------------------------------------
@@ -68,6 +70,12 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
             fty_proto_ext_insert (asset, "name", "%s", ip);
         }
     }
+    
+    std::time_t timestamp = std::time(NULL);
+    char mbstr[100];
+    if(std::strftime(mbstr, sizeof(mbstr), "%FT%T%z", std::localtime(&timestamp))) {
+        fty_proto_ext_insert(asset, "discovered_ts", "%s", mbstr);
+    }
 
     fty_proto_print (asset);
 
@@ -80,6 +88,7 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
         zsys_error ("Failed to send ASSET_MANIPULATION message to asset-agent");
     } else {
         zsys_info ("Create message has been sent to asset-agent (rv = %i)", rv);
+        self->nb_discovered++;
     }
 }
 
@@ -138,16 +147,12 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                     }
                     else if (streq (cmd, "SCAN")) {
                         if (range_scanner) {
+                            self->nb_discovered = 0;
                             zpoller_remove (poller, range_scanner);
                             zactor_destroy (&range_scanner);
                         }
                         zstr_free (&range_scan_config.range);
                         range_scan_config.range = zmsg_popstr (msg);
-                    }
-                    else if (streq (cmd, "PROGRESS")) {
-                        if (percent)
-                            zstr_free (&percent);
-                        percent = zmsg_popstr (msg);
                     }
                     zstr_free (&cmd);
                 }
@@ -190,6 +195,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 zpoller_remove (poller, range_scanner);
                                 zactor_destroy (&range_scanner);
                             }
+                            self->nb_discovered = 0;
                             range_scanner = zactor_new (range_scan_actor, &range_scan_config);
                             zpoller_add (poller, range_scanner);
 
@@ -206,10 +212,27 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         if (percent) {
                             zmsg_addstr (reply, "OK");
                             zmsg_addstr (reply, percent);
+                            zmsg_addstrf(reply, "%li", self->nb_discovered);
                         }
                         else
                             zmsg_addstr (reply, "ERROR");
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
+                    }
+                    else if(streq (cmd, "STOPSCAN")) {
+                            if (range_scanner) {
+                                zpoller_remove (poller, range_scanner);
+                                zactor_destroy (&range_scanner);
+                            }
+                            
+                        zstr_free (&range_scan_config.config);
+                        zstr_free (&range_scan_config.range);
+                        
+                        char *zuuid = zmsg_popstr (msg);
+                        zmsg_t *reply = zmsg_new ();
+                        zmsg_addstr (reply, zuuid);
+                        zmsg_addstr (reply, "OK");
+                        mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
+                        
                     }
                     zstr_free (&cmd);
                 }
@@ -230,6 +253,11 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                     else if (streq (cmd, "FOUND")) {
                         ftydiscovery_create_asset (self, &msg);
                     }
+                    else if (streq (cmd, "PROGRESS")) {
+                        if (percent)
+                            zstr_free (&percent);
+                        percent = zmsg_popstr (msg);
+                    }
                     zstr_free (&cmd);
                 }
                 zmsg_destroy (&msg);
@@ -242,6 +270,9 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 zsys_debug ("Range scanner start for %s with config file %s", range_scan_config.range, range_scan_config.config);
                 // create range scanner
                 // TODO: send list of IPs to skip
+                self->nb_discovered = 0;
+                if(percent)
+                    zstr_free (&percent);
                 range_scanner = zactor_new (range_scan_actor, &range_scan_config);
                 zpoller_add (poller, range_scanner);
             }
@@ -269,6 +300,7 @@ ftydiscovery_new ()
     self->mlm = mlm_client_new ();
     self->scanner = NULL;
     self->assets = assets_new ();
+    self->nb_discovered = 0;
     return self;
 }
 
