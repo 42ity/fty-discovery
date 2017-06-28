@@ -70,7 +70,7 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
             fty_proto_ext_insert (asset, "name", "%s", ip);
         }
     }
-    
+
     std::time_t timestamp = std::time(NULL);
     char mbstr[100];
     if(std::strftime(mbstr, sizeof(mbstr), "%FT%T%z", std::localtime(&timestamp))) {
@@ -212,7 +212,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         if (percent) {
                             zmsg_addstr (reply, "OK");
                             zmsg_addstr (reply, percent);
-                            zmsg_addstrf(reply, "%li", self->nb_discovered);
+                            zmsg_addstrf(reply, "%" PRIi64, self->nb_discovered);
                         }
                         else
                             zmsg_addstr (reply, "ERROR");
@@ -223,16 +223,16 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 zpoller_remove (poller, range_scanner);
                                 zactor_destroy (&range_scanner);
                             }
-                            
+
                         zstr_free (&range_scan_config.config);
                         zstr_free (&range_scan_config.range);
-                        
+
                         char *zuuid = zmsg_popstr (msg);
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
                         zmsg_addstr (reply, "OK");
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
-                        
+
                     }
                     zstr_free (&cmd);
                 }
