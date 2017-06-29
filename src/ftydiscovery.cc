@@ -155,13 +155,13 @@ void configure_quick_scan(ftydiscovery_t *self)
             prefix = mask_nb_bit(netm);
                 
             self->quickscan_size += (1 << (32 - prefix));
-
+            
             CIDRAddress addrCidr(addr, prefix);
 
             addrmask.clear();
-            addrmask.assign(addrCidr.network().toString());
-
-            self->quickscan_subnets.push_back(std::make_pair(addrmask,(1 << (32 - prefix))));
+            addrmask.assign(addrCidr.network().toString());  
+            
+            self->quickscan_subnets.push_back(std::make_pair(addrmask,(1 << (32 - prefix))));            
             zsys_info("Quickscan subnet found for %s : %s",ifa->ifa_name, addrmask.c_str());
             
         }
@@ -203,7 +203,7 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
             fty_proto_ext_insert (asset, "name", "%s", ip);
         }
     }
-    
+
     std::time_t timestamp = std::time(NULL);
     char mbstr[100];
     if(std::strftime(mbstr, sizeof(mbstr), "%FT%T%z", std::localtime(&timestamp))) {
@@ -376,7 +376,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         if (percent) {
                             zmsg_addstr (reply, "OK");
                             zmsg_addstr (reply, percent);
-                            zmsg_addstrf(reply, "%lli", self->nb_discovered);
+                            zmsg_addstrf(reply, "%" PRIi64, self->nb_discovered);
                         }
                         else
                             zmsg_addstr (reply, "ERROR");
@@ -387,9 +387,10 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 zpoller_remove (poller, range_scanner);
                                 zactor_destroy (&range_scanner);
                             }
-                            
+
                         zstr_free (&range_scan_config.config);
                         zstr_free (&range_scan_config.range);
+
                         self->quickscan_subnets.clear();
                         self->quickscan_size = 0;
                         
@@ -398,7 +399,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zmsg_addstr (reply, zuuid);
                         zmsg_addstr (reply, "OK");
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
-                        
+
                     }
                     else if(streq (cmd, "QUICKSCAN")) {
                         
@@ -503,13 +504,14 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         if(self->quickscan_subnets.size() > 0)
                         {
                             std::string percentstr = std::to_string( (atoi(percent) * self->quickscan_subnets.back().second) / self->quickscan_size);
+                                 
                             zstr_free (&percent);
                             
                             zmsg_t *zmfalse = zmsg_new ();
                             zmsg_addstr(zmfalse, percentstr.c_str());                            
                             percent = zmsg_popstr(zmfalse);     
                             zmsg_destroy(&zmfalse);
-                        }
+                        }   
                     }
                     zstr_free (&cmd);
                 }
