@@ -51,8 +51,13 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
     if (!ip) return;
 
     if (assets_find (self->assets, "ip", ip)) {
-        // TODO: check also calculated guid
         zsys_info ("Asset with IP address %s already exists", ip);
+        return;
+    }
+
+    const char *uuid = fty_proto_ext_string (asset, "uuid", NULL);
+    if (uuid && assets_find (self->assets, "uuid", uuid)) {
+        zsys_info ("Asset with uuid %s already exists", uuid);
         return;
     }
 

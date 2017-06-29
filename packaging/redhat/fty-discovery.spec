@@ -56,6 +56,7 @@ BuildRequires:  malamute-devel
 BuildRequires:  fty-proto-devel
 BuildRequires:  libcidr-devel
 BuildRequires:  cxxtools-devel
+BuildRequires:  openssl-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -85,6 +86,7 @@ Requires:       malamute-devel
 Requires:       fty-proto-devel
 Requires:       libcidr-devel
 Requires:       cxxtools-devel
+Requires:       openssl-devel
 
 %description devel
 42ity service for discovering devices development tools

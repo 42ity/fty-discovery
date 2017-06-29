@@ -38,6 +38,14 @@ zmsg_t * device_scan_scan (const char *addr, zconfig_t *config)
     scan_dns (asset, addr, config);
 
     if (found) {
+        const char *mfr = fty_proto_ext_string (asset, "manufacturer", NULL);
+        const char *model = fty_proto_ext_string (asset, "model", NULL);
+        const char *serial = fty_proto_ext_string (asset, "serial_no", NULL);
+        if (mfr && model && serial) {
+            fty_uuid_t *uuid = fty_uuid_new ();
+            fty_proto_ext_insert (asset, "uuid", "%s", fty_uuid_calculate (uuid, mfr, model, serial));
+            fty_uuid_destroy (&uuid);
+        }
         zmsg_t *result = fty_proto_encode (&asset);
         zmsg_pushstr (result, "FOUND");
         return result;
