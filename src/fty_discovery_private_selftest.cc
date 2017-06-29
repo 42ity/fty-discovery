@@ -47,6 +47,7 @@ fty_discovery_private_selftest (bool verbose)
     scan_dns_test (verbose);
     scan_nut_test (verbose);
     assets_test (verbose);
+    fty_uuid_test (verbose);
 }
 /*
 ################################################################################

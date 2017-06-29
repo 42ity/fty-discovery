@@ -30,6 +30,7 @@
     <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
         repository = "https://github.com/42ity/cxxtools"
         release = "42ity"/>
+    <use project = "openssl" header = "openssl/sha.h" debian_name="libssl-dev"/>
 
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "subprocess"   private = "1">C++ Wrapper around cxxtools::Fork</class>
@@ -39,7 +40,9 @@
     <class name = "device_scan"  private = "1">Perform one IP address scan</class>
     <class name = "scan_dns"     private = "1">collect information from DNS</class>
     <class name = "scan_nut"     private = "1">collect information from DNS</class>
-    <class name = "assets"  private = "1">Cache of assets</class>
+    <class name = "assets"       private = "1">Cache of assets</class>
+    <class name = "fty_uuid"     private = "1">UUID generating</class>
+
     <class name = "ftydiscovery" state = "stable">Manages discovery requests, provides feedback</class>
     <main name = "fty-discovery" service = "1">
         Agent performing device discovery in network

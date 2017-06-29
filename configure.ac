@@ -55,7 +55,6 @@ AC_PROG_AWK
 PKG_PROG_PKG_CONFIG
 
 # Code coverage
-AC_MSG_CHECKING([whether to enable GCov])
 AC_ARG_WITH(gcov, [AS_HELP_STRING([--with-gcov=yes/no],
                   [With GCC Code Coverage reporting])],
                   [FTY_DISCOVERY_GCOV="$withval"])
@@ -67,27 +66,8 @@ if test "x${FTY_DISCOVERY_GCOV}" == "xyes"; then
         CFLAGS="${CFLAGS} ${FTY_DISCOVERY_ORIG_CFLAGS}"
     fi
     AM_CONDITIONAL(WITH_GCOV, true)
-    AC_MSG_RESULT([yes])
 else
     AM_CONDITIONAL(WITH_GCOV, false)
-    AC_MSG_RESULT([no])
-fi
-
-# Memory mis-use detection
-AC_MSG_CHECKING([whether to enable ASan])
-AC_ARG_ENABLE(address-sanitizer, [AS_HELP_STRING([--enable-address-sanitizer=yes/no],
-                  [Build with GCC Address Sanitizer instrumentation])],
-                  [FTY_DISCOVERY_ASAN="$enableval"])
-
-if test "x${FTY_DISCOVERY_ASAN}" == "xyes"; then
-    CFLAGS="${CFLAGS} -fsanitize=address"
-    CXXFLAGS="${CXXFLAGS} -fsanitize=address"
-
-    AM_CONDITIONAL(ENABLE_ASAN, true)
-    AC_MSG_RESULT([yes])
-else
-    AM_CONDITIONAL(ENABLE_ASAN, false)
-    AC_MSG_RESULT([no])
 fi
 
 # Set pkgconfigdir
@@ -633,6 +613,69 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
     ])
 ])
 dnl END of enabled attempts to search for cxxtools
+
+
+was_openssl_check_lib_detected=no
+
+search_openssl="yes"
+
+AC_ARG_WITH([openssl],
+    [
+        AS_HELP_STRING([--with-openssl],
+        [yes or no. Optionally specify openssl prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_openssl="yes"
+    ],
+    [])
+AS_CASE([x"${with_openssl}"],
+    [xyes], [search_openssl="yes"],
+    [xno],  [search_openssl="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_openssl}" = xno],
+    [AC_MSG_WARN([Required dependency on openssl was explicitly disabled during configuration by '--with-openssl=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_openssl}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    found_linkname=""
+    PKG_CHECK_MODULES([openssl], [openssl >= 0.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $openssl_LIBS"
+        was_openssl_check_lib_detected=pkgcfg
+        found_pkgconfig="openssl"
+    ],
+    [
+        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'openssl' - please ensure it is set])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for openssl
+    AS_CASE(["x${was_openssl_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_openssl],[${found_pkgconfig}])
+                CFLAGS="${openssl_CFLAGS} ${CFLAGS}"
+                LIBS="${openssl_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_openssl],[${found_linkname}])
+                CFLAGS="${openssl_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${openssl_synthetic_libs} ${LDFLAGS}"
+                LIBS="${openssl_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([openssl_CFLAGS],[${openssl_synthetic_cflags}])
+                AC_SUBST([openssl_LIBS],[${openssl_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_openssl],[openssl])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for openssl 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for openssl
 
 
 CFLAGS="${PREVIOUS_CFLAGS}"

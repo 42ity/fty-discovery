@@ -22,10 +22,11 @@ AM_CPPFLAGS = \
     ${fty_proto_CFLAGS} \
     ${cidr_CFLAGS} \
     ${cxxtools_CFLAGS} \
+    ${openssl_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS}
+project_libs = ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS} ${openssl_LIBS}
 
 SUBDIRS = doc
 DIST_SUBDIRS = doc
@@ -49,6 +50,7 @@ EXTRA_DIST += \
     Findfty_proto.cmake \
     Findcidr.cmake \
     Findcxxtools.cmake \
+    Findopenssl.cmake \
     CMakeLists.txt
 endif
 
@@ -62,6 +64,7 @@ EXTRA_DIST += \
     src/scan_dns.h \
     src/scan_nut.h \
     src/assets.h \
+    src/fty_uuid.h \
     README.md \
     src/fty_discovery_classes.h
 

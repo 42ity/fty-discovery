@@ -35,6 +35,7 @@
 #include <ftyproto.h>
 #include <libcidr.h>
 #include <cxxtools/allocator.h>
+#include <openssl/sha.h>
 
 //  FTY_DISCOVERY version macros for compile-time API detection
 #define FTY_DISCOVERY_VERSION_MAJOR 1
