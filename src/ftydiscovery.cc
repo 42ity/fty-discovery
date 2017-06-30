@@ -27,6 +27,10 @@
 */
 
 #include <ctime>
+#include <vector>
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <string>
 #include "fty_discovery_classes.h"
 
 //  Structure of our class
@@ -36,7 +40,136 @@ struct _ftydiscovery_t {
     zactor_t *scanner;
     assets_t *assets;
     int64_t nb_discovered;
+    int64_t quickscan_size;
+    std::vector<std::pair <std::string, int64_t>> quickscan_subnets;
 };
+
+int mask_nb_bit(std::string mask)
+{
+    size_t pos;
+    int res = 0;
+    std::string part;
+    while( (pos = mask.find(".")) != std::string::npos)
+    {
+        part = mask.substr(0,pos);
+        if(part == "255")
+            res += 8;
+        else if(part == "254")
+            return res+7;
+        else if(part == "252")
+            return res+6;
+        else if(part == "248")
+            return res+5;
+        else if(part == "240")
+            return res+4;
+        else if(part == "224")
+            return res+3;
+        else if(part == "192")
+            return res+2;
+        else if(part == "128")
+            return res+1;
+        else if(part == "0")
+            return res;
+        else //error
+            return -1;
+        
+        mask.erase(0, pos +1);
+    }
+    
+    if(mask == "255")
+        res += 8;
+    else if(mask == "254")
+        res += 7;
+    else if(mask == "252")
+        res += 6;
+    else if(mask == "248")
+        res += 5;
+    else if(mask == "240")
+        res += 4;
+    else if(mask == "224")
+        res += 3;
+    else if(mask == "192")
+        res += 2;
+    else if(mask == "128")
+        res += 1;
+    else if(mask == "0")
+        return res;
+    else
+        return -1;
+    
+    return res;
+}
+
+void configure_quick_scan(ftydiscovery_t *self)
+{
+    int s, family, prefix;
+    char host[NI_MAXHOST];
+    struct ifaddrs *ifaddr, *ifa;
+    std::string addr, netm, addrmask;
+
+    self->quickscan_size = 0;
+    if(getifaddrs(&ifaddr) != -1)
+    {
+        for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+        {
+            if(streq(ifa->ifa_name,"lo"))
+                continue;
+            if(ifa->ifa_addr == NULL)
+                continue;
+
+            family = ifa->ifa_addr->sa_family;
+            if (family != AF_INET)
+                continue;
+
+            s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if(s != 0)
+            {
+                zsys_debug("IP address parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
+                continue;
+            }
+            else
+                addr.assign(host);    
+
+            if(ifa->ifa_netmask == NULL)
+            {
+                zsys_debug("No netmask found for %s", ifa->ifa_name);
+                continue;
+            }
+
+            family = ifa->ifa_netmask->sa_family;
+            if (family != AF_INET)
+                continue;
+
+            s = getnameinfo(ifa->ifa_netmask, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if(s != 0)
+            {
+                zsys_debug("Netmask parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
+                continue;
+            }
+            else
+                netm.assign(host);
+
+            prefix = 0;
+            addrmask.clear();
+
+            prefix = mask_nb_bit(netm);
+                
+            self->quickscan_size += (1 << (32 - prefix));
+            
+            CIDRAddress addrCidr(addr, prefix);
+
+            addrmask.clear();
+            addrmask.assign(addrCidr.network().toString());  
+            
+            self->quickscan_subnets.push_back(std::make_pair(addrmask,(1 << (32 - prefix))));            
+            zsys_info("Quickscan subnet found for %s : %s",ifa->ifa_name, addrmask.c_str());
+            
+        }
+
+        freeifaddrs(ifaddr);
+    }
+}
+
 
 //  --------------------------------------------------------------------------
 //  send create asses if it is new
@@ -156,8 +289,36 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                             zpoller_remove (poller, range_scanner);
                             zactor_destroy (&range_scanner);
                         }
+                        
+                        self->quickscan_subnets.clear();
+                        self->quickscan_size = 0;
                         zstr_free (&range_scan_config.range);
                         range_scan_config.range = zmsg_popstr (msg);
+                    }
+                    else if (streq (cmd, "QUICKSCAN")) {
+                        if (range_scanner) {
+                            self->nb_discovered = 0;
+                            zpoller_remove (poller, range_scanner);
+                            zactor_destroy (&range_scanner);
+                        }
+                        
+                        self->quickscan_subnets.clear();
+                        self->quickscan_size = 0;
+                        
+                        configure_quick_scan(self);
+                        
+                        if(self->quickscan_size > 0)
+                        {
+                            zstr_free (&range_scan_config.range);
+                            
+                            zmsg_t *zmfalse = zmsg_new ();
+                            zmsg_addstr(zmfalse, self->quickscan_subnets.back().first.c_str());                            
+                            range_scan_config.range = zmsg_popstr(zmfalse);
+                            
+                            self->nb_discovered = 0;                           
+                            zmsg_destroy (&zmfalse);
+                        }
+                        
                     }
                     zstr_free (&cmd);
                 }
@@ -186,6 +347,9 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
 
+                        self->quickscan_subnets.clear();
+                        self->quickscan_size = 0;
+                        
                         zstr_free (&range_scan_config.config);
                         range_scan_config.config = zmsg_popstr (msg);
                         if (streq (range_scan_config.config, ""))
@@ -232,12 +396,63 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zstr_free (&range_scan_config.config);
                         zstr_free (&range_scan_config.range);
 
+                        self->quickscan_subnets.clear();
+                        self->quickscan_size = 0;
+                        
                         char *zuuid = zmsg_popstr (msg);
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
                         zmsg_addstr (reply, "OK");
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
 
+                    }
+                    else if(streq (cmd, "QUICKSCAN")) {
+                        
+                        if (percent)
+                            zstr_free (&percent);
+                        percent = strdup ("0");
+                        
+                        char *zuuid = zmsg_popstr (msg);
+                        zmsg_t *reply = zmsg_new ();
+                        zmsg_addstr (reply, zuuid);
+                        
+                        self->quickscan_subnets.clear();
+                        self->quickscan_size = 0;
+                        
+                        zstr_free (&range_scan_config.config);
+                        range_scan_config.config = zmsg_popstr (msg);
+                        if (streq (range_scan_config.config, ""))
+                            range_scan_config.config = strdup ("/etc/default/fty.cfg");
+                        
+                        configure_quick_scan(self);
+                        
+                        if(self->quickscan_size > 0)
+                        {
+                            zstr_free (&range_scan_config.range);
+                            
+                            zmsg_t *zmfalse = zmsg_new ();
+                            zmsg_addstr(zmfalse, self->quickscan_subnets.back().first.c_str());                            
+                            range_scan_config.range = zmsg_popstr(zmfalse);
+                            
+                            zsys_debug ("Range scanner requested for %s with config file %s %s", range_scan_config.range, range_scan_config.config);
+                           
+                            // create range scanner
+                            if (range_scanner) {
+                                zpoller_remove (poller, range_scanner);
+                                zactor_destroy (&range_scanner);
+                            }
+                            self->nb_discovered = 0;
+                            range_scanner = zactor_new (range_scan_actor, &range_scan_config);
+                            zpoller_add (poller, range_scanner);
+                            
+                            zmsg_destroy (&zmfalse);
+                            zmsg_addstr (reply, "OK");
+                        }
+                        else
+                            zmsg_addstr (reply, "ERROR");
+                        
+                        
+                        mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
                     }
                     zstr_free (&cmd);
                 }
@@ -253,15 +468,55 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 zsys_debug ("Range scanner message: %s", cmd);
                 if (cmd) {
                     if (streq (cmd, "DONE")) {
-                        zstr_send (pipe, "DONE");
+                        if(self->quickscan_subnets.size() > 1)
+                        {
+                            //not done yet, still the others subnets to do
+                            
+                            //remove the done subnet
+                            self->quickscan_subnets.pop_back();
+                            
+                            //start another one
+                            zstr_free (&range_scan_config.range);
+                            zmsg_t *zmfalse = zmsg_new ();
+                            zmsg_addstr(zmfalse, self->quickscan_subnets.back().first.c_str());                            
+                            range_scan_config.range = zmsg_popstr(zmfalse);
+                            
+                            zsys_debug ("Range scanner requested for %s with config file %s", range_scan_config.range, range_scan_config.config);
+                           
+                            // create range scanner
+                            if (range_scanner) {
+                                zpoller_remove (poller, range_scanner);
+                                zactor_destroy (&range_scanner);
+                            }
+                            
+                            range_scanner = zactor_new (range_scan_actor, &range_scan_config);
+                            zpoller_add (poller, range_scanner); 
+                            
+                            zmsg_destroy(&zmfalse);
+                        }
+                        else
+                            zstr_send (pipe, "DONE");
                     }
                     else if (streq (cmd, "FOUND")) {
                         ftydiscovery_create_asset (self, &msg);
                     }
-                    else if (streq (cmd, "PROGRESS")) {
+                    else if (streq (cmd, "PROGRESS")) {                            
                         if (percent)
                             zstr_free (&percent);
+                        
                         percent = zmsg_popstr (msg);
+                        
+                        if(self->quickscan_subnets.size() > 0)
+                        {
+                            std::string percentstr = std::to_string( (atoi(percent) * self->quickscan_subnets.back().second) / self->quickscan_size);
+                                 
+                            zstr_free (&percent);
+                            
+                            zmsg_t *zmfalse = zmsg_new ();
+                            zmsg_addstr(zmfalse, percentstr.c_str());                            
+                            percent = zmsg_popstr(zmfalse);     
+                            zmsg_destroy(&zmfalse);
+                        }   
                     }
                     zstr_free (&cmd);
                 }
@@ -306,6 +561,7 @@ ftydiscovery_new ()
     self->scanner = NULL;
     self->assets = assets_new ();
     self->nb_discovered = 0;
+    self->quickscan_size = 0;
     return self;
 }
 

@@ -28,6 +28,7 @@
 
 #include "fty_discovery_classes.h"
 
+
 static const char *ACTOR_NAME = "fty-discovery";
 static const char *ENDPOINT = "ipc://@/malamute";
 
@@ -73,14 +74,11 @@ int main (int argc, char *argv [])
             return 1;
         }
     }
+    
     zsys_init ();
     if (verbose) {
         zsys_info ("fty_discovery - Agent performing device discovery in network");
         zsys_debug ("range: %s, agent %i", range ? range : "none", agent);
-    }
-    if (!agent && !range) {
-        zsys_error ("Scanning range not set");
-        return 1;
     }
 
     // configure actor
@@ -95,6 +93,10 @@ int main (int argc, char *argv [])
     zstr_sendx (discovery, "CONFIG", config, NULL);
     zstr_sendx (discovery, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
     if (range) zstr_sendx (discovery, "SCAN", range, NULL);
+    else if(!agent)
+    {
+        zstr_sendx(discovery, "QUICKSCAN", NULL);
+    }
 
     // main loop
     while (!zsys_interrupted) {
