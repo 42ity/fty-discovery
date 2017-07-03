@@ -47,7 +47,8 @@ int main (int argc, char *argv [])
             puts ("  --verbose / -v         verbose test output");
             puts ("  --help / -h            this information");
             puts ("  --agent / -a           stay running, listen to rest api commands");
-            puts ("  --range / -r           scan this range (192.168.1.0/24 format)");
+            puts ("  --range / -r           scan this range (192.168.1.0/24 format). If -a and -r are not");
+            puts ("                         present, scan of attached networks is performed (quickscan)");
             puts ("  --config / -c          config file [/etc/default/fty.cfg]");
             return 0;
         }
@@ -74,7 +75,7 @@ int main (int argc, char *argv [])
             return 1;
         }
     }
-    
+
     zsys_init ();
     if (verbose) {
         zsys_info ("fty_discovery - Agent performing device discovery in network");
