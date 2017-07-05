@@ -192,8 +192,9 @@ range_scan_actor (zsock_t *pipe, void *args)
                 zmsg_destroy (&msg);
                 dosomething = list.next (addr);
                 self->cursor++;
-                zstr_sendm (pipe, "PROGRESS");
-                zstr_sendf (pipe, "%" PRId32, range_scan_progress (self));
+                
+                zstr_send (pipe, "PROGRESS");
+                //zstr_sendf (pipe, "%" PRId32, range_scan_progress (self));
                 if (dosomething) {
                     zsys_debug ("scanning %s", addr.toString().c_str());
                     zstr_sendx (device_actor, "SCAN", addr.toString().c_str(), NULL);

@@ -39,10 +39,21 @@ struct _ftydiscovery_t {
     mlm_client_t *mlm;
     zactor_t *scanner;
     assets_t *assets;
+    int64_t nb_percent;
     int64_t nb_discovered;
-    int64_t quickscan_size;
-    std::vector<std::pair <std::string, int64_t>> quickscan_subnets;
+    int64_t scan_size;
+    int64_t nb_ups_discovered;
+    int64_t nb_epdu_discovered;
+    int64_t nb_sts_discovered;
+    bool ongoing_stop;
+    std::vector<std::string> localscan_subnets;
 };
+
+static void *s_noblock_actor_destroy(void *args)
+{    
+    zactor_destroy ((zactor_t **)args);
+    return NULL;
+}
 
 int mask_nb_bit(std::string mask)
 {
@@ -100,14 +111,14 @@ int mask_nb_bit(std::string mask)
     return res;
 }
 
-void configure_quick_scan(ftydiscovery_t *self)
+void configure_local_scan(ftydiscovery_t *self)
 {
     int s, family, prefix;
     char host[NI_MAXHOST];
     struct ifaddrs *ifaddr, *ifa;
     std::string addr, netm, addrmask;
 
-    self->quickscan_size = 0;
+    self->scan_size = 0;
     if(getifaddrs(&ifaddr) != -1)
     {
         for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
@@ -154,15 +165,16 @@ void configure_quick_scan(ftydiscovery_t *self)
 
             prefix = mask_nb_bit(netm);
                 
-            self->quickscan_size += (1 << (32 - prefix));
+            //all the subnet (1 << (32- prefix) ) minus subnet and broadcast address
+            self->scan_size += ((1 << (32 - prefix)) -2);
             
             CIDRAddress addrCidr(addr, prefix);
 
             addrmask.clear();
             addrmask.assign(addrCidr.network().toString());  
             
-            self->quickscan_subnets.push_back(std::make_pair(addrmask,(1 << (32 - prefix))));            
-            zsys_info("Quickscan subnet found for %s : %s",ifa->ifa_name, addrmask.c_str());
+            self->localscan_subnets.push_back(addrmask);            
+            zsys_info("Localscan subnet found for %s : %s",ifa->ifa_name, addrmask.c_str());
             
         }
 
@@ -226,6 +238,11 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
         zsys_error ("Failed to send ASSET_MANIPULATION message to asset-agent");
     } else {
         zsys_info ("Create message has been sent to asset-agent (rv = %i)", rv);
+        
+        name = fty_proto_aux_string (asset, "subtype", NULL);
+        if(streq (name, "ups")) self->nb_ups_discovered++;
+        else if(streq (name, "epdu")) self->nb_epdu_discovered++;
+        else if(streq (name, "sts")) self->nb_sts_discovered++;
         self->nb_discovered++;
     }
 }
@@ -289,30 +306,44 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                             zpoller_remove (poller, range_scanner);
                             zactor_destroy (&range_scanner);
                         }
-                        
-                        self->quickscan_subnets.clear();
-                        self->quickscan_size = 0;
+
+                        self->ongoing_stop = false;
+                        self->localscan_subnets.clear();
+                        self->scan_size = 0;
                         zstr_free (&range_scan_config.range);
                         range_scan_config.range = zmsg_popstr (msg);
+                        if(range_scan_config.range) {
+                            CIDRAddress addrCIDR(range_scan_config.range);
+
+                            if(addrCIDR.prefix() != -1)
+                                self->scan_size = (1 << (32 - addrCIDR.prefix())) -2;
+                            else //not a valid range
+                            {
+                                zsys_error ("Address range (%s) is not valid!", range_scan_config.range);
+                                zstr_free (&range_scan_config.range);
+                            }
+
+                        }
                     }
-                    else if (streq (cmd, "QUICKSCAN")) {
+                    else if (streq (cmd, "LOCALSCAN")) {
                         if (range_scanner) {
                             self->nb_discovered = 0;
                             zpoller_remove (poller, range_scanner);
                             zactor_destroy (&range_scanner);
                         }
                         
-                        self->quickscan_subnets.clear();
-                        self->quickscan_size = 0;
+                        self->ongoing_stop = false;
+                        self->localscan_subnets.clear();
+                        self->scan_size = 0;
                         
-                        configure_quick_scan(self);
+                        configure_local_scan(self);
                         
-                        if(self->quickscan_size > 0)
+                        if(self->scan_size > 0)
                         {
                             zstr_free (&range_scan_config.range);
                             
                             zmsg_t *zmfalse = zmsg_new ();
-                            zmsg_addstr(zmfalse, self->quickscan_subnets.back().first.c_str());                            
+                            zmsg_addstr(zmfalse, self->localscan_subnets.back().c_str());                            
                             range_scan_config.range = zmsg_popstr(zmfalse);
                             
                             self->nb_discovered = 0;                           
@@ -337,43 +368,65 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 if (cmd) {
                     // RUNSCAN
                     // <uuid>
-                    // <config> (can be empty - then default config is used)
                     // <range>
                     if (streq (cmd, "RUNSCAN")) {
-                        if (percent)
-                            zstr_free (&percent);
-                        percent = strdup ("0");
+                        
                         char *zuuid = zmsg_popstr (msg);
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
-
-                        self->quickscan_subnets.clear();
-                        self->quickscan_size = 0;
                         
-                        zstr_free (&range_scan_config.config);
-                        range_scan_config.config = zmsg_popstr (msg);
-                        if (streq (range_scan_config.config, ""))
-                            range_scan_config.config = strdup ("/etc/default/fty.cfg");
-                        zstr_free (&range_scan_config.range);
-                        range_scan_config.range = zmsg_popstr (msg);
-
-                        if (range_scan_config.range) {
-                            zsys_debug ("Range scanner requested for %s with config file %s", range_scan_config.range, range_scan_config.config);
-                            // create range scanner
-                            if (range_scanner) {
-                                zpoller_remove (poller, range_scanner);
-                                zactor_destroy (&range_scanner);
-                            }
-                            self->nb_discovered = 0;
-                            range_scanner = zactor_new (range_scan_actor, &range_scan_config);
-                            zpoller_add (poller, range_scanner);
-
-                            zmsg_addstr (reply, "OK");
+                        if (range_scanner) {
+                            if(self->ongoing_stop) 
+                                zmsg_addstr (reply, "STOPPING");
+                            else
+                                zmsg_addstr (reply, "RUNNING");
                         }
-                        else
-                            zmsg_addstr (reply, "ERROR");
+                        else {
+                            self->ongoing_stop = false;
+                            
+                            if (percent)
+                                zstr_free (&percent);
+                            percent = strdup ("0");
+
+                            self->localscan_subnets.clear();
+                            self->scan_size = 0;
+                            self->nb_percent = 0;
+
+                            zstr_free (&range_scan_config.config);
+                            //range_scan_config.config = zmsg_popstr (msg);
+                            //if (streq (range_scan_config.config, ""))
+                            range_scan_config.config = strdup ("/etc/default/fty.cfg");
+                            zstr_free (&range_scan_config.range);
+                            range_scan_config.range = zmsg_popstr (msg);
+
+                            if (range_scan_config.range) {
+                                zsys_debug ("Range scanner requested for %s with config file %s", range_scan_config.range, range_scan_config.config);
+                                // create range scanner
+                                if (range_scanner) {
+                                    zpoller_remove (poller, range_scanner);
+                                    zactor_destroy (&range_scanner);
+                                }
+                                CIDRAddress addrCIDR(range_scan_config.range);
+                                if(addrCIDR.prefix() != -1) {
+                                    self->scan_size = (1 << (32 - addrCIDR.prefix())) -2;
+                                    self->nb_discovered = 0;
+                                    range_scanner = zactor_new (range_scan_actor, &range_scan_config);
+                                    zpoller_add (poller, range_scanner);
+
+                                    zmsg_addstr (reply, "OK");
+                                }
+                                else {
+                                    zsys_error ("Address range (%s) is not valid!", range_scan_config.range);
+                                    zmsg_addstr (reply, "ERROR");
+                                }                                
+                            }
+                            else
+                                zmsg_addstr (reply, "ERROR");
+                        }
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
-                    }
+                    }                    
+                    // PROGRESS
+                    // <uuid>
                     else if (streq (cmd, "PROGRESS")) {
                         char *zuuid = zmsg_popstr (msg);
                         zmsg_t *reply = zmsg_new ();
@@ -382,75 +435,97 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                             zmsg_addstr (reply, "OK");
                             zmsg_addstr (reply, percent);
                             zmsg_addstrf(reply, "%" PRIi64, self->nb_discovered);
+                            zmsg_addstrf(reply, "%" PRIi64, self->nb_ups_discovered);
+                            zmsg_addstrf(reply, "%" PRIi64, self->nb_epdu_discovered);
+                            zmsg_addstrf(reply, "%" PRIi64, self->nb_sts_discovered);
                         }
                         else
                             zmsg_addstr (reply, "ERROR");
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
-                    }
+                    }                    
+                    // STOPSCAN
+                    // <uuid>
                     else if(streq (cmd, "STOPSCAN")) {
-                            if (range_scanner) {
-                                zpoller_remove (poller, range_scanner);
-                                zactor_destroy (&range_scanner);
-                            }
-
-                        zstr_free (&range_scan_config.config);
-                        zstr_free (&range_scan_config.range);
-
-                        self->quickscan_subnets.clear();
-                        self->quickscan_size = 0;
                         
                         char *zuuid = zmsg_popstr (msg);
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
                         zmsg_addstr (reply, "OK");
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
-
-                    }
-                    else if(streq (cmd, "QUICKSCAN")) {
                         
-                        if (percent)
-                            zstr_free (&percent);
-                        percent = strdup ("0");
+                        
+                            if (range_scanner) {
+                                zpoller_remove (poller, range_scanner);
+                                self->ongoing_stop = true;
+                                zthread_new (s_noblock_actor_destroy, &range_scanner);
+                                //zactor_destroy (&range_scanner);
+                            }
+
+                        
+                        zstr_free (&range_scan_config.config);
+                        zstr_free (&range_scan_config.range);
+
+                        self->localscan_subnets.clear();
+                        self->scan_size = 0;                        
+                    }                    
+                    // LOCALSCAN
+                    // <uuid>
+                    else if(streq (cmd, "LOCALSCAN")) {
+                        zsys_debug ("Received : LOCALSCAN Command");
                         
                         char *zuuid = zmsg_popstr (msg);
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
                         
-                        self->quickscan_subnets.clear();
-                        self->quickscan_size = 0;
-                        
-                        zstr_free (&range_scan_config.config);
-                        range_scan_config.config = zmsg_popstr (msg);
-                        if (streq (range_scan_config.config, ""))
-                            range_scan_config.config = strdup ("/etc/default/fty.cfg");
-                        
-                        configure_quick_scan(self);
-                        
-                        if(self->quickscan_size > 0)
-                        {
-                            zstr_free (&range_scan_config.range);
-                            
-                            zmsg_t *zmfalse = zmsg_new ();
-                            zmsg_addstr(zmfalse, self->quickscan_subnets.back().first.c_str());                            
-                            range_scan_config.range = zmsg_popstr(zmfalse);
-                            
-                            zsys_debug ("Range scanner requested for %s with config file %s %s", range_scan_config.range, range_scan_config.config);
-                           
-                            // create range scanner
-                            if (range_scanner) {
-                                zpoller_remove (poller, range_scanner);
-                                zactor_destroy (&range_scanner);
-                            }
-                            self->nb_discovered = 0;
-                            range_scanner = zactor_new (range_scan_actor, &range_scan_config);
-                            zpoller_add (poller, range_scanner);
-                            
-                            zmsg_destroy (&zmfalse);
-                            zmsg_addstr (reply, "OK");
+                        if (range_scanner) {
+                            if(self->ongoing_stop) 
+                                zmsg_addstr (reply, "STOPPING");
+                            else
+                                zmsg_addstr (reply, "RUNNING");
                         }
-                        else
-                            zmsg_addstr (reply, "ERROR");
+                        else {
+                            self->ongoing_stop = false;
                         
+                            if (percent)
+                                zstr_free (&percent);
+                            percent = strdup ("0");
+
+                            self->localscan_subnets.clear();
+                            self->scan_size = 0;
+                            self->nb_percent = 0;
+
+                            zstr_free (&range_scan_config.config);
+                            //range_scan_config.config = zmsg_popstr (msg);
+                            //if (streq (range_scan_config.config, ""))
+                            range_scan_config.config = strdup ("/etc/default/fty.cfg");
+
+                            configure_local_scan(self);
+
+                            if(self->scan_size > 0)
+                            {
+                                zstr_free (&range_scan_config.range);
+
+                                zmsg_t *zmfalse = zmsg_new ();
+                                zmsg_addstr(zmfalse, self->localscan_subnets.back().c_str());                            
+                                range_scan_config.range = zmsg_popstr(zmfalse);
+
+                                zsys_debug ("Range scanner requested for %s with config file %s %s", range_scan_config.range, range_scan_config.config);
+
+                                // create range scanner
+                                if (range_scanner) {
+                                    zpoller_remove (poller, range_scanner);
+                                    zactor_destroy (&range_scanner);
+                                }
+                                self->nb_discovered = 0;
+                                range_scanner = zactor_new (range_scan_actor, &range_scan_config);
+                                zpoller_add (poller, range_scanner);
+
+                                zmsg_destroy (&zmfalse);
+                                zmsg_addstr (reply, "OK");
+                            }
+                            else
+                                zmsg_addstr (reply, "ERROR");
+                        }                        
                         
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
                     }
@@ -468,17 +543,17 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 zsys_debug ("Range scanner message: %s", cmd);
                 if (cmd) {
                     if (streq (cmd, "DONE")) {
-                        if(self->quickscan_subnets.size() > 1)
+                        if(self->localscan_subnets.size() > 1)
                         {
                             //not done yet, still the others subnets to do
                             
                             //remove the done subnet
-                            self->quickscan_subnets.pop_back();
+                            self->localscan_subnets.pop_back();
                             
                             //start another one
                             zstr_free (&range_scan_config.range);
                             zmsg_t *zmfalse = zmsg_new ();
-                            zmsg_addstr(zmfalse, self->quickscan_subnets.back().first.c_str());                            
+                            zmsg_addstr(zmfalse, self->localscan_subnets.back().c_str());                            
                             range_scan_config.range = zmsg_popstr(zmfalse);
                             
                             zsys_debug ("Range scanner requested for %s with config file %s", range_scan_config.range, range_scan_config.config);
@@ -500,23 +575,19 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                     else if (streq (cmd, "FOUND")) {
                         ftydiscovery_create_asset (self, &msg);
                     }
-                    else if (streq (cmd, "PROGRESS")) {                            
-                        if (percent)
+                    else if (streq (cmd, "PROGRESS")) {
+                        self->nb_percent++;                        
+                        
+                        std::string percentstr = std::to_string( self->nb_percent*100 / self->scan_size);
+                        
+                        if(percent)
                             zstr_free (&percent);
                         
-                        percent = zmsg_popstr (msg);
-                        
-                        if(self->quickscan_subnets.size() > 0)
-                        {
-                            std::string percentstr = std::to_string( (atoi(percent) * self->quickscan_subnets.back().second) / self->quickscan_size);
-                                 
-                            zstr_free (&percent);
-                            
-                            zmsg_t *zmfalse = zmsg_new ();
-                            zmsg_addstr(zmfalse, percentstr.c_str());                            
-                            percent = zmsg_popstr(zmfalse);     
-                            zmsg_destroy(&zmfalse);
-                        }   
+                        zsys_debug("percent here : %s with %i and %i", percentstr.c_str(), self->nb_percent, self->scan_size);
+                        zmsg_t *zmfalse = zmsg_new ();
+                        zmsg_addstr(zmfalse, percentstr.c_str());                            
+                        percent = zmsg_popstr(zmfalse);     
+                        zmsg_destroy(&zmfalse);
                     }
                     zstr_free (&cmd);
                 }
@@ -531,6 +602,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 // create range scanner
                 // TODO: send list of IPs to skip
                 self->nb_discovered = 0;
+                self->nb_percent = 0;
                 if(percent)
                     zstr_free (&percent);
                 range_scanner = zactor_new (range_scan_actor, &range_scan_config);
@@ -561,7 +633,8 @@ ftydiscovery_new ()
     self->scanner = NULL;
     self->assets = assets_new ();
     self->nb_discovered = 0;
-    self->quickscan_size = 0;
+    self->scan_size = 0;
+    self->ongoing_stop = false;
     return self;
 }
 
