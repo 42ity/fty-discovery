@@ -48,7 +48,7 @@ int main (int argc, char *argv [])
             puts ("  --help / -h            this information");
             puts ("  --agent / -a           stay running, listen to rest api commands");
             puts ("  --range / -r           scan this range (192.168.1.0/24 format). If -a and -r are not");
-            puts ("                         present, scan of attached networks is performed (quickscan)");
+            puts ("                         present, scan of attached networks is performed (localscan)");
             puts ("  --config / -c          config file [/etc/default/fty.cfg]");
             return 0;
         }
@@ -96,7 +96,7 @@ int main (int argc, char *argv [])
     if (range) zstr_sendx (discovery, "SCAN", range, NULL);
     else if(!agent)
     {
-        zstr_sendx(discovery, "QUICKSCAN", NULL);
+        zstr_sendx(discovery, "LOCALSCAN", NULL);
     }
 
     // main loop

@@ -163,8 +163,7 @@ nut_scan_snmp(
                 args,
                 name,
                 out);
-
-        if (r != -1)
+        
             return r;
     }
 
