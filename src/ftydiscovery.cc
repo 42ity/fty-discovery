@@ -583,7 +583,6 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         if(percent)
                             zstr_free (&percent);
                         
-                        zsys_debug("percent here : %s with %i and %i", percentstr.c_str(), self->nb_percent, self->scan_size);
                         zmsg_t *zmfalse = zmsg_new ();
                         zmsg_addstr(zmfalse, percentstr.c_str());                            
                         percent = zmsg_popstr(zmfalse);     
