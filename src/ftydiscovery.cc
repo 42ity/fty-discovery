@@ -49,12 +49,6 @@ struct _ftydiscovery_t {
     std::vector<std::string> localscan_subnets;
 };
 
-static void *s_noblock_actor_destroy(void *args)
-{    
-    zactor_destroy ((zactor_t **)args);
-    return NULL;
-}
-
 int mask_nb_bit(std::string mask)
 {
     size_t pos;
@@ -454,11 +448,9 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
                         
                         
-                            if (range_scanner) {
-                                zpoller_remove (poller, range_scanner);
+                            if (range_scanner && !self->ongoing_stop) {
                                 self->ongoing_stop = true;
-                                zthread_new (s_noblock_actor_destroy, &range_scanner);
-                                //zactor_destroy (&range_scanner);
+                                zstr_send(range_scanner,"$TERM");
                             }
 
                         
@@ -543,7 +535,11 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                 zsys_debug ("Range scanner message: %s", cmd);
                 if (cmd) {
                     if (streq (cmd, "DONE")) {
-                        if(self->localscan_subnets.size() > 1)
+                        if (self->ongoing_stop && range_scanner) {
+                                zpoller_remove (poller, range_scanner);
+                                zactor_destroy (&range_scanner);
+                        }
+                        else if(self->localscan_subnets.size() > 1)
                         {
                             //not done yet, still the others subnets to do
                             
