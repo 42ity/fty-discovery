@@ -27,6 +27,7 @@
 */
 
 #include <ctime>
+#include <pthread.h>
 #include <vector>
 #include <sys/types.h>
 #include <ifaddrs.h>
@@ -261,6 +262,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
     range_scan_config.config = NULL;
     range_scan_config.range = NULL;
     zmsg_t *range_stack = zmsg_new ();
+    pthread_t thread_stop;
     char *percent = NULL;
 
     while (!zsys_interrupted) {
@@ -457,8 +459,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                             if (range_scanner) {
                                 zpoller_remove (poller, range_scanner);
                                 self->ongoing_stop = true;
-                                zthread_new (s_noblock_actor_destroy, &range_scanner);
-                                //zactor_destroy (&range_scanner);
+                                pthread_create (&thread_stop, NULL, s_noblock_actor_destroy, (void *) &range_scanner);
                             }
 
                         
