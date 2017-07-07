@@ -28,6 +28,8 @@
 %else
 %define DRAFTS no
 %endif
+
+
 Name:           fty-discovery
 Version:        1.0.0
 Release:        1
@@ -100,13 +102,23 @@ This package contains development files for fty-discovery: 42ity service for dis
 %{_mandir}/man3/*
 %{_mandir}/man7/*
 
+
 %prep
+#FIXME: %{error:...} did not worked for me
+%if %{with python_cffi}
+%if %{without drafts}
+echo "FATAL: python_cffi not yet supported w/o drafts"
+exit 1
+%endif
+%endif
+
 %setup -q
 
 %build
-sh autogen.sh
+[ -f autogen.sh ] && sh autogen.sh
 %{configure} --enable-drafts=%{DRAFTS} --with-systemd-units
 make %{_smp_mflags}
+
 
 %install
 make install DESTDIR=%{buildroot} %{?_smp_mflags}
@@ -114,6 +126,7 @@ make install DESTDIR=%{buildroot} %{?_smp_mflags}
 # remove static libraries
 find %{buildroot} -name '*.a' | xargs rm -f
 find %{buildroot} -name '*.la' | xargs rm -f
+
 
 %files
 %defattr(-,root,root)
