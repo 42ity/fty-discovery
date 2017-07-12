@@ -28,6 +28,7 @@ extern "C" {
 
 typedef struct _range_scan_args_t {
     char *range;
+    char *range_dest;
     char *config;
 } range_scan_args_t;
 
