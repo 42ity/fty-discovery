@@ -150,8 +150,20 @@ range_scan_actor (zsock_t *pipe, void *args)
         config = zconfig_new ("root", NULL);
     }
     CIDRList list;
-    list.add (range_scan_range (self));
     CIDRAddress addr;
+    CIDRAddress addrDest;
+    
+    if(!params->range_dest) {
+        CIDRAddress addr_network(range_scan_range (self));
+        list.add(addr_network.network());
+    }
+    else {    
+        //real range and not subnetwork, need to scan all ips
+       list.add (range_scan_range (self));  
+       CIDRAddress addrStart(range_scan_range (self));
+       list.add(addrStart.host());
+       addrDest = CIDRAddress(params->range_dest); 
+    }
 
     zactor_t *device_actor = zactor_new (device_scan_actor, config);
     zpoller_t *poller = zpoller_new (pipe, device_actor, NULL);
@@ -196,6 +208,8 @@ range_scan_actor (zsock_t *pipe, void *args)
                 zstr_send (pipe, "PROGRESS");
                 //zstr_sendf (pipe, "%" PRId32, range_scan_progress (self));
                 if (dosomething) {
+                    if(addrDest.valid() && (addr > addrDest))
+                        break;
                     zsys_debug ("scanning %s", addr.toString().c_str());
                     zstr_sendx (device_actor, "SCAN", addr.toString().c_str(), NULL);
                 } else {
