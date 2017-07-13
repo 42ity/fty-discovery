@@ -153,13 +153,11 @@ range_scan_actor (zsock_t *pipe, void *args)
     CIDRAddress addr;
     CIDRAddress addrDest;
     
-    if(!params->range_dest)
-    {
+    if(!params->range_dest) {
         CIDRAddress addr_network(range_scan_range (self));
         list.add(addr_network.network());
     }
-    else
-    {    
+    else {    
         //real range and not subnetwork, need to scan all ips
        list.add (range_scan_range (self));  
        CIDRAddress addrStart(range_scan_range (self));

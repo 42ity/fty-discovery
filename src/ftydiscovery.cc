@@ -65,8 +65,8 @@ bool add_multiscan(std::string scan, ftydiscovery_t *self)
             self->localscan_subscan.push_back(scan);
             zsys_debug("Add subnet %s to multiscan", scan.c_str());
         }
-        else //not a valid range
-        {
+        else {
+            //not a valid range
             zsys_error ("Address subnet (%s) is not valid!", scan.c_str());
             return false;
         }
@@ -204,10 +204,8 @@ void configure_local_scan(ftydiscovery_t *self)
     std::string addr, netm, addrmask;
 
     self->scan_size = 0;
-    if(getifaddrs(&ifaddr) != -1)
-    {
-        for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
-        {
+    if(getifaddrs(&ifaddr) != -1) {
+        for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
             if(streq(ifa->ifa_name,"lo"))
                 continue;
             if(ifa->ifa_addr == NULL)
@@ -218,16 +216,14 @@ void configure_local_scan(ftydiscovery_t *self)
                 continue;
 
             s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-            if(s != 0)
-            {
+            if(s != 0) {
                 zsys_debug("IP address parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
                 continue;
             }
             else
                 addr.assign(host);    
 
-            if(ifa->ifa_netmask == NULL)
-            {
+            if(ifa->ifa_netmask == NULL) {
                 zsys_debug("No netmask found for %s", ifa->ifa_name);
                 continue;
             }
@@ -237,8 +233,7 @@ void configure_local_scan(ftydiscovery_t *self)
                 continue;
 
             s = getnameinfo(ifa->ifa_netmask, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-            if(s != 0)
-            {
+            if(s != 0) {
                 zsys_debug("Netmask parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
                 continue;
             }
@@ -413,8 +408,8 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 else //31/32 prefix special management
                                     self->scan_size = (1 << (32 - addrCIDR.prefix()));
                             }
-                            else //not a valid range
-                            {
+                            else {
+                                //not a valid range
                                 zsys_error ("Address range (%s) is not valid!", range_scan_config.range);
                                 zstr_free (&range_scan_config.range);
                             }
@@ -434,8 +429,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         
                         configure_local_scan(self);
                         
-                        if(self->scan_size > 0)
-                        {
+                        if(self->scan_size > 0) {
                             zstr_free (&range_scan_config.range);
                             zstr_free (&range_scan_config.range_dest);
                             
@@ -600,8 +594,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
 
                             configure_local_scan(self);
 
-                            if(self->scan_size > 0)
-                            {
+                            if(self->scan_size > 0) {
                                 zstr_free (&range_scan_config.range);
                                 zstr_free (&range_scan_config.range_dest);
 
@@ -663,13 +656,12 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                             int nbScan = atoi ( multiscan_value);
                             zstr_free(&multiscan_value);
                             bool multiscan_valid = true;
-                            for(int i=0; i < nbScan; i++)
-                            {
+                            for(int i=0; i < nbScan; i++) {
                                 multiscan_value = zmsg_popstr(msg);
                                 if(multiscan_value) {
                                     std::string str(multiscan_value);
                                     zstr_free(&multiscan_value);
-                                    if(!add_multiscan(str, self)){
+                                    if(!add_multiscan(str, self)) {
                                        //ERROR 
                                         multiscan_valid = false;
                                         break;
@@ -682,8 +674,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 }
                             }
                             
-                            if(multiscan_valid && self->scan_size > 0)
-                            {
+                            if(multiscan_valid && self->scan_size > 0) {
                                 zstr_free (&range_scan_config.range);
                                 zstr_free (&range_scan_config.range_dest);
 
@@ -744,8 +735,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                zpoller_remove (poller, range_scanner);
                                zactor_destroy (&range_scanner);
                         }
-                        else if(self->localscan_subscan.size() > 1)
-                        {
+                        else if(self->localscan_subscan.size() > 1) {
                             //not done yet, still the others subnets to do
                             
                             //remove the done subnet
