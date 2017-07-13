@@ -21,7 +21,7 @@ To run fty-discovery project:
 ```
 The available options are:
 * -v for verbose mode;
-* -r [range] to scan the range (192.168.1.0/24 format);
+* -r [subnet] to scan the subnet (192.168.1.0/24 format);
 * -c [file] to define a config file;
 * -a for agent mode.
 
@@ -38,19 +38,20 @@ systemctl start fty-discovery
 ### Mailbox requests
 
 It is possible to request the agent discovery for:
-* launch a range scan;
+* launch a simple scan;
 * launch a localscan (scan all of attached networks/subnetworks);
+* launch a multiscan
 * get the progression of the scan;
 * stop a scan.
 
-#### Launch a range scan
+#### Launch a simple scan
 
 The USER peer sends the following messages using MAILBOX SEND to fty-discovery peer:
-* RUNSCAN/\<range>
+* RUNSCAN/\<subnet>
 
 where 
 * '/' indicates a multipart string message
-* 'range' is the range on wich the scan will be launch. It must be on the '192.168.1.0/24' format.
+* 'subnet' is the subnetwork on wich the scan will be launch. It must be on the '192.168.1.0/24' format.
 
 The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
 * OK
@@ -75,6 +76,26 @@ The fty-discovery peer MUST respond with one of the messages back to USER peer u
 
 RUNNING reply  means an other scan curently running.
 STOPPING reply means an other scan is in currently stopping.
+
+### Launch a multiscan
+
+The USER sends the following messages using MAILBOX SEND to fty-discovery peer:
+* MULTISCAN/\<nb_of_scan>/\<scan1>/\<scan2>/...
+
+where
+* '/' indicates a multipart string message
+* 'nb_of_scan' is the number of scan who will have to be performed
+* 'scanX' one of the scan to be performed. It can be on the '192.168.1.0/24' format in order to scan a network or ont the '192.168.1.12-192.168.1.18' format to scan a range.
+
+The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
+* OK
+* ERROR
+* RUNNING
+* STOPPING
+
+RUNNING reply  means an other scan curently running.
+STOPPING reply means an other scan is in currently stopping.
+ERROR can be reply if there is less 'scanX' than 'nb_of_scan' or if a 'scanX' is empty or misformed.
 
 ### Get the progression of the current scan
 
