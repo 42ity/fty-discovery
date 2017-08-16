@@ -25,6 +25,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+    
+#define TYPE_LOCALSCAN 1
+#define TYPE_RANGESCAN 2
 
 //  @interface
 //  Create a new ftydiscovery
