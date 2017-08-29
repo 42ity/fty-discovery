@@ -159,15 +159,36 @@ std::string form_config_reply(configuration_scan_t* config) {
         else
             si.addMember("scan_type") <<= "rangescan";
 
-        cxxtools::SerializationInfo& si_liste = si.addMember("scans");
-        si_liste.setCategory(cxxtools::SerializationInfo::Array);
+        cxxtools::SerializationInfo& si_multiscan = si.addMember("rangescan");
+        cxxtools::SerializationInfo& si_liste1 = si_multiscan.addMember("subnet");
+        si_liste1.setCategory(cxxtools::SerializationInfo::Array);
+        std::vector<std::string> listsubnet, listfromto;
         for(unsigned int i=0; i < config->scan_list.size(); i++) {
             std::string scan = config->scan_list.at(i);
-            cxxtools::SerializationInfo& si_scan = si_liste.addMember("");
-            if(scan.find("-") != std::string::npos)
-                si_scan.addMember("from_to") <<= scan;
-            else
-                si_scan.addMember("subnet") <<= scan;
+            size_t pos = scan.find("-");
+            if(pos != std::string::npos) {    
+                std::string rangeStart = scan.substr(0, pos);
+                std::string rangeEnd = scan.substr(pos+1);
+                rangeStart = rangeStart.substr(0, rangeStart.find("/"));
+                rangeEnd = rangeEnd.substr(0, rangeEnd.find("/"));
+                scan = rangeStart;
+                scan.append("-");
+                scan.append(rangeEnd);
+                listfromto.push_back(scan);                
+            }
+            else {
+                listsubnet.push_back(scan);
+            }
+        }
+        
+        for(unsigned int i=0; i < listsubnet.size(); i++) {
+            si_liste1.addMember("") <<= listsubnet.at(i);
+        }
+        
+        cxxtools::SerializationInfo& si_liste2 = si_multiscan.addMember("from_to");
+        si_liste2.setCategory(cxxtools::SerializationInfo::Array);
+        for(unsigned int i=0; i < listfromto.size(); i++) {
+            si_liste2.addMember("") <<= listfromto.at(i);
         }
 
         // serialize to json
@@ -358,7 +379,9 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
 
     zsys_info ("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
     fty_proto_set_operation (asset, "create");
-    zmsg_t *msg = fty_proto_encode (&asset);
+    
+    fty_proto_t *assetDup = fty_proto_dup(asset); 
+    zmsg_t *msg = fty_proto_encode (&assetDup);
     zsys_debug ("about to send create message");
     int rv = mlm_client_sendto (self->mlm, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
     if (rv == -1) {
@@ -372,6 +395,7 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
         else if(streq (name, "sts")) self->nb_sts_discovered++;
         self->nb_discovered++;
     }
+    fty_proto_destroy(&asset);
 }
 
 //  --------------------------------------------------------------------------
@@ -385,7 +409,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
     zactor_t *range_scanner = NULL;
     zsock_signal (pipe, 0);
     range_scan_args_t range_scan_config;
-    range_scan_config.config = strdup ("/etc/default/fty.cfg");
+    range_scan_config.config = strdup ("/etc/fty-discovery/fty-discovery.cfg");
     range_scan_config.range = NULL;
     range_scan_config.range_dest = NULL;
     configuration_scan_t configuration_scan;

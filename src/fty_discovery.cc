@@ -37,7 +37,7 @@ int main (int argc, char *argv [])
     bool verbose = false;
     bool agent = false;
     const char *range = NULL;
-    const char *config = "/etc/default/fty.cfg";
+    const char *config = "/etc/fty-discovery/fty-discovery.cfg";
 
     int argn;
     for (argn = 1; argn < argc; argn++) {
@@ -49,7 +49,7 @@ int main (int argc, char *argv [])
             puts ("  --agent / -a           stay running, listen to rest api commands");
             puts ("  --range / -r           scan this range (192.168.1.0/24 format). If -a and -r are not");
             puts ("                         present, scan of attached networks is performed (localscan)");
-            puts ("  --config / -c          config file [/etc/default/fty.cfg]");
+            puts ("  --config / -c          config file [/etc/fty-discovery/fty-discovery.cfg]");
             return 0;
         }
         else if (streq (argv [argn], "--verbose") ||  streq (argv [argn], "-v")) {
