@@ -27,7 +27,13 @@ extern "C" {
 #endif
     
 #define TYPE_LOCALSCAN 1
-#define TYPE_RANGESCAN 2
+#define TYPE_MULTISCAN 2
+#define TYPE_IPSCAN    3
+    
+#define STATUS_STOPPED  1
+#define STATUS_FINISHED 2
+#define STATUS_PROGESS  3
+    
 
 //  @interface
 //  Create a new ftydiscovery
