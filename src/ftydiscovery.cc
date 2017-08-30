@@ -47,6 +47,7 @@ struct _ftydiscovery_t {
     int64_t nb_ups_discovered;
     int64_t nb_epdu_discovered;
     int64_t nb_sts_discovered;
+    int32_t status_scan;
     bool ongoing_stop;
     std::vector<std::string> localscan_subscan;
 };
@@ -56,6 +57,25 @@ typedef struct _configuration_scan_t {
     int64_t scan_size;
     uint8_t type;    
 } configuration_scan_t;
+
+bool compute_ip_list(std::vector<std::string>* listIp)
+{
+    for(unsigned int iPosIp = 0; iPosIp < listIp->size(); iPosIp++) {
+        std::string ips = listIp->at(iPosIp);
+        CIDRAddress addrCIDR(ips, 32);
+        if(addrCIDR.prefix() != -1) {
+            zsys_debug("valid ip %s", ips.c_str());
+            listIp->at(iPosIp) = addrCIDR.toString();
+        }
+        else {
+            //not a valid address
+            zsys_error ("Address (%s) is not valid!", ips.c_str());
+            return false;            
+        }
+    }
+    
+    return true;
+}
 
 bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
 {
@@ -151,20 +171,52 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
     return true;
 }
 
-std::string form_config_reply(configuration_scan_t* config) {
+std::string form_config_reply(const char* configFile) {
     try {
+        
+        zconfig_t *config = zconfig_load (configFile);
+        if (!config) {
+            zsys_error ("failed to load config file %s", configFile);
+            config = zconfig_new ("root", NULL);
+        }
+        
+        char* strType = zconfig_get(config, "/discovery/type", "localscan");
+                        
+        std::vector<std::string> scan_list, listIp;
+        
+        zconfig_t *section = zconfig_locate (config, "/discovery/scans");
+        if(section) {
+            zconfig_t *item = zconfig_child (section);
+            while (item) {
+                //FIXME : can't delete item in cfg for now...
+                if(streq(zconfig_value(item), ""))
+                    break;
+                scan_list.push_back (zconfig_value (item));
+                item = zconfig_next (item);                
+            }
+        }
+        
+        section = zconfig_locate (config, "/discovery/ips");
+        if(section) {
+            zconfig_t *item = zconfig_child (section);
+            while (item) {
+                //FIXME : can't delete item in cfg for now...
+                if(streq(zconfig_value(item), ""))
+                    break;
+                listIp.push_back (zconfig_value (item));
+                item = zconfig_next (item);                
+            }
+        }
+        
         cxxtools::SerializationInfo si;
-        if(config->type == TYPE_LOCALSCAN)
-            si.addMember("scan_type") <<= "localscan";
-        else
-            si.addMember("scan_type") <<= "rangescan";
-
-        cxxtools::SerializationInfo& si_multiscan = si.addMember("rangescan");
+        si.addMember("scan_type") <<= strType;
+        
+        cxxtools::SerializationInfo& si_multiscan = si.addMember("multiscan");
         cxxtools::SerializationInfo& si_liste1 = si_multiscan.addMember("subnet");
         si_liste1.setCategory(cxxtools::SerializationInfo::Array);
         std::vector<std::string> listsubnet, listfromto;
-        for(unsigned int i=0; i < config->scan_list.size(); i++) {
-            std::string scan = config->scan_list.at(i);
+        for(unsigned int i=0; i < scan_list.size(); i++) {
+            std::string scan = scan_list.at(i);
             size_t pos = scan.find("-");
             if(pos != std::string::npos) {    
                 std::string rangeStart = scan.substr(0, pos);
@@ -189,6 +241,12 @@ std::string form_config_reply(configuration_scan_t* config) {
         si_liste2.setCategory(cxxtools::SerializationInfo::Array);
         for(unsigned int i=0; i < listfromto.size(); i++) {
             si_liste2.addMember("") <<= listfromto.at(i);
+        }
+        
+        cxxtools::SerializationInfo& si_listip = si.addMember("ips");
+        si_listip.setCategory(cxxtools::SerializationInfo::Array);
+        for(unsigned int i=0; i < listIp.size(); i++) {
+            si_listip.addMember("") <<= listIp.at(i).substr(0, listIp.at(i).find("/"));            
         }
 
         // serialize to json
@@ -462,7 +520,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         
                         char* strType = zconfig_get(config, "/discovery/type", "localscan");
                         
-                        std::vector<std::string> list_scans;
+                        std::vector<std::string> list_scans, listIp;
                         bool valid = true;
                         zconfig_t *section = zconfig_locate (config, "/discovery/scans");
                         if (section) {
@@ -475,20 +533,42 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 item = zconfig_next (item);
                             }
                         }
-                        if (list_scans.empty () && streq(strType, "rangescan")) {
+                        section = zconfig_locate (config, "/discovery/ips");
+                        if (section) {
+                            zconfig_t *item = zconfig_child (section);
+                            while (item) {
+                                //FIXME : can't delete item in cfg for now...
+                                if(streq(zconfig_value(item), ""))
+                                    break;
+                                listIp.push_back( zconfig_value(item));
+                                item = zconfig_next (item);
+                            }
+                        }
+                        if (list_scans.empty () && streq(strType, "multiscan")) {
                             valid = false;
                              zsys_error ("error in config file %s : can't have rangescan without range", range_scan_config.config);
+                        } else if (listIp.empty() && streq(strType, "ipscan")) {
+                            valid = false;
+                            zsys_error ("error in config file %s : can't have ipscan without ip list", range_scan_config.config);
                         } else {
                             int64_t sizeTemp = 0;
-                            if(compute_scans_size(&list_scans, &sizeTemp)) {
+                            if(compute_scans_size(&list_scans, &sizeTemp) && compute_ip_list(&listIp)) {
                                 //ok, validate the config
-                                if(streq(strType, "rangescan"))
-                                    configuration_scan.type = TYPE_RANGESCAN;
-                                else
+                                if(streq(strType, "multiscan"))
+                                    configuration_scan.type = TYPE_MULTISCAN;
+                                else if (streq(strType, "localscan"))
                                     configuration_scan.type = TYPE_LOCALSCAN;
+                                else
+                                    configuration_scan.type = TYPE_IPSCAN;
                                 configuration_scan.scan_size = sizeTemp;
                                 configuration_scan.scan_list.clear();
                                 configuration_scan.scan_list = list_scans;
+                                
+                                if(configuration_scan.type == TYPE_IPSCAN) {                                    
+                                    configuration_scan.scan_size = listIp.size();
+                                    configuration_scan.scan_list.clear();
+                                    configuration_scan.scan_list = listIp;
+                                }
                                 
                             } else {
                                 valid = false;
@@ -582,7 +662,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         
                         bool config_valid = true;
                         char *scanType = zmsg_popstr (msg);
-                        if(streq(scanType, "rangescan") || streq(scanType, "localscan")) {
+                        if(streq(scanType, "multiscan") || streq(scanType, "localscan") || streq(scanType, "ipscan")) {
                             char *scanNumber = zmsg_popstr (msg);
                             char *configValue;
                             int nbScan = atoi ( scanNumber);
@@ -602,16 +682,42 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                     break;
                                 }
                             }
+                            //IPs list
+                            scanNumber = zmsg_popstr (msg);
+                            nbScan = atoi (scanNumber);
+                            std::vector<std::string> listIp;
+                            zstr_free(&scanNumber);
+                            for(int i=0; i < nbScan; i++) {
+                                configValue = zmsg_popstr(msg);
+                                if(configValue) {
+                                    std::string str(configValue);
+                                    listIp.push_back(str);
+                                    zstr_free(&configValue);
+                                }
+                                else {
+                                    zsys_error("error in config : error in IPs. Not enough IPs.");
+                                    config_valid = false;
+                                    break;
+                                }
+                            }
 
-                            if(config_valid && compute_scans_size(&list_scans, &sizeTemp)) {
+                            if(config_valid && compute_scans_size(&list_scans, &sizeTemp) && compute_ip_list(&listIp)) {
                                 //ok, validate the config
-                                if(streq(scanType, "rangescan"))
-                                    configuration_scan.type = TYPE_RANGESCAN;
-                                else
+                                if(streq(scanType, "multiscan"))
+                                    configuration_scan.type = TYPE_MULTISCAN;
+                                else if(streq(scanType, "localscan"))
                                     configuration_scan.type = TYPE_LOCALSCAN;
+                                else
+                                    configuration_scan.type = TYPE_IPSCAN;
                                 configuration_scan.scan_size = sizeTemp;
                                 configuration_scan.scan_list.clear();
                                 configuration_scan.scan_list = list_scans;
+                                
+                                if(configuration_scan.type == TYPE_IPSCAN) {                                    
+                                    configuration_scan.scan_size = listIp.size();
+                                    configuration_scan.scan_list.clear();
+                                    configuration_scan.scan_list = listIp;
+                                }
                                 
                         
                                 if(config_valid) {
@@ -637,6 +743,18 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                         }
                                     }
                                     
+                                    section = zconfig_locate (config, "/discovery/ips");
+                                    if (section) {
+                                        zconfig_t *item = zconfig_child (section);
+                                        while (item) {
+                                            //FIXME : can't delete item in cfg for now...
+                                            if(streq(zconfig_value(item), ""))
+                                                break;
+                                            zconfig_set_value(item, NULL);
+                                            item = zconfig_next(item);
+                                        }
+                                    }
+                                    
                                     //add new informations
                                     zconfig_put (config, "/discovery/type", scanType);
                                     std::ostringstream oss;
@@ -646,7 +764,15 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                         zconfig_put(config, oss.str().c_str(), list_scans.at(i).c_str());
                                     }
                                     
+                                    for(unsigned int i=0; i < listIp.size(); i++) {
+                                        oss.str("");
+                                        oss << "/discovery/ips/ipNumber" << i;
+                                        zconfig_put(config, oss.str().c_str(), listIp.at(i).c_str());
+                                    }
+                                    
                                     section = zconfig_locate (config, "/discovery/scans");
+                                    zconfig_set_value(section,NULL);
+                                    section = zconfig_locate (config, "/discovery/ips");
                                     zconfig_set_value(section,NULL);
                                     section = zconfig_locate (config, "/discovery");
                                     zconfig_set_value(section,NULL);
@@ -681,7 +807,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
                         
-                        std::string content_reply = form_config_reply(&configuration_scan);
+                        std::string content_reply = form_config_reply(range_scan_config.config);
                         zmsg_addstr (reply, "OK");
                         zmsg_addstr (reply, content_reply.c_str());
                         
@@ -734,6 +860,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                     self->nb_discovered = 0;
                                     range_scanner = zactor_new (range_scan_actor, &range_scan_config);
                                     zpoller_add (poller, range_scanner);
+                                    self->status_scan = STATUS_PROGESS;
 
                                     zmsg_destroy (&zmfalse);
                                     zmsg_addstr (reply, "OK");
@@ -741,7 +868,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 else
                                     zmsg_addstr (reply, "ERROR");
                                 
-                            } else if(configuration_scan.type == TYPE_RANGESCAN) {
+                            } else if((configuration_scan.type == TYPE_MULTISCAN) || (configuration_scan.type == TYPE_IPSCAN)) {
                                 //Launch rangeScan
                                 self->localscan_subscan = configuration_scan.scan_list;
                                 self->scan_size = configuration_scan.scan_size;
@@ -776,6 +903,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                                 range_scanner = zactor_new (range_scan_actor, &range_scan_config);
                                 zpoller_add (poller, range_scanner);
 
+                                self->status_scan = STATUS_PROGESS;
                                 zmsg_destroy (&zmfalse);
                                 zmsg_addstr (reply, "OK");
                             } else {
@@ -792,14 +920,17 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zmsg_addstr (reply, zuuid);
                         if (percent) {
                             zmsg_addstr (reply, "OK");
+                            zmsg_addstrf (reply, "%" PRIi32, self->status_scan);
                             zmsg_addstr (reply, percent);
                             zmsg_addstrf(reply, "%" PRIi64, self->nb_discovered);
                             zmsg_addstrf(reply, "%" PRIi64, self->nb_ups_discovered);
                             zmsg_addstrf(reply, "%" PRIi64, self->nb_epdu_discovered);
                             zmsg_addstrf(reply, "%" PRIi64, self->nb_sts_discovered);
                         }
-                        else
-                            zmsg_addstr (reply, "ERROR");
+                        else {
+                            zmsg_addstr (reply, "OK");
+                            zmsg_addstrf (reply, "%" PRIi32, -1);
+                        }
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
                     }                    
                     // STOPSCAN
@@ -810,10 +941,12 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                         zmsg_t *reply = zmsg_new ();
                         zmsg_addstr (reply, zuuid);
                         zmsg_addstr (reply, "OK");
+                         
                         mlm_client_sendto (self->mlm, mlm_client_sender (self->mlm), mlm_client_subject (self->mlm), mlm_client_tracker (self->mlm), 1000, &reply);
                         
                         
                             if (range_scanner && !self->ongoing_stop) {
+                                self->status_scan = STATUS_STOPPED;
                                 self->ongoing_stop = true;
                                 zstr_send(range_scanner,"$TERM");
                             }
@@ -889,6 +1022,7 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
                             if(!self->localscan_subscan.empty())
                                 self->localscan_subscan.clear();
                             
+                            self->status_scan = STATUS_FINISHED;
                             zstr_free (&range_scan_config.range);
                             zstr_free (&range_scan_config.range_dest);
                             
@@ -959,6 +1093,7 @@ ftydiscovery_new ()
     self->nb_discovered = 0;
     self->scan_size = 0;
     self->ongoing_stop = false;
+    self->status_scan = -1;
     return self;
 }
 
