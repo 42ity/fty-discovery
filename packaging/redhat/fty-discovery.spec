@@ -1,21 +1,21 @@
 #
 #    fty-discovery - 42ity service for discovering devices
 #
-#    Copyright (C) 2014 - 2017 Eaton                                        
-#                                                                           
-#    This program is free software; you can redistribute it and/or modify   
-#    it under the terms of the GNU General Public License as published by   
-#    the Free Software Foundation; either version 2 of the License, or      
-#    (at your option) any later version.                                    
-#                                                                           
-#    This program is distributed in the hope that it will be useful,        
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-#    GNU General Public License for more details.                           
-#                                                                           
+#    Copyright (C) 2014 - 2017 Eaton
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
 #    You should have received a copy of the GNU General Public License along
 #    with this program; if not, write to the Free Software Foundation, Inc.,
-#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
 # To build with draft APIs, use "--with drafts" in rpmbuild for local builds or add
@@ -28,8 +28,6 @@
 %else
 %define DRAFTS no
 %endif
-
-
 Name:           fty-discovery
 Version:        1.0.0
 Release:        1
@@ -102,23 +100,14 @@ This package contains development files for fty-discovery: 42ity service for dis
 %{_mandir}/man3/*
 %{_mandir}/man7/*
 
-
 %prep
-#FIXME: %{error:...} did not worked for me
-%if %{with python_cffi}
-%if %{without drafts}
-echo "FATAL: python_cffi not yet supported w/o drafts"
-exit 1
-%endif
-%endif
 
 %setup -q
 
 %build
-[ -f autogen.sh ] && sh autogen.sh
+sh autogen.sh
 %{configure} --enable-drafts=%{DRAFTS} --with-systemd-units
 make %{_smp_mflags}
-
 
 %install
 make install DESTDIR=%{buildroot} %{?_smp_mflags}
@@ -126,7 +115,6 @@ make install DESTDIR=%{buildroot} %{?_smp_mflags}
 # remove static libraries
 find %{buildroot} -name '*.a' | xargs rm -f
 find %{buildroot} -name '*.la' | xargs rm -f
-
 
 %files
 %defattr(-,root,root)

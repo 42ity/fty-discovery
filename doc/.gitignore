@@ -11,8 +11,8 @@
 *.xml7
 
 # Ignore the source doc texts generated from program sources
-ftydiscovery.txt
-ftydiscovery.doc
+fty_discovery_server.txt
+fty_discovery_server.doc
 fty-discovery.txt
 fty-discovery.doc
 

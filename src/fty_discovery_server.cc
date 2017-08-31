@@ -1,5 +1,5 @@
 /*  =========================================================================
-    ftydiscovery - Manages discovery requests, provides feedback
+    fty_discovery_server - Manages discovery requests, provides feedback
 
     Copyright (C) 2014 - 2017 Eaton
 
@@ -21,7 +21,7 @@
 
 /*
 @header
-    ftydiscovery - Manages discovery requests, provides feedback
+    fty_discovery_server - Manages discovery requests, provides feedback
 @discuss
 @end
 */
@@ -37,7 +37,7 @@
 
 //  Structure of our class
 
-struct _ftydiscovery_t {
+struct _fty_discovery_server_t {
     mlm_client_t *mlm;
     zactor_t *scanner;
     assets_t *assets;
@@ -318,7 +318,7 @@ int mask_nb_bit(std::string mask)
     return res;
 }
 
-void configure_local_scan(ftydiscovery_t *self)
+void configure_local_scan(fty_discovery_server_t *self)
 {
     int s, family, prefix;
     char host[NI_MAXHOST];
@@ -392,7 +392,7 @@ void configure_local_scan(ftydiscovery_t *self)
 //  --------------------------------------------------------------------------
 //  send create asses if it is new
 void
-ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
+ftydiscovery_create_asset (fty_discovery_server_t *self, zmsg_t **msg_p)
 {
     if (!self || !msg_p) return;
     if (!is_fty_proto (*msg_p)) return;
@@ -457,12 +457,12 @@ ftydiscovery_create_asset (ftydiscovery_t *self, zmsg_t **msg_p)
 }
 
 //  --------------------------------------------------------------------------
-//  ftydiscovery actor
+//  fty_discovery_server actor
 
 void
-ftydiscovery_actor (zsock_t *pipe, void *args)
+fty_discovery_server (zsock_t *pipe, void *args)
 {
-    ftydiscovery_t *self = ftydiscovery_new();
+    fty_discovery_server_t *self = fty_discovery_server_new();
     zpoller_t *poller = zpoller_new (pipe, mlm_client_msgpipe (self->mlm), NULL);
     zactor_t *range_scanner = NULL;
     zsock_signal (pipe, 0);
@@ -1074,17 +1074,17 @@ ftydiscovery_actor (zsock_t *pipe, void *args)
     zstr_free (&range_scan_config.range_dest);
     zmsg_destroy (&range_stack);
     zactor_destroy (&range_scanner);
-    ftydiscovery_destroy (&self);
+    fty_discovery_server_destroy (&self);
     zpoller_destroy (&poller);
 }
 
 //  --------------------------------------------------------------------------
-//  Create a new ftydiscovery
+//  Create a new fty_discovery_server
 
-ftydiscovery_t *
-ftydiscovery_new ()
+fty_discovery_server_t *
+fty_discovery_server_new ()
 {
-    ftydiscovery_t *self = (ftydiscovery_t *) zmalloc (sizeof (ftydiscovery_t));
+    fty_discovery_server_t *self = (fty_discovery_server_t *) zmalloc (sizeof (fty_discovery_server_t));
     assert (self);
     //  Initialize class properties here
     self->mlm = mlm_client_new ();
@@ -1098,11 +1098,11 @@ ftydiscovery_new ()
 }
 
 void
-ftydiscovery_destroy (ftydiscovery_t **self_p)
+fty_discovery_server_destroy (fty_discovery_server_t **self_p)
 {
     assert (self_p);
     if (*self_p) {
-        ftydiscovery_t *self = *self_p;
+        fty_discovery_server_t *self = *self_p;
         //  Free class properties here
         zactor_destroy (&self->scanner);
         mlm_client_destroy (&self->mlm);
@@ -1117,14 +1117,14 @@ ftydiscovery_destroy (ftydiscovery_t **self_p)
 //  --------------------------------------------------------------------------
 //  Self test of this class
 
-void
-ftydiscovery_test (bool verbose)
+void 
+fty_discovery_server_test (bool verbose)
 {
     printf (" * ftydiscovery: ");
 
     //  @selftest
     //  Simple create/destroy test
-    zactor_t *self = zactor_new (ftydiscovery_actor, NULL);
+    zactor_t *self = zactor_new (fty_discovery_server, NULL);
     assert (self);
     zclock_sleep (500);
     zactor_destroy (&self);

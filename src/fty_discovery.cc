@@ -83,25 +83,25 @@ int main (int argc, char *argv [])
     }
 
     // configure actor
-    zactor_t *discovery = zactor_new (ftydiscovery_actor, NULL);
+    zactor_t *discovery_server = zactor_new (fty_discovery_server, NULL);
     if (agent) {
-        zstr_sendx (discovery, "BIND", ENDPOINT, ACTOR_NAME, NULL);
+        zstr_sendx (discovery_server, "BIND", ENDPOINT, ACTOR_NAME, NULL);
     } else {
         char *name = zsys_sprintf ("%s.%i", ACTOR_NAME, getpid());
-        zstr_sendx (discovery, "BIND", ENDPOINT, name, NULL);
+        zstr_sendx (discovery_server, "BIND", ENDPOINT, name, NULL);
         zstr_free (&name);
     }
-    zstr_sendx (discovery, "CONFIG", config, NULL);
-    zstr_sendx (discovery, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
-    if (range) zstr_sendx (discovery, "SCAN", range, NULL);
+    zstr_sendx (discovery_server, "CONFIG", config, NULL);
+    zstr_sendx (discovery_server, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
+    if (range) zstr_sendx (discovery_server, "SCAN", range, NULL);
     else if(!agent)
     {
-        zstr_sendx(discovery, "LOCALSCAN", NULL);
+        zstr_sendx(discovery_server, "LOCALSCAN", NULL);
     }
 
     // main loop
     while (!zsys_interrupted) {
-        zmsg_t *msg = zmsg_recv (discovery);
+        zmsg_t *msg = zmsg_recv (discovery_server);
         if (msg) {
             char *cmd = zmsg_popstr (msg);
             zsys_debug ("main: %s command received", cmd ? cmd : "(null)");
@@ -116,6 +116,6 @@ int main (int argc, char *argv [])
             zmsg_destroy (&msg);
         }
     }
-    zactor_destroy (&discovery);
+    zactor_destroy (&discovery_server);
     return 0;
 }

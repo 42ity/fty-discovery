@@ -36,22 +36,21 @@ extern "C" {
     
 
 //  @interface
-//  Create a new ftydiscovery
-FTY_DISCOVERY_EXPORT ftydiscovery_t *
-    ftydiscovery_new ();
+//  Create a new fty_discovery_server
+FTY_DISCOVERY_EXPORT fty_discovery_server_t *
+    fty_discovery_server_new (void);
 
-//  Destroy a new ftydiscovery
+//  Destroy the fty_discovery_server
 FTY_DISCOVERY_EXPORT void
-    ftydiscovery_destroy (ftydiscovery_t **self_p);
+    fty_discovery_server_destroy (fty_discovery_server_t **self_p);
 
 //  ftydiscovery actor
 FTY_DISCOVERY_EXPORT void
-    ftydiscovery_actor (zsock_t *pipe, void *args);
+    fty_discovery_server (zsock_t *pipe, void *args);
 
 //  Self test of this class
 FTY_DISCOVERY_EXPORT void
-    ftydiscovery_test (bool verbose);
-
+    fty_discovery_server_test (bool verbose);
 //  @end
 
 #ifdef __cplusplus
