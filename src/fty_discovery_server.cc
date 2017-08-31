@@ -183,11 +183,11 @@ std::string form_config_reply(const char* configFile) {
             config = zconfig_new("root", NULL);
         }
 
-        char* strType = zconfig_get(config, "/discovery/type", "localscan");
+        char* strType = zconfig_get(config, CFG_DISCOVERY_TYPE, DISCOVERY_TYPE_LOCAL);
 
         std::vector<std::string> scan_list, listIp;
 
-        zconfig_t *section = zconfig_locate(config, "/discovery/scans");
+        zconfig_t *section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
         if (section) {
             zconfig_t *item = zconfig_child(section);
             while (item) {
@@ -199,7 +199,7 @@ std::string form_config_reply(const char* configFile) {
             }
         }
 
-        section = zconfig_locate(config, "/discovery/ips");
+        section = zconfig_locate(config, CFG_DISCOVERY_IPS);
         if (section) {
             zconfig_t *item = zconfig_child(section);
             while (item) {
@@ -214,7 +214,7 @@ std::string form_config_reply(const char* configFile) {
         cxxtools::SerializationInfo si;
         si.addMember("scan_type") <<= strType;
 
-        cxxtools::SerializationInfo& si_multiscan = si.addMember("multiscan");
+        cxxtools::SerializationInfo& si_multiscan = si.addMember(DISCOVERY_TYPE_MULTI);
         cxxtools::SerializationInfo& si_liste1 = si_multiscan.addMember("subnet");
         si_liste1.setCategory(cxxtools::SerializationInfo::Array);
         std::vector<std::string> listsubnet, listfromto;
@@ -471,19 +471,19 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         return true;
     }
     zsys_debug("s_handle_pipe DO %s", command);
-    if (streq(command, "$TERM")) {
+    if (streq(command, REQ_TERM)) {
         zsys_info("Got $TERM");
         zmsg_destroy(&message);
         zstr_free(&command);
         return false;
-    } else if (streq(command, "BIND")) {
+    } else if (streq(command, REQ_BIND)) {
         char *endpoint = zmsg_popstr(message);
         char *myname = zmsg_popstr(message);
         assert(endpoint && myname);
         mlm_client_connect(self->mlm, endpoint, 5000, myname);
         zstr_free(&endpoint);
         zstr_free(&myname);
-    } else if (streq(command, "CONSUMER")) {
+    } else if (streq(command, REQ_CONSUMER)) {
         char *stream = zmsg_popstr(message);
         char *pattern = zmsg_popstr(message);
         assert(stream && pattern);
@@ -493,8 +493,8 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         // ask for assets now
         zmsg_t *republish = zmsg_new();
         zmsg_addstr(republish, "$all");
-        mlm_client_sendto(self->mlm, "asset-agent", "REPUBLISH", NULL, 1000, &republish);
-    } else if (streq(command, "CONFIG")) {
+        mlm_client_sendto(self->mlm, FTY_ASSET, REQ_REPUBLISH, NULL, 1000, &republish);
+    } else if (streq(command, REQ_CONFIG)) {
         zstr_free(&self->range_scan_config.config);
         self->range_scan_config.config = zmsg_popstr(message);
         zconfig_t *config = zconfig_load(self->range_scan_config.config);
@@ -502,10 +502,10 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
             zsys_error("failed to load config file %s", self->range_scan_config.config);
             config = zconfig_new("root", NULL);
         }
-        char* strType = zconfig_get(config, "/discovery/type", "localscan");
+        char* strType = zconfig_get(config, CFG_DISCOVERY_TYPE, DISCOVERY_TYPE_LOCAL);
         std::vector<std::string> list_scans, listIp;
         bool valid = true;
-        zconfig_t *section = zconfig_locate(config, "/discovery/scans");
+        zconfig_t *section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
         if (section) {
             zconfig_t *item = zconfig_child(section);
             while (item) {
@@ -516,7 +516,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                 item = zconfig_next(item);
             }
         }
-        section = zconfig_locate(config, "/discovery/ips");
+        section = zconfig_locate(config, CFG_DISCOVERY_IPS);
         if (section) {
             zconfig_t *item = zconfig_child(section);
             while (item) {
@@ -527,19 +527,21 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                 item = zconfig_next(item);
             }
         }
-        if (list_scans.empty() && streq(strType, "multiscan")) {
+        if (list_scans.empty() && streq(strType, DISCOVERY_TYPE_MULTI)) {
             valid = false;
-            zsys_error("error in config file %s : can't have rangescan without range", self->range_scan_config.config);
-        } else if (listIp.empty() && streq(strType, "ipscan")) {
+            zsys_error("error in config file %s : can't have rangescan without range",
+                    self->range_scan_config.config);
+        } else if (listIp.empty() && streq(strType, DISCOVERY_TYPE_IP)) {
             valid = false;
-            zsys_error("error in config file %s : can't have ipscan without ip list", self->range_scan_config.config);
+            zsys_error("error in config file %s : can't have ipscan without ip list", 
+                    self->range_scan_config.config);
         } else {
             int64_t sizeTemp = 0;
             if (compute_scans_size(&list_scans, &sizeTemp) && compute_ip_list(&listIp)) {
                 //ok, validate the config
-                if (streq(strType, "multiscan"))
+                if (streq(strType, DISCOVERY_TYPE_MULTI))
                     self->configuration_scan.type = TYPE_MULTISCAN;
-                else if (streq(strType, "localscan"))
+                else if (streq(strType, DISCOVERY_TYPE_LOCAL))
                     self->configuration_scan.type = TYPE_LOCALSCAN;
                 else
                     self->configuration_scan.type = TYPE_IPSCAN;
@@ -552,16 +554,17 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                     self->configuration_scan.scan_list.clear();
                     self->configuration_scan.scan_list = listIp;
                 }
-
             } else {
                 valid = false;
-                zsys_error("error in config file %s: error in scans", self->range_scan_config.config);
+                zsys_error("error in config file %s: error in scans",
+                        self->range_scan_config.config);
             }
         }
 
         if (valid)
-            zsys_debug("config file %s applied successfully", self->range_scan_config.config);
-    } else if (streq(command, "SCAN")) {
+            zsys_debug("config file %s applied successfully", 
+                    self->range_scan_config.config);
+    } else if (streq(command, REQ_SCAN)) {
         if (self->range_scanner) {
             reset_nb_discovered(self);
             zpoller_remove(poller, self->range_scanner);
@@ -584,12 +587,13 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                     self->scan_size = (1 << (32 - addrCIDR.prefix()));
             } else {
                 //not a valid range
-                zsys_error("Address range (%s) is not valid!", self->range_scan_config.range);
+                zsys_error("Address range (%s) is not valid!", 
+                        self->range_scan_config.range);
                 zstr_free(&self->range_scan_config.range);
             }
 
         }
-    } else if (streq(command, "LOCALSCAN")) {
+    } else if (streq(command, REQ_LOCALSCAN)) {
         if (self->range_scanner) {
             reset_nb_discovered(self);
             zpoller_remove(poller, self->range_scanner);
@@ -647,7 +651,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             return;
         }
         zsys_debug("s_handle_mailbox DO : %s", cmd);
-        if (streq(cmd, "SETCONFIG")) {
+        if (streq(cmd, REQ_SETCONFIG)) {
             // SETCONFIG 
             // REQ <uuid> <type_of_scan><nb_of_scan><scan1><scan2>...
             char *zuuid = zmsg_popstr(msg);
@@ -656,7 +660,9 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
 
             bool config_valid = true;
             char *scanType = zmsg_popstr(msg);
-            if (streq(scanType, "multiscan") || streq(scanType, "localscan") || streq(scanType, "ipscan")) {
+            if (streq(scanType, DISCOVERY_TYPE_MULTI) || 
+                    streq(scanType, DISCOVERY_TYPE_LOCAL) || 
+                    streq(scanType, DISCOVERY_TYPE_IP)) {
                 char *scanNumber = zmsg_popstr(msg);
                 char *configValue;
                 int nbScan = atoi(scanNumber);
@@ -693,11 +699,13 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                     }
                 }
 
-                if (config_valid && compute_scans_size(&list_scans, &sizeTemp) && compute_ip_list(&listIp)) {
+                if (config_valid && 
+                        compute_scans_size(&list_scans, &sizeTemp) && 
+                        compute_ip_list(&listIp)) {
                     //ok, validate the config
-                    if (streq(scanType, "multiscan"))
+                    if (streq(scanType, DISCOVERY_TYPE_MULTI))
                         self->configuration_scan.type = TYPE_MULTISCAN;
-                    else if (streq(scanType, "localscan"))
+                    else if (streq(scanType, DISCOVERY_TYPE_LOCAL))
                         self->configuration_scan.type = TYPE_LOCALSCAN;
                     else
                         self->configuration_scan.type = TYPE_IPSCAN;
@@ -713,7 +721,8 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                     if (config_valid) {
                         zconfig_t *config = zconfig_load(self->range_scan_config.config);
                         if (!config) {
-                            zsys_error("failed to load config file %s", self->range_scan_config.config);
+                            zsys_error("failed to load config file %s", 
+                                    self->range_scan_config.config);
                             config = zconfig_new("root", NULL);
                         }
                         //FIXME : we need to delete old informations...
@@ -721,7 +730,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         //zconfig_destroy(&section_discovery);
                         //section_discovery = zconfig_new("discovery", config);
 
-                        zconfig_t *section = zconfig_locate(config, "/discovery/scans");
+                        zconfig_t *section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
                         if (section) {
                             zconfig_t *item = zconfig_child(section);
                             while (item) {
@@ -732,7 +741,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                                 item = zconfig_next(item);
                             }
                         }
-                        section = zconfig_locate(config, "/discovery/ips");
+                        section = zconfig_locate(config, CFG_DISCOVERY_IPS);
                         if (section) {
                             zconfig_t *item = zconfig_child(section);
                             while (item) {
@@ -744,28 +753,28 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                             }
                         }
                         //add new informations
-                        zconfig_put(config, "/discovery/type", scanType);
+                        zconfig_put(config, CFG_DISCOVERY_TYPE, scanType);
                         std::ostringstream oss;
                         for (unsigned int i = 0; i < list_scans.size(); i++) {
                             oss.str("");
-                            oss << "/discovery/scans/scanNumber" << i;
+                            oss << CFG_DISCOVERY_SCANS_NUM << i;
                             zconfig_put(config, oss.str().c_str(), list_scans.at(i).c_str());
                         }
 
                         for (unsigned int i = 0; i < listIp.size(); i++) {
                             oss.str("");
-                            oss << "/discovery/ips/ipNumber" << i;
+                            oss << CFG_DISCOVERY_IPS_NUM << i;
                             zconfig_put(config, oss.str().c_str(), listIp.at(i).c_str());
                         }
 
-                        section = zconfig_locate(config, "/discovery/scans");
+                        section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
                         if(section)
                             zconfig_set_value(section, NULL);
-                        section = zconfig_locate(config, "/discovery/ips");
+                        section = zconfig_locate(config, CFG_DISCOVERY_IPS);
                         if(section)
                             zconfig_set_value(section, NULL);
                         if(section)
-                            section = zconfig_locate(config, "/discovery");
+                            section = zconfig_locate(config, CFG_DISCOVERY);
                         zconfig_set_value(section, NULL);
 
                         zconfig_save(config, self->range_scan_config.config);
@@ -782,16 +791,16 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             }
 
             if (config_valid) {
-                zmsg_addstr(reply, "OK");
+                zmsg_addstr(reply, RESP_OK);
             } else {
-                zmsg_addstr(reply, "ERROR");
+                zmsg_addstr(reply, RESP_ERR);
             }
 
             mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
                     mlm_client_subject(self->mlm), 
                     mlm_client_tracker(self->mlm), 
                     1000, &reply);
-        } else if (streq(cmd, "GETCONFIG")) {
+        } else if (streq(cmd, REQ_GETCONFIG)) {
             // GETCONFIG
             // REQ <uuid>
             char *zuuid = zmsg_popstr(msg);
@@ -799,14 +808,14 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             zmsg_addstr(reply, zuuid);
 
             std::string content_reply = form_config_reply(self->range_scan_config.config);
-            zmsg_addstr(reply, "OK");
+            zmsg_addstr(reply, RESP_OK);
             zmsg_addstr(reply, content_reply.c_str());
 
             mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
                     mlm_client_subject(self->mlm), 
                     mlm_client_tracker(self->mlm), 
                     1000, &reply);
-        } else if (streq(cmd, "LAUNCHSCAN")) {
+        } else if (streq(cmd, REQ_LAUNCHSCAN)) {
             // LAUNCHSCAN
             // REQ <uuid>
             char *zuuid = zmsg_popstr(msg);
@@ -815,9 +824,9 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
 
             if (self->range_scanner) {
                 if (self->ongoing_stop)
-                    zmsg_addstr(reply, "STOPPING");
+                    zmsg_addstr(reply, STATUS_STOPPING);
                 else
-                    zmsg_addstr(reply, "RUNNING");
+                    zmsg_addstr(reply, STATUS_RUNNING);
             } else {
                 self->ongoing_stop = false;
 
@@ -856,11 +865,12 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         self->status_scan = STATUS_PROGESS;
 
                         zmsg_destroy(&zmfalse);
-                        zmsg_addstr(reply, "OK");
+                        zmsg_addstr(reply, RESP_OK);
                     } else
-                        zmsg_addstr(reply, "ERROR");
+                        zmsg_addstr(reply, RESP_ERR);
 
-                } else if ((self->configuration_scan.type == TYPE_MULTISCAN) || (self->configuration_scan.type == TYPE_IPSCAN)) {
+                } else if ((self->configuration_scan.type == TYPE_MULTISCAN) ||
+                        (self->configuration_scan.type == TYPE_IPSCAN)) {
                     //Launch rangeScan
                     self->localscan_subscan = self->configuration_scan.scan_list;
                     self->scan_size = self->configuration_scan.scan_size;
@@ -898,23 +908,23 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
 
                     self->status_scan = STATUS_PROGESS;
                     zmsg_destroy(&zmfalse);
-                    zmsg_addstr(reply, "OK");
+                    zmsg_addstr(reply, RESP_OK);
                 } else {
-                    zmsg_addstr(reply, "ERROR");
+                    zmsg_addstr(reply, RESP_ERR);
                 }
             }
             mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
                     mlm_client_subject(self->mlm), 
                     mlm_client_tracker(self->mlm), 
                     1000, &reply);
-        } else if (streq(cmd, "PROGRESS")) {
+        } else if (streq(cmd, REQ_PROGRESS)) {
             // PROGRESS
             // REQ <uuid>
             char *zuuid = zmsg_popstr(msg);
             zmsg_t *reply = zmsg_new();
             zmsg_addstr(reply, zuuid);
             if (self->percent) {
-                zmsg_addstr(reply, "OK");
+                zmsg_addstr(reply, RESP_OK);
                 zmsg_addstrf(reply, "%" PRIi32, self->status_scan);
                 zmsg_addstr(reply, self->percent);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_discovered);
@@ -922,20 +932,20 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_epdu_discovered);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_sts_discovered);
             } else {
-                zmsg_addstr(reply, "OK");
+                zmsg_addstr(reply, RESP_OK);
                 zmsg_addstrf(reply, "%" PRIi32, -1);
             }
             mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
                     mlm_client_subject(self->mlm), 
                     mlm_client_tracker(self->mlm), 
                     1000, &reply);
-        } else if (streq(cmd, "STOPSCAN")) {
+        } else if (streq(cmd, REQ_STOPSCAN)) {
             // STOPSCAN
             // REQ <uuid>
             char *zuuid = zmsg_popstr(msg);
             zmsg_t *reply = zmsg_new();
             zmsg_addstr(reply, zuuid);
-            zmsg_addstr(reply, "OK");
+            zmsg_addstr(reply, RESP_OK);
 
             mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
                     mlm_client_subject(self->mlm), 
@@ -944,7 +954,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             if (self->range_scanner && !self->ongoing_stop) {
                 self->status_scan = STATUS_STOPPED;
                 self->ongoing_stop = true;
-                zstr_send(self->range_scanner, "$TERM");
+                zstr_send(self->range_scanner, REQ_TERM);
             }
 
             zstr_free(&self->range_scan_config.range);
@@ -985,7 +995,7 @@ s_handle_range_scanner(fty_discovery_server_t* self,
         return;
     }
     zsys_debug("s_handle_range_scanner DO : %s", cmd);
-    if (streq(cmd, "DONE")) {
+    if (streq(cmd, REQ_DONE)) {
         if (self->ongoing_stop && self->range_scanner) {
             zpoller_remove(poller, self->range_scanner);
             zactor_destroy(&self->range_scanner);
@@ -1031,7 +1041,7 @@ s_handle_range_scanner(fty_discovery_server_t* self,
 
             zmsg_destroy(&zmfalse);
         } else {
-            zstr_send(pipe, "DONE");
+            zstr_send(pipe, REQ_DONE);
             if (!self->localscan_subscan.empty())
                 self->localscan_subscan.clear();
 
@@ -1042,9 +1052,9 @@ s_handle_range_scanner(fty_discovery_server_t* self,
             zpoller_remove(poller, self->range_scanner);
             zactor_destroy(&self->range_scanner);
         }
-    } else if (streq(cmd, "FOUND")) {
+    } else if (streq(cmd, REQ_FOUND)) {
         ftydiscovery_create_asset(self, &msg);
-    } else if (streq(cmd, "PROGRESS")) {
+    } else if (streq(cmd, REQ_PROGRESS)) {
         self->nb_percent++;
 
         std::string percentstr = std::to_string(self->nb_percent * 100 / self->scan_size);
@@ -1083,10 +1093,10 @@ fty_discovery_server(zsock_t *pipe, void *args) {
             if (!message)
                 continue;
             const char *command = mlm_client_command(self->mlm);
-            if (streq(command, "STREAM DELIVER")) {
+            if (streq(command, STREAM_CMD)) {
                 s_handle_stream(self, message);
             } else
-                if (streq(command, "MAILBOX DELIVER")) {
+                if (streq(command, MAILBOX_CMD)) {
                 s_handle_mailbox(self, message, poller);
             }
         } else if (self->range_scanner && which == self->range_scanner) {
@@ -1137,7 +1147,7 @@ fty_discovery_server_new() {
     self->scan_size = 0;
     self->ongoing_stop = false;
     self->status_scan = -1;
-    self->range_scan_config.config = strdup("/etc/fty-discovery/fty-discovery.cfg");
+    self->range_scan_config.config = strdup(FTY_DISCOVERY_CFG_FILE);
     self->range_scan_config.range = NULL;
     self->range_scan_config.range_dest = NULL;
     self->configuration_scan.type = TYPE_LOCALSCAN;

@@ -29,15 +29,12 @@
 #include "fty_discovery_classes.h"
 
 
-static const char *ACTOR_NAME = "fty-discovery";
-static const char *ENDPOINT = "ipc://@/malamute";
-
 int main (int argc, char *argv [])
 {
     bool verbose = false;
     bool agent = false;
     const char *range = NULL;
-    const char *config = "/etc/fty-discovery/fty-discovery.cfg";
+    const char *config = FTY_DISCOVERY_CFG_FILE;
 
     int argn;
     for (argn = 1; argn < argc; argn++) {
@@ -49,7 +46,7 @@ int main (int argc, char *argv [])
             puts ("  --agent / -a           stay running, listen to rest api commands");
             puts ("  --range / -r           scan this range (192.168.1.0/24 format). If -a and -r are not");
             puts ("                         present, scan of attached networks is performed (localscan)");
-            puts ("  --config / -c          config file [/etc/fty-discovery/fty-discovery.cfg]");
+            printf("  --config / -c          config file [%s]\n",FTY_DISCOVERY_CFG_FILE);
             return 0;
         }
         else if (streq (argv [argn], "--verbose") ||  streq (argv [argn], "-v")) {
@@ -85,18 +82,18 @@ int main (int argc, char *argv [])
     // configure actor
     zactor_t *discovery_server = zactor_new (fty_discovery_server, NULL);
     if (agent) {
-        zstr_sendx (discovery_server, "BIND", ENDPOINT, ACTOR_NAME, NULL);
+        zstr_sendx (discovery_server, REQ_BIND, FTY_DISCOVERY_ENDPOINT, FTY_DISCOVERY_ACTOR_NAME, NULL);
     } else {
-        char *name = zsys_sprintf ("%s.%i", ACTOR_NAME, getpid());
-        zstr_sendx (discovery_server, "BIND", ENDPOINT, name, NULL);
+        char *name = zsys_sprintf ("%s.%i", FTY_DISCOVERY_ACTOR_NAME, getpid());
+        zstr_sendx (discovery_server, REQ_BIND, FTY_DISCOVERY_ENDPOINT, name, NULL);
         zstr_free (&name);
     }
-    zstr_sendx (discovery_server, "CONFIG", config, NULL);
-    zstr_sendx (discovery_server, "CONSUMER", FTY_PROTO_STREAM_ASSETS, ".*", NULL);
-    if (range) zstr_sendx (discovery_server, "SCAN", range, NULL);
+    zstr_sendx (discovery_server, REQ_CONFIG, config, NULL);
+    zstr_sendx (discovery_server, REQ_CONSUMER, FTY_PROTO_STREAM_ASSETS, ".*", NULL);
+    if (range) zstr_sendx (discovery_server, REQ_SCAN, range, NULL);
     else if(!agent)
     {
-        zstr_sendx(discovery_server, "LOCALSCAN", NULL);
+        zstr_sendx(discovery_server, REQ_LOCALSCAN, NULL);
     }
 
     // main loop
@@ -106,7 +103,7 @@ int main (int argc, char *argv [])
             char *cmd = zmsg_popstr (msg);
             zsys_debug ("main: %s command received", cmd ? cmd : "(null)");
             if (cmd) {
-                if (!agent && streq (cmd, "DONE")) {
+                if (!agent && streq (cmd, REQ_DONE)) {
                     zstr_free (&cmd);
                     zmsg_destroy (&msg);
                     break;

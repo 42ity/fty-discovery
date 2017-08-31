@@ -26,15 +26,50 @@
 extern "C" {
 #endif
     
+#define CFG_DISCOVERY            "/discovery"    
+#define CFG_DISCOVERY_TYPE       CFG_DISCOVERY"/type"
+#define CFG_DISCOVERY_SCANS      CFG_DISCOVERY"/scans"
+#define CFG_DISCOVERY_IPS        CFG_DISCOVERY"/ips"
+#define CFG_DISCOVERY_SCANS_NUM  CFG_DISCOVERY_SCANS"/scanNumber"
+#define CFG_DISCOVERY_IPS_NUM    CFG_DISCOVERY_IPS"/ipNumber" 
+    
 #define TYPE_LOCALSCAN 1
 #define TYPE_MULTISCAN 2
 #define TYPE_IPSCAN    3
+#define DISCOVERY_TYPE_LOCAL "localscan"    
+#define DISCOVERY_TYPE_MULTI "multiscan"
+#define DISCOVERY_TYPE_IP    "ipscan"
     
 #define STATUS_STOPPED  1
 #define STATUS_FINISHED 2
 #define STATUS_PROGESS  3
-    
+#define STATUS_STOPPING "STOPPING"    
+#define STATUS_RUNNING  "RUNNING"
 
+#define REQ_TERM       "$TERM"    
+#define REQ_BIND       "BIND"
+#define REQ_CONSUMER   "CONSUMER"    
+#define REQ_REPUBLISH  "REPUBLISH"   
+#define REQ_SCAN       "SCAN"  
+#define REQ_LOCALSCAN  "LOCALSCAN"    
+#define REQ_SETCONFIG  "SETCONFIG"    
+#define REQ_GETCONFIG  "GETCONFIG"   
+#define REQ_CONFIG     "CONFIG"
+#define REQ_LAUNCHSCAN "LAUNCHSCAN" 
+#define REQ_PROGRESS   "PROGRESS"
+#define REQ_STOPSCAN   "STOPSCAN" 
+#define REQ_DONE       "DONE"  
+#define REQ_FOUND      "FOUND"  
+#define REQ_PROGRESS   "PROGRESS"
+
+#define STREAM_CMD   "STREAM DELIVER"  
+#define MAILBOX_CMD  "MAILBOX DELIVER"
+    
+#define RESP_OK  "OK"    
+#define RESP_ERR "ERROR"
+    
+#define FTY_ASSET "asset-agent"   
+    
 //  @interface
 //  Create a new fty_discovery_server
 FTY_DISCOVERY_EXPORT fty_discovery_server_t *
