@@ -1,27 +1,27 @@
 #
 #    fty-discovery - 42ity service for discovering devices
 #
-#    Copyright (C) 2014 - 2017 Eaton                                        
-#                                                                           
-#    This program is free software; you can redistribute it and/or modify   
-#    it under the terms of the GNU General Public License as published by   
-#    the Free Software Foundation; either version 2 of the License, or      
-#    (at your option) any later version.                                    
-#                                                                           
-#    This program is distributed in the hope that it will be useful,        
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-#    GNU General Public License for more details.                           
-#                                                                           
+#    Copyright (C) 2014 - 2017 Eaton
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
 #    You should have received a copy of the GNU General Public License along
 #    with this program; if not, write to the Free Software Foundation, Inc.,
-#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 Source:         fty-discovery
 Section:        net
 Priority:       optional
 Maintainer:     fty-discovery Developers <eatonipcopensource@eaton.com>
-Standards-Version: 3.9.7
+Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     pkg-config,
     libzmq3-dev,
@@ -39,13 +39,15 @@ Build-Depends: debhelper (>= 9),
 Package: libfty-discovery0
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: 42ity service for discovering devices shared library
- This package contains shared library for fty-discovery: 42ity service for discovering devices
+Description: fty-discovery shared library
+ This package contains shared library for fty-discovery:
+ 42ity service for discovering devices
 
 Package: libfty-discovery-dev
 Architecture: any
 Section: libdevel
 Depends:
+    ${misc:Depends},
     libzmq3-dev,
     libczmq-dev,
     libmlm-dev,
@@ -54,22 +56,24 @@ Depends:
     libcxxtools-dev,
     libssl-dev,
     libfty-discovery0 (= ${binary:Version})
-Description: 42ity service for discovering devices development tools
- This package contains development files for fty-discovery: 42ity service for discovering devices
+Description: fty-discovery development tools
+ This package contains development files for fty-discovery:
+ 42ity service for discovering devices
 
 Package: fty-discovery
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
-Description: 42ity service for discovering devices
- Main package for fty-discovery: 42ity service for discovering devices
+Description: runnable binaries from fty-discovery
+ Main package for fty-discovery:
+ 42ity service for discovering devices
 
 Package: fty-discovery-dbg
 Architecture: any
 Section: debug
-Priority: extra
+Priority: optional
 Depends:
     fty-discovery (= ${binary:Version}),
     ${misc:Depends}
-Description: 42ity service for discovering devices debugging symbols
- This package contains the debugging symbols for fty-discovery : 42ity service for discovering devices.
-
+Description: fty-discovery debugging symbols
+ This package contains the debugging symbols for fty-discovery:
+ 42ity service for discovering devices.

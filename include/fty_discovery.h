@@ -25,6 +25,11 @@
 //  Include the project library file
 #include "fty_discovery_library.h"
 
+#define FTY_DISCOVERY_ACTOR_NAME "fty-discovery"
+#define FTY_DISCOVERY_ENDPOINT   "ipc://@/malamute"
+
+#define FTY_DISCOVERY_CFG_FILE "/etc/fty-discovery/fty-discovery.cfg"
+
 //  Add your own public definitions here, if you need them
 
 #endif
