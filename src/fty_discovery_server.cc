@@ -36,6 +36,7 @@
 #include "fty_discovery_classes.h"
 
 //  Structure of our class
+
 typedef struct _configuration_scan_t {
     std::vector<std::string> scan_list;
     int64_t scan_size;
@@ -65,7 +66,7 @@ void reset_nb_discovered(fty_discovery_server_t *self) {
     self->nb_discovered = 0;
     self->nb_epdu_discovered = 0;
     self->nb_sts_discovered = 0;
-    self->nb_ups_discovered = 0; 
+    self->nb_ups_discovered = 0;
 }
 
 bool compute_ip_list(std::vector<std::string>* listIp) {
@@ -533,7 +534,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                     self->range_scan_config.config);
         } else if (listIp.empty() && streq(strType, DISCOVERY_TYPE_IP)) {
             valid = false;
-            zsys_error("error in config file %s : can't have ipscan without ip list", 
+            zsys_error("error in config file %s : can't have ipscan without ip list",
                     self->range_scan_config.config);
         } else {
             int64_t sizeTemp = 0;
@@ -562,8 +563,8 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         }
 
         if (valid)
-            zsys_debug("config file %s applied successfully", 
-                    self->range_scan_config.config);
+            zsys_debug("config file %s applied successfully",
+                self->range_scan_config.config);
     } else if (streq(command, REQ_SCAN)) {
         if (self->range_scanner) {
             reset_nb_discovered(self);
@@ -587,7 +588,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                     self->scan_size = (1 << (32 - addrCIDR.prefix()));
             } else {
                 //not a valid range
-                zsys_error("Address range (%s) is not valid!", 
+                zsys_error("Address range (%s) is not valid!",
                         self->range_scan_config.range);
                 zstr_free(&self->range_scan_config.range);
             }
@@ -599,7 +600,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
             zpoller_remove(poller, self->range_scanner);
             zactor_destroy(&self->range_scanner);
         }
-        
+
         self->ongoing_stop = false;
         self->localscan_subscan.clear();
         self->scan_size = 0;
@@ -660,8 +661,8 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
 
             bool config_valid = true;
             char *scanType = zmsg_popstr(msg);
-            if (streq(scanType, DISCOVERY_TYPE_MULTI) || 
-                    streq(scanType, DISCOVERY_TYPE_LOCAL) || 
+            if (streq(scanType, DISCOVERY_TYPE_MULTI) ||
+                    streq(scanType, DISCOVERY_TYPE_LOCAL) ||
                     streq(scanType, DISCOVERY_TYPE_IP)) {
                 char *scanNumber = zmsg_popstr(msg);
                 char *configValue;
@@ -699,8 +700,8 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                     }
                 }
 
-                if (config_valid && 
-                        compute_scans_size(&list_scans, &sizeTemp) && 
+                if (config_valid &&
+                        compute_scans_size(&list_scans, &sizeTemp) &&
                         compute_ip_list(&listIp)) {
                     //ok, validate the config
                     if (streq(scanType, DISCOVERY_TYPE_MULTI))
@@ -721,7 +722,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                     if (config_valid) {
                         zconfig_t *config = zconfig_load(self->range_scan_config.config);
                         if (!config) {
-                            zsys_error("failed to load config file %s", 
+                            zsys_error("failed to load config file %s",
                                     self->range_scan_config.config);
                             config = zconfig_new("root", NULL);
                         }
@@ -768,12 +769,12 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         }
 
                         section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
-                        if(section)
+                        if (section)
                             zconfig_set_value(section, NULL);
                         section = zconfig_locate(config, CFG_DISCOVERY_IPS);
-                        if(section)
+                        if (section)
                             zconfig_set_value(section, NULL);
-                        if(section)
+                        if (section)
                             section = zconfig_locate(config, CFG_DISCOVERY);
                         zconfig_set_value(section, NULL);
 
@@ -796,9 +797,9 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zmsg_addstr(reply, RESP_ERR);
             }
 
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
-                    mlm_client_subject(self->mlm), 
-                    mlm_client_tracker(self->mlm), 
+            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm),
+                    mlm_client_subject(self->mlm),
+                    mlm_client_tracker(self->mlm),
                     1000, &reply);
         } else if (streq(cmd, REQ_GETCONFIG)) {
             // GETCONFIG
@@ -811,9 +812,9 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             zmsg_addstr(reply, RESP_OK);
             zmsg_addstr(reply, content_reply.c_str());
 
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
-                    mlm_client_subject(self->mlm), 
-                    mlm_client_tracker(self->mlm), 
+            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm),
+                    mlm_client_subject(self->mlm),
+                    mlm_client_tracker(self->mlm),
                     1000, &reply);
         } else if (streq(cmd, REQ_LAUNCHSCAN)) {
             // LAUNCHSCAN
@@ -850,7 +851,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
                         self->range_scan_config.range = zmsg_popstr(zmfalse);
 
-                        zsys_debug("Range scanner requested for %s with config file %s", 
+                        zsys_debug("Range scanner requested for %s with config file %s",
                                 self->range_scan_config.range,
                                 self->range_scan_config.config);
 
@@ -893,8 +894,8 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         self->range_scan_config.range_dest = zmsg_popstr(zmfalse);
                     }
 
-                    zsys_debug("Range scanner requested for %s with config file %s", 
-                            next_scan.c_str(), 
+                    zsys_debug("Range scanner requested for %s with config file %s",
+                            next_scan.c_str(),
                             self->range_scan_config.config);
 
                     // create range scanner
@@ -913,9 +914,9 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                     zmsg_addstr(reply, RESP_ERR);
                 }
             }
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
-                    mlm_client_subject(self->mlm), 
-                    mlm_client_tracker(self->mlm), 
+            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm),
+                    mlm_client_subject(self->mlm),
+                    mlm_client_tracker(self->mlm),
                     1000, &reply);
         } else if (streq(cmd, REQ_PROGRESS)) {
             // PROGRESS
@@ -935,9 +936,9 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zmsg_addstr(reply, RESP_OK);
                 zmsg_addstrf(reply, "%" PRIi32, -1);
             }
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
-                    mlm_client_subject(self->mlm), 
-                    mlm_client_tracker(self->mlm), 
+            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm),
+                    mlm_client_subject(self->mlm),
+                    mlm_client_tracker(self->mlm),
                     1000, &reply);
         } else if (streq(cmd, REQ_STOPSCAN)) {
             // STOPSCAN
@@ -947,9 +948,9 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             zmsg_addstr(reply, zuuid);
             zmsg_addstr(reply, RESP_OK);
 
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), 
-                    mlm_client_subject(self->mlm), 
-                    mlm_client_tracker(self->mlm), 
+            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm),
+                    mlm_client_subject(self->mlm),
+                    mlm_client_tracker(self->mlm),
                     1000, &reply);
             if (self->range_scanner && !self->ongoing_stop) {
                 self->status_scan = STATUS_STOPPED;
@@ -1027,7 +1028,7 @@ s_handle_range_scanner(fty_discovery_server_t* self,
             }
 
             zsys_debug("Range scanner requested for %s with config file %s",
-                    next_scan.c_str(), 
+                    next_scan.c_str(),
                     self->range_scan_config.config);
 
             // create range scanner
@@ -1087,7 +1088,6 @@ fty_discovery_server(zsock_t *pipe, void *args) {
         if (which == pipe) {
             if (!s_handle_pipe(self, zmsg_recv(pipe), poller))
                 break; //TERM
-            else continue;
         } else if (which == mlm_client_msgpipe(self->mlm)) {
             zmsg_t *message = mlm_client_recv(self->mlm);
             if (!message)
@@ -1105,24 +1105,25 @@ fty_discovery_server(zsock_t *pipe, void *args) {
                 continue;
             s_handle_range_scanner(self, message, poller, pipe);
         }
-    }
-    // check that scanner is NULL && we have to do scan
-    if (self->range_scan_config.range && !self->range_scanner) {
-        if (zclock_mono() - assets_last_change(self->assets) > 5000) {
-            // no asset change for last 5 secs => we can start range scan
-            zsys_debug("Range scanner start for %s with config file %s", 
-                    self->range_scan_config.range, 
-                    self->range_scan_config.config);
-            // create range scanner
-            // TODO: send list of IPs to skip
-            reset_nb_discovered(self);
-            self->nb_percent = 0;
-            if (self->percent)
-                zstr_free(&self->percent);
-            self->range_scanner = zactor_new(range_scan_actor, 
-                    &self->range_scan_config);
-            zpoller_add(poller, self->range_scanner);
+        // check that scanner is NULL && we have to do scan
+        if (self->range_scan_config.range && !self->range_scanner) {
+            if (zclock_mono() - assets_last_change(self->assets) > 5000) {
+                // no asset change for last 5 secs => we can start range scan
+                zsys_debug("Range scanner start for %s with config file %s",
+                        self->range_scan_config.range,
+                        self->range_scan_config.config);
+                // create range scanner
+                // TODO: send list of IPs to skip
+                reset_nb_discovered(self);
+                self->nb_percent = 0;
+                if (self->percent)
+                    zstr_free(&self->percent);
+                self->range_scanner = zactor_new(range_scan_actor,
+                        &self->range_scan_config);
+                zpoller_add(poller, self->range_scanner);
+            }
         }
+
     }
     zmsg_destroy(&range_stack);
     fty_discovery_server_destroy(&self);
@@ -1143,7 +1144,7 @@ fty_discovery_server_new() {
     self->nb_discovered = 0;
     self->nb_epdu_discovered = 0;
     self->nb_sts_discovered = 0;
-    self->nb_ups_discovered = 0; 
+    self->nb_ups_discovered = 0;
     self->scan_size = 0;
     self->ongoing_stop = false;
     self->status_scan = -1;
