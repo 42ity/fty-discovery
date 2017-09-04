@@ -25,7 +25,7 @@ The available options are:
 * -c [file] to define a config file;
 * -a for agent mode.
 
-If neither -a nor -r options are present, scan of all attached networks (localisation) will be performed.
+If neither -a nor -r options are present, scan of all attached networks (localscan) will be performed.
 
 #### from an installed base, using systemd, run:
 
@@ -38,78 +38,42 @@ systemctl start fty-discovery
 ### Mailbox requests
 
 It is possible to request the agent discovery for:
-* launch a simple scan;
-* launch a localscan (scan all of attached networks/subnetworks);
-* launch a multiscan
+* launch a scan based on the configuration;
 * get the progression of the scan;
 * stop a scan.
 
-#### Launch a simple scan
+#### Launch the scan configured
 
 The USER peer sends the following messages using MAILBOX SEND to fty-discovery peer:
-* RUNSCAN/\<subnet>
-
-where 
-* '/' indicates a multipart string message
-* 'subnet' is the subnetwork on wich the scan will be launch. It must be on the '192.168.1.0/24' format.
+* LAUNCHSCAN/\<correlation_id>
 
 The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
-* OK
-* ERROR
-* RUNNING
-* STOPPING
+* <correlation_id>/\OK
+* <correlation_id>/\ERROR
+* <correlation_id>/\RUNNING
+* <correlation_id>/\STOPPING
 
-RUNNING reply  means an other scan curently running.
-STOPPING reply means an other scan is in currently stopping.
-ERROR can be reply if range is empty or misformed.
-
-### Launch a localscan
-
-The USER peer sends the following messages using MAILBOX SEND to fty-discovery peer:
-* LOCALSCAN
-
-The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
-* OK
-* ERROR
-* RUNNING
-* STOPPING
-
-RUNNING reply  means an other scan curently running.
-STOPPING reply means an other scan is in currently stopping.
-
-### Launch a multiscan
-
-The USER sends the following messages using MAILBOX SEND to fty-discovery peer:
-* MULTISCAN/\<nb_of_scan>/\<scan1>/\<scan2>/...
-
-where
-* '/' indicates a multipart string message
-* 'nb_of_scan' is the number of scan who will have to be performed
-* 'scanX' one of the scan to be performed. It can be on the '192.168.1.0/24' format in order to scan a network or ont the '192.168.1.12-192.168.1.18' format to scan a range.
-
-The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
-* OK
-* ERROR
-* RUNNING
-* STOPPING
-
-RUNNING reply  means an other scan curently running.
-STOPPING reply means an other scan is in currently stopping.
-ERROR can be reply if there is less 'scanX' than 'nb_of_scan' or if a 'scanX' is empty or misformed.
+RUNNING reply means an other scan curently running.
+STOPPING reply means an other scan is currently stopping.
+ERROR reply can be occur if config file is missformed.
 
 ### Get the progression of the current scan
 
 The USER peer sends the following messages using MAILBOX SEND to fty-discovery peer:
-* PROGRESS
+* PROGRESS/\<correlation_id>
 
 The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
-* OK/\<percent>/\<nb of discovered devices>/\<nb of discovered ups>/\<nb of discovered epdu>/\<nb of discovered sts>
-* ERROR
+* <correlation_id>/\OK/\'-1'
+* <correlation_id>/\OK/\<status>/\<percent>/\<nb of discovered devices>/\<nb of discovered ups>/\<nb of discovered epdu>/\<nb of discovered sts>
+* <correlation_id>/\ERROR
 
-Where  
+Where 
+* 'status' is the current status of the scan. It can be '1' for "cancelled by user", '2' for "terminated" and '3' for "in progress" 
 * 'percent' the percent number of the scan progression
 * 'nb of discovered devices' is the number of all the discovered devices 
 * each 'nb of discovered [...]' are the number of specific type of discovered device.
+
+<correlation_id>/\OK/\'-1' occur if no scan has been launched yet.
 
 
 ### Stop the current scan
