@@ -175,95 +175,6 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
     return true;
 }
 
-std::string form_config_reply(const char* configFile) {
-    try {
-
-        zconfig_t *config = zconfig_load(configFile);
-        if (!config) {
-            zsys_error("failed to load config file %s", configFile);
-            config = zconfig_new("root", NULL);
-        }
-
-        char* strType = zconfig_get(config, CFG_DISCOVERY_TYPE, DISCOVERY_TYPE_LOCAL);
-
-        std::vector<std::string> scan_list, listIp;
-
-        zconfig_t *section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
-        if (section) {
-            zconfig_t *item = zconfig_child(section);
-            while (item) {
-                //FIXME : can't delete item in cfg for now...
-                if (streq(zconfig_value(item), ""))
-                    break;
-                scan_list.push_back(zconfig_value(item));
-                item = zconfig_next(item);
-            }
-        }
-
-        section = zconfig_locate(config, CFG_DISCOVERY_IPS);
-        if (section) {
-            zconfig_t *item = zconfig_child(section);
-            while (item) {
-                //FIXME : can't delete item in cfg for now...
-                if (streq(zconfig_value(item), ""))
-                    break;
-                listIp.push_back(zconfig_value(item));
-                item = zconfig_next(item);
-            }
-        }
-
-        cxxtools::SerializationInfo si;
-        si.addMember("scan_type") <<= strType;
-
-        cxxtools::SerializationInfo& si_multiscan = si.addMember(DISCOVERY_TYPE_MULTI);
-        cxxtools::SerializationInfo& si_liste1 = si_multiscan.addMember("subnet");
-        si_liste1.setCategory(cxxtools::SerializationInfo::Array);
-        std::vector<std::string> listsubnet, listfromto;
-        for (unsigned int i = 0; i < scan_list.size(); i++) {
-            std::string scan = scan_list.at(i);
-            size_t pos = scan.find("-");
-            if (pos != std::string::npos) {
-                std::string rangeStart = scan.substr(0, pos);
-                std::string rangeEnd = scan.substr(pos + 1);
-                rangeStart = rangeStart.substr(0, rangeStart.find("/"));
-                rangeEnd = rangeEnd.substr(0, rangeEnd.find("/"));
-                scan = rangeStart;
-                scan.append("-");
-                scan.append(rangeEnd);
-                listfromto.push_back(scan);
-            } else {
-                listsubnet.push_back(scan);
-            }
-        }
-
-        for (unsigned int i = 0; i < listsubnet.size(); i++) {
-            si_liste1.addMember("") <<= listsubnet.at(i);
-        }
-
-        cxxtools::SerializationInfo& si_liste2 = si_multiscan.addMember("from_to");
-        si_liste2.setCategory(cxxtools::SerializationInfo::Array);
-        for (unsigned int i = 0; i < listfromto.size(); i++) {
-            si_liste2.addMember("") <<= listfromto.at(i);
-        }
-
-        cxxtools::SerializationInfo& si_listip = si.addMember("ips");
-        si_listip.setCategory(cxxtools::SerializationInfo::Array);
-        for (unsigned int i = 0; i < listIp.size(); i++) {
-            si_listip.addMember("") <<= listIp.at(i).substr(0, listIp.at(i).find("/"));
-        }
-
-        // serialize to json
-        std::ostringstream result;
-        cxxtools::JsonSerializer serializer(result);
-
-        serializer.serialize(si).finish();
-        return result.str();
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-    }
-    return "";
-}
-
 int mask_nb_bit(std::string mask) {
     size_t pos;
     int res = 0;
@@ -385,9 +296,85 @@ void configure_local_scan(fty_discovery_server_t *self) {
     }
 }
 
+bool compute_configuration_file(fty_discovery_server_t *self) {         
+    zconfig_t *config = zconfig_load(self->range_scan_config.config);
+    if (!config) {
+        zsys_error("failed to load config file %s", self->range_scan_config.config);
+        config = zconfig_new("root", NULL);
+    }
+    
+    char* strType = zconfig_get(config, CFG_DISCOVERY_TYPE, DISCOVERY_TYPE_LOCAL);
+    std::vector<std::string> list_scans, listIp;
+    bool valid = true;
+    zconfig_t *section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
+    if (section) {
+        zconfig_t *item = zconfig_child(section);
+        while (item) {
+            //FIXME : can't delete item in cfg for now...
+            if (streq(zconfig_value(item), ""))
+                break;
+            list_scans.push_back(zconfig_value(item));
+            item = zconfig_next(item);
+        }
+    }
+    section = zconfig_locate(config, CFG_DISCOVERY_IPS);
+    if (section) {
+        zconfig_t *item = zconfig_child(section);
+        while (item) {
+            //FIXME : can't delete item in cfg for now...
+            if (streq(zconfig_value(item), ""))
+                break;
+            listIp.push_back(zconfig_value(item));
+            item = zconfig_next(item);
+        }
+    }
+    if (list_scans.empty() && streq(strType, DISCOVERY_TYPE_MULTI)) {
+        valid = false;
+        zsys_error("error in config file %s : can't have rangescan without range",
+                self->range_scan_config.config);
+    } else if (listIp.empty() && streq(strType, DISCOVERY_TYPE_IP)) {
+        valid = false;
+        zsys_error("error in config file %s : can't have ipscan without ip list",
+                self->range_scan_config.config);
+    } else {
+        int64_t sizeTemp = 0;
+        if(streq(strType, DISCOVERY_TYPE_MULTI)) {
+            if(!compute_scans_size(&list_scans, &sizeTemp)) {
+                valid = false;
+                zsys_error("Error in config file %s: error in range or subnet", self->range_scan_config.config);
+            } else {
+                self->configuration_scan.type = TYPE_MULTISCAN;
+                self->configuration_scan.scan_size = sizeTemp;
+                self->configuration_scan.scan_list.clear();
+                self->configuration_scan.scan_list = list_scans;					
+            }
+        } else if(streq(strType, DISCOVERY_TYPE_IP)) {
+            if(!compute_ip_list(&listIp)) {
+                valid = false;
+                zsys_error("Error in config file %s: error in ip list", self->range_scan_config.config);
+            } else {
+                self->configuration_scan.type = TYPE_IPSCAN;
+                self->configuration_scan.scan_size = listIp.size();
+                self->configuration_scan.scan_list.clear();
+                self->configuration_scan.scan_list = listIp;					
+            }
+        } else if(streq(strType, DISCOVERY_TYPE_LOCAL)) {
+            self->configuration_scan.type = TYPE_LOCALSCAN;
+        } else {
+            valid = false;
+        }
+    }
+
+    if (valid)
+        zsys_debug("config file %s applied successfully",
+            self->range_scan_config.config);
+    
+    return valid;
+}
+
 
 //  --------------------------------------------------------------------------
-//  send create asses if it is new
+//  send create asset if it is new
 
 void
 ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
@@ -652,171 +639,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             return;
         }
         zsys_debug("s_handle_mailbox DO : %s", cmd);
-        if (streq(cmd, REQ_SETCONFIG)) {
-            // SETCONFIG 
-            // REQ <uuid> <type_of_scan><nb_of_scan><scan1><scan2>...
-            char *zuuid = zmsg_popstr(msg);
-            zmsg_t *reply = zmsg_new();
-            zmsg_addstr(reply, zuuid);
-
-            bool config_valid = true;
-            char *scanType = zmsg_popstr(msg);
-            if (streq(scanType, DISCOVERY_TYPE_MULTI) ||
-                    streq(scanType, DISCOVERY_TYPE_LOCAL) ||
-                    streq(scanType, DISCOVERY_TYPE_IP)) {
-                char *scanNumber = zmsg_popstr(msg);
-                char *configValue;
-                int nbScan = atoi(scanNumber);
-                int64_t sizeTemp = 0;
-                std::vector<std::string> list_scans;
-                zstr_free(&scanNumber);
-                for (int i = 0; i < nbScan; i++) {
-                    configValue = zmsg_popstr(msg);
-                    if (configValue) {
-                        std::string str(configValue);
-                        list_scans.push_back(str);
-                        zstr_free(&configValue);
-                    } else {
-                        zsys_error("error in config : error in rangesNot enough \"range\"");
-                        config_valid = false;
-                        break;
-                    }
-                }
-                //IPs list
-                scanNumber = zmsg_popstr(msg);
-                nbScan = atoi(scanNumber);
-                std::vector<std::string> listIp;
-                zstr_free(&scanNumber);
-                for (int i = 0; i < nbScan; i++) {
-                    configValue = zmsg_popstr(msg);
-                    if (configValue) {
-                        std::string str(configValue);
-                        listIp.push_back(str);
-                        zstr_free(&configValue);
-                    } else {
-                        zsys_error("error in config : error in IPs. Not enough IPs.");
-                        config_valid = false;
-                        break;
-                    }
-                }
-
-                if (config_valid &&
-                        compute_scans_size(&list_scans, &sizeTemp) &&
-                        compute_ip_list(&listIp)) {
-                    //ok, validate the config
-                    if (streq(scanType, DISCOVERY_TYPE_MULTI))
-                        self->configuration_scan.type = TYPE_MULTISCAN;
-                    else if (streq(scanType, DISCOVERY_TYPE_LOCAL))
-                        self->configuration_scan.type = TYPE_LOCALSCAN;
-                    else
-                        self->configuration_scan.type = TYPE_IPSCAN;
-                    self->configuration_scan.scan_size = sizeTemp;
-                    self->configuration_scan.scan_list.clear();
-                    self->configuration_scan.scan_list = list_scans;
-
-                    if (self->configuration_scan.type == TYPE_IPSCAN) {
-                        self->configuration_scan.scan_size = listIp.size();
-                        self->configuration_scan.scan_list.clear();
-                        self->configuration_scan.scan_list = listIp;
-                    }
-                    if (config_valid) {
-                        zconfig_t *config = zconfig_load(self->range_scan_config.config);
-                        if (!config) {
-                            zsys_error("failed to load config file %s",
-                                    self->range_scan_config.config);
-                            config = zconfig_new("root", NULL);
-                        }
-                        //FIXME : we need to delete old informations...
-                        //zconfig_t *section_discovery = zconfig_locate (config, "/discovery");
-                        //zconfig_destroy(&section_discovery);
-                        //section_discovery = zconfig_new("discovery", config);
-
-                        zconfig_t *section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
-                        if (section) {
-                            zconfig_t *item = zconfig_child(section);
-                            while (item) {
-                                //FIXME : can't delete item in cfg for now...
-                                if (streq(zconfig_value(item), ""))
-                                    break;
-                                zconfig_set_value(item, NULL);
-                                item = zconfig_next(item);
-                            }
-                        }
-                        section = zconfig_locate(config, CFG_DISCOVERY_IPS);
-                        if (section) {
-                            zconfig_t *item = zconfig_child(section);
-                            while (item) {
-                                //FIXME : can't delete item in cfg for now...
-                                if (streq(zconfig_value(item), ""))
-                                    break;
-                                zconfig_set_value(item, NULL);
-                                item = zconfig_next(item);
-                            }
-                        }
-                        //add new informations
-                        zconfig_put(config, CFG_DISCOVERY_TYPE, scanType);
-                        std::ostringstream oss;
-                        for (unsigned int i = 0; i < list_scans.size(); i++) {
-                            oss.str("");
-                            oss << CFG_DISCOVERY_SCANS_NUM << i;
-                            zconfig_put(config, oss.str().c_str(), list_scans.at(i).c_str());
-                        }
-
-                        for (unsigned int i = 0; i < listIp.size(); i++) {
-                            oss.str("");
-                            oss << CFG_DISCOVERY_IPS_NUM << i;
-                            zconfig_put(config, oss.str().c_str(), listIp.at(i).c_str());
-                        }
-
-                        section = zconfig_locate(config, CFG_DISCOVERY_SCANS);
-                        if (section)
-                            zconfig_set_value(section, NULL);
-                        section = zconfig_locate(config, CFG_DISCOVERY_IPS);
-                        if (section)
-                            zconfig_set_value(section, NULL);
-                        if (section)
-                            section = zconfig_locate(config, CFG_DISCOVERY);
-                        zconfig_set_value(section, NULL);
-
-                        zconfig_save(config, self->range_scan_config.config);
-                        zconfig_destroy(&config);
-                    }
-
-                } else {
-                    config_valid = false;
-                    zsys_error("error in config : error in scans");
-                }
-            } else {
-                config_valid = false;
-                zsys_error("error in config : not a valid scan type");
-            }
-
-            if (config_valid) {
-                zmsg_addstr(reply, RESP_OK);
-            } else {
-                zmsg_addstr(reply, RESP_ERR);
-            }
-
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm),
-                    mlm_client_subject(self->mlm),
-                    mlm_client_tracker(self->mlm),
-                    1000, &reply);
-        } else if (streq(cmd, REQ_GETCONFIG)) {
-            // GETCONFIG
-            // REQ <uuid>
-            char *zuuid = zmsg_popstr(msg);
-            zmsg_t *reply = zmsg_new();
-            zmsg_addstr(reply, zuuid);
-
-            std::string content_reply = form_config_reply(self->range_scan_config.config);
-            zmsg_addstr(reply, RESP_OK);
-            zmsg_addstr(reply, content_reply.c_str());
-
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm),
-                    mlm_client_subject(self->mlm),
-                    mlm_client_tracker(self->mlm),
-                    1000, &reply);
-        } else if (streq(cmd, REQ_LAUNCHSCAN)) {
+        if (streq(cmd, REQ_LAUNCHSCAN)) {
             // LAUNCHSCAN
             // REQ <uuid>
             char *zuuid = zmsg_popstr(msg);
@@ -842,17 +665,61 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zstr_free(&self->range_scan_config.range);
                 zstr_free(&self->range_scan_config.range_dest);
 
-                if (self->configuration_scan.type == TYPE_LOCALSCAN) {
-                    //Launch localScan
-                    configure_local_scan(self);
+                if(compute_configuration_file(self)) {
+                    if (self->configuration_scan.type == TYPE_LOCALSCAN) {
+                        //Launch localScan
+                        configure_local_scan(self);
 
-                    if (self->scan_size > 0) {
+                        if (self->scan_size > 0) {
+                            zmsg_t *zmfalse = zmsg_new();
+                            zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
+                            self->range_scan_config.range = zmsg_popstr(zmfalse);
+
+                            zsys_debug("Range scanner requested for %s with config file %s",
+                                    self->range_scan_config.range,
+                                    self->range_scan_config.config);
+
+                            // create range scanner
+                            if (self->range_scanner) {
+                                zpoller_remove(poller, self->range_scanner);
+                                zactor_destroy(&self->range_scanner);
+                            }
+                            reset_nb_discovered(self);
+                            self->range_scanner = zactor_new(range_scan_actor, &self->range_scan_config);
+                            zpoller_add(poller, self->range_scanner);
+                            self->status_scan = STATUS_PROGESS;
+
+                            zmsg_destroy(&zmfalse);
+                            zmsg_addstr(reply, RESP_OK);
+                        } else
+                            zmsg_addstr(reply, RESP_ERR);
+
+                    } else if ((self->configuration_scan.type == TYPE_MULTISCAN) ||
+                            (self->configuration_scan.type == TYPE_IPSCAN)) {
+                        //Launch rangeScan
+                        self->localscan_subscan = self->configuration_scan.scan_list;
+                        self->scan_size = self->configuration_scan.scan_size;
+
                         zmsg_t *zmfalse = zmsg_new();
-                        zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
-                        self->range_scan_config.range = zmsg_popstr(zmfalse);
+                        std::string next_scan = self->localscan_subscan.back();
+
+                        int ms_range_pos = next_scan.find("-");
+                        if (ms_range_pos == -1) {
+                            //Subnet
+                            zmsg_addstr(zmfalse, next_scan.c_str());
+                            self->range_scan_config.range = zmsg_popstr(zmfalse);
+                        } else {
+                            //range
+
+                            zmsg_addstr(zmfalse, next_scan.substr(0, ms_range_pos).c_str());
+                            self->range_scan_config.range = zmsg_popstr(zmfalse);
+
+                            zmsg_addstr(zmfalse, next_scan.substr(ms_range_pos + 1).c_str());
+                            self->range_scan_config.range_dest = zmsg_popstr(zmfalse);
+                        }
 
                         zsys_debug("Range scanner requested for %s with config file %s",
-                                self->range_scan_config.range,
+                                next_scan.c_str(),
                                 self->range_scan_config.config);
 
                         // create range scanner
@@ -863,53 +730,13 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         reset_nb_discovered(self);
                         self->range_scanner = zactor_new(range_scan_actor, &self->range_scan_config);
                         zpoller_add(poller, self->range_scanner);
-                        self->status_scan = STATUS_PROGESS;
 
+                        self->status_scan = STATUS_PROGESS;
                         zmsg_destroy(&zmfalse);
                         zmsg_addstr(reply, RESP_OK);
-                    } else
-                        zmsg_addstr(reply, RESP_ERR);
-
-                } else if ((self->configuration_scan.type == TYPE_MULTISCAN) ||
-                        (self->configuration_scan.type == TYPE_IPSCAN)) {
-                    //Launch rangeScan
-                    self->localscan_subscan = self->configuration_scan.scan_list;
-                    self->scan_size = self->configuration_scan.scan_size;
-
-                    zmsg_t *zmfalse = zmsg_new();
-                    std::string next_scan = self->localscan_subscan.back();
-
-                    int ms_range_pos = next_scan.find("-");
-                    if (ms_range_pos == -1) {
-                        //Subnet
-                        zmsg_addstr(zmfalse, next_scan.c_str());
-                        self->range_scan_config.range = zmsg_popstr(zmfalse);
                     } else {
-                        //range
-
-                        zmsg_addstr(zmfalse, next_scan.substr(0, ms_range_pos).c_str());
-                        self->range_scan_config.range = zmsg_popstr(zmfalse);
-
-                        zmsg_addstr(zmfalse, next_scan.substr(ms_range_pos + 1).c_str());
-                        self->range_scan_config.range_dest = zmsg_popstr(zmfalse);
+                        zmsg_addstr(reply, RESP_ERR);
                     }
-
-                    zsys_debug("Range scanner requested for %s with config file %s",
-                            next_scan.c_str(),
-                            self->range_scan_config.config);
-
-                    // create range scanner
-                    if (self->range_scanner) {
-                        zpoller_remove(poller, self->range_scanner);
-                        zactor_destroy(&self->range_scanner);
-                    }
-                    reset_nb_discovered(self);
-                    self->range_scanner = zactor_new(range_scan_actor, &self->range_scan_config);
-                    zpoller_add(poller, self->range_scanner);
-
-                    self->status_scan = STATUS_PROGESS;
-                    zmsg_destroy(&zmfalse);
-                    zmsg_addstr(reply, RESP_OK);
                 } else {
                     zmsg_addstr(reply, RESP_ERR);
                 }
