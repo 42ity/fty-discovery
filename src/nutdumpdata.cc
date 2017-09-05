@@ -193,7 +193,9 @@ nut_dumpdata(
 {
     Argv args;
     //to forge the command line to call the driver
-    //first the driver name
+    //first the sudo cmd
+    args.push_back("sudo");
+    //then the driver name
     args.push_back(driver);
     //ask the driver to do dump-data
     args.push_back("-d");
@@ -242,7 +244,7 @@ nut_dumpdata_snmp_ups(
         comm = "public";
     extra["community"]=comm;
     int loop=s_get_nut_dumpdata_loop();
-    return nut_dumpdata("snmp-ups",
+    return nut_dumpdata("/lib/nut/snmp-ups",
             extra,
             loop,
             out);
@@ -263,7 +265,7 @@ nut_dumpdata_netxml_ups(
     map_string_t extra;
     extra["port"]=port;
     int loop=s_get_nut_dumpdata_loop();
-    return nut_dumpdata("netxml-ups",
+    return nut_dumpdata("/lib/nut/netxml-ups",
             extra,
             loop,
             out);
@@ -284,7 +286,7 @@ nut_dumpdata_dummy_ups(
     map_string_t extra;
     extra["port"]=device;
     int loop=s_get_nut_dumpdata_loop();
-    return nut_dumpdata("dummy-ups",
+    return nut_dumpdata("/lib/nut/dummy-ups",
             extra,
             loop,
             out);

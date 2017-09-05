@@ -1,0 +1,16 @@
+# Description: This ADDITIONAL file is a configuration module
+# for "sudo" and it contains definition of some command lines
+# needed for run-time activity of the $BIOS project.
+# It relies on values set in the sudoers.d/bios_00_base file.
+# See also the script to generate these needed $BIOS accounts:
+#    tools/init-os-accounts.sh
+#
+
+# Shorthands to reference the specific commands or command-line (shell
+# globs generally) which we may be interested in:
+
+# The helper script to reconfigure and restart NUT services
+Cmnd_Alias FTY_DISCOVERY   = /lib/nut/snmp-ups, /lib/nut/netxml-ups, /lib/nut/dummy-ups
+
+BIOS_USERS ALL=(BIOS_RUNAS) NOPASSWD:FTY_DISCOVERY
+
