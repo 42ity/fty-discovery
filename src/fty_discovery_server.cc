@@ -374,7 +374,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
 
 
 //  --------------------------------------------------------------------------
-//  send create assest if it is new
+//  send create asset if it is new
 
 void
 ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {

@@ -7,3 +7,9 @@ server
     background = 0      #   Run as background process
     workdir = .         #   Working directory for daemon
     verbose = 0         #   Do verbose logging of activity?
+
+discovery
+    type = "localscan"
+    scans
+    ips
+
