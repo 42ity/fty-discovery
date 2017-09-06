@@ -28,13 +28,13 @@
 
 #include "fty_discovery_classes.h"
 
-zmsg_t * device_scan_scan (const char *addr, zconfig_t *config)
+zmsg_t * device_scan_scan (const char *addr, zconfig_t *config, discovered_devices_t *devices)
 {
     fty_proto_t *asset = fty_proto_new (FTY_PROTO_ASSET);
     bool found = false;
     fty_proto_ext_insert (asset, "ip.1", "%s", addr);
 
-    found |= scan_nut (asset, addr, config);
+    found |= scan_nut (asset, addr, config, devices);
     scan_dns (asset, addr, config);
 
     if (found) {
@@ -64,11 +64,21 @@ void
 device_scan_actor (zsock_t *pipe, void *args)
 {
     zsock_signal (pipe, 0);
-    if (! args) {
-        zsys_error ("dsa: actor created without config");
+    if (! args ) {
+        zsys_error ("dsa: actor created without parameters");
         return;
     }
-    zconfig_t *config = (zconfig_t *)args;
+    
+    zlist_t *argv = (zlist_t *)args;
+    
+    if (!argv || zlist_size(argv) != 2) {
+        zsys_error ("dsa: actor created without config");
+        zlist_destroy(&argv);
+        return;
+    }
+    
+    zconfig_t *config = (zconfig_t *) zlist_head(argv);
+    discovered_devices_t *devices = (discovered_devices_t*) zlist_tail(argv);
 
     zsys_debug ("dsa: device scan actor created");
     while (!zsys_interrupted) {
@@ -82,7 +92,7 @@ device_scan_actor (zsock_t *pipe, void *args)
             else if (streq (cmd, "SCAN")) {
                 char *addr = zmsg_popstr (msg);
                 zsys_debug ("ds: scan request for %s", addr ? addr : "(null)");
-                zmsg_t *reply = device_scan_scan (addr, config);
+                zmsg_t *reply = device_scan_scan (addr, config, devices);
                 zmsg_send (&reply, pipe);
                 zstr_free (&addr);
             }
@@ -90,6 +100,7 @@ device_scan_actor (zsock_t *pipe, void *args)
         }
     }
     zsys_debug ("dsa: device scan actor exited");
+    zlist_destroy(&argv);
 }
 
 
@@ -97,8 +108,11 @@ device_scan_actor (zsock_t *pipe, void *args)
 //  Create a new device_scan actor
 
 zactor_t *
-device_scan_new (zconfig_t *args)
+device_scan_new (zconfig_t *arg1, discovered_devices_t *arg2)
 {
+    zlist_t *args = zlist_new();
+    zlist_append(args, arg1);
+    zlist_append(args, arg2);
     return zactor_new (device_scan_actor, (void *)args);
 }
 
@@ -129,7 +143,7 @@ device_scan_test (bool verbose)
     //assert ( (str_SELFTEST_DIR_RW != "") );
     // NOTE that for "char*" context you need (str_SELFTEST_DIR_RO + "/myfilename").c_str()
 
-    zactor_t *self = device_scan_new (NULL);
+    zactor_t *self = device_scan_new (NULL, NULL);
     assert (self);
 
     // zconfig /etc/default/fty.cfg
@@ -140,7 +154,7 @@ device_scan_test (bool verbose)
     zconfig_put (cfg, "/snmp/community/0", "public");
     zconfig_put (cfg, "/snmp/community/1", "private");
 
-    zmsg_t *msg = device_scan_scan ("10.231.107.40", cfg);
+    zmsg_t *msg = device_scan_scan ("10.231.107.40", cfg, NULL);
     zmsg_destroy (&msg);
 
     zconfig_destroy (&cfg);

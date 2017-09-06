@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include <string>
+#include <mutex>
 #include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
 #include "fty_discovery_classes.h"
@@ -60,7 +61,15 @@ struct _fty_discovery_server_t {
     configuration_scan_t configuration_scan;
     zactor_t *range_scanner;
     char *percent;
+    discovered_devices_t devices_discovered;
 };
+
+zactor_t* range_scanner_new(fty_discovery_server_t *self) {
+    zlist_t *args = zlist_new();
+    zlist_append(args, &self->range_scan_config);
+    zlist_append(args, &self->devices_discovered);
+    return zactor_new(range_scan_actor, args);
+}
 
 void reset_nb_discovered(fty_discovery_server_t *self) {
     self->nb_discovered = 0;
@@ -685,7 +694,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                                 zactor_destroy(&self->range_scanner);
                             }
                             reset_nb_discovered(self);
-                            self->range_scanner = zactor_new(range_scan_actor, &self->range_scan_config);
+                            self->range_scanner = range_scanner_new(self);
                             zpoller_add(poller, self->range_scanner);
                             self->status_scan = STATUS_PROGESS;
 
@@ -728,7 +737,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                             zactor_destroy(&self->range_scanner);
                         }
                         reset_nb_discovered(self);
-                        self->range_scanner = zactor_new(range_scan_actor, &self->range_scan_config);
+                        self->range_scanner = range_scanner_new(self);
                         zpoller_add(poller, self->range_scanner);
 
                         self->status_scan = STATUS_PROGESS;
@@ -801,9 +810,34 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
 //  process message stream
 
 void static
-s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {
+s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {    
+    if (is_fty_proto(message)) {
+        // handle fty_proto protocol here
+        fty_proto_t *fmsg = fty_proto_decode(&message);
+        
+        if (fmsg && (fty_proto_id(fmsg) == FTY_PROTO_ASSET)) { 
+            
+            const char *operation = fty_proto_operation(fmsg);
+            
+            if (streq(operation, FTY_PROTO_ASSET_OP_DELETE)) {
+                const char *iname = fty_proto_name(fmsg);
+                self->devices_discovered.mtx_list.lock();
+                zhash_delete(self->devices_discovered.device_list, iname);
+                self->devices_discovered.mtx_list.unlock();                
+            } else if (streq(operation, FTY_PROTO_ASSET_OP_CREATE) || streq(operation, FTY_PROTO_ASSET_OP_UPDATE)) {
+                const char *iname = fty_proto_name(fmsg);
+                const char *ip = fty_proto_ext_string(fmsg, "ip.1", "");
+                if(!streq(ip, "")){
+                    self->devices_discovered.mtx_list.lock();
+                    zhash_update(self->devices_discovered.device_list, iname, strdup(ip));
+                    self->devices_discovered.mtx_list.unlock();
+                }          
+            }
+        }
+        
+        fty_proto_destroy(&fmsg);
+    }
     zmsg_destroy(&message);
-    zsys_error("s_handle_stream: not implemented");
 }
 
 //  --------------------------------------------------------------------------
@@ -864,7 +898,7 @@ s_handle_range_scanner(fty_discovery_server_t* self,
                 zactor_destroy(&self->range_scanner);
             }
 
-            self->range_scanner = zactor_new(range_scan_actor, &self->range_scan_config);
+            self->range_scanner = range_scanner_new(self);
             zpoller_add(poller, self->range_scanner);
 
             zmsg_destroy(&zmfalse);
@@ -894,7 +928,8 @@ s_handle_range_scanner(fty_discovery_server_t* self,
         zmsg_addstr(zmfalse, percentstr.c_str());
         self->percent = zmsg_popstr(zmfalse);
         zmsg_destroy(&zmfalse);
-    } else
+    // other cmd. NOTFOUND must not be treated
+    } else if(!streq(cmd, "NOTFOUND"))
         zsys_error("s_handle_range_scanner: Unknown  command: %s.\n", cmd);
     zstr_free(&cmd);
     zmsg_destroy(&msg);
@@ -945,8 +980,7 @@ fty_discovery_server(zsock_t *pipe, void *args) {
                 self->nb_percent = 0;
                 if (self->percent)
                     zstr_free(&self->percent);
-                self->range_scanner = zactor_new(range_scan_actor,
-                        &self->range_scan_config);
+                self->range_scanner = range_scanner_new(self);
                 zpoller_add(poller, self->range_scanner);
             }
         }
@@ -980,6 +1014,7 @@ fty_discovery_server_new() {
     self->range_scan_config.range_dest = NULL;
     self->configuration_scan.type = TYPE_LOCALSCAN;
     self->configuration_scan.scan_size = 0;
+    self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
     return self;
 }
@@ -1003,6 +1038,8 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
             zstr_free(&self->percent);
         if (self->range_scanner)
             zactor_destroy(&self->range_scanner);
+        if (self->devices_discovered.device_list)
+            zhash_destroy(&self->devices_discovered.device_list);
         //  Free object itself
         free(self);
         *self_p = NULL;
