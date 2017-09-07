@@ -33,7 +33,6 @@
 #include <czmq.h>
 #include <malamute.h>
 #include <ftyproto.h>
-#include <mutex>
 #include <libcidr.h>
 #include <cxxtools/allocator.h>
 #include <openssl/sha.h>
@@ -72,10 +71,6 @@
 #   endif
 #endif
 
-typedef struct _discovered_devices_t {
-    std::mutex mtx_list;
-    zhash_t *device_list; 
-} discovered_devices_t;
 //  Opaque class structures to allow forward references
 //  These classes are stable or legacy and built in all releases
 typedef struct _fty_discovery_server_t fty_discovery_server_t;
