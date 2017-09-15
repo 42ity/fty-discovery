@@ -22,10 +22,12 @@
 #ifndef FTYDISCOVERY_H_INCLUDED
 #define FTYDISCOVERY_H_INCLUDED
 
+#include <mutex>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 #define CFG_DISCOVERY            "/discovery"    
 #define CFG_DISCOVERY_TYPE       CFG_DISCOVERY"/type"
 #define CFG_DISCOVERY_SCANS      CFG_DISCOVERY"/scans"
@@ -69,6 +71,11 @@ extern "C" {
 #define RESP_ERR "ERROR"
     
 #define FTY_ASSET "asset-agent"   
+    
+typedef struct _discovered_devices_t {
+    std::mutex mtx_list;
+    zhash_t *device_list; 
+} discovered_devices_t;
     
 //  @interface
 //  Create a new fty_discovery_server

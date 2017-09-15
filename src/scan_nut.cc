@@ -90,6 +90,10 @@ s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::st
         {"device.part", "device.part"},
         {"ups.serial", "serial_no"},
         {"ups.firmware", "firmware"},
+        {"battery.type", "battery.type"},
+        {"input.phases", "phases.input"},
+        {"output.phases", "phases.output"},
+        {"outlet.count", "outlet.count"},
     };
 
     for (auto it: mapping) {
@@ -111,11 +115,30 @@ s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::st
     }
 }
 
+//
+bool
+ip_present(discovered_devices_t *device_discovered, std::string ip) {
+    if(!device_discovered)
+        return false;
+    
+    device_discovered->mtx_list.lock();
+    char* c = (char*) zhash_first( device_discovered->device_list);
+    
+    while(c && !streq(c, ip.c_str())) {
+        c = (char*) zhash_next( device_discovered->device_list);
+    }
+    
+    bool present = (c != NULL);
+    device_discovered->mtx_list.unlock();
+    
+    return present;
+}
+
 //  --------------------------------------------------------------------------
 //  Scan IP address using nut-scanner
 
 bool
-scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config)
+scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config, discovered_devices_t *devices)
 {
     if (!msg || !address) return false;
 
@@ -136,7 +159,11 @@ scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config)
     if (communities.empty ()) {
         communities.push_back ("public");
     }
-
+    
+    if(ip_present(devices, addr.toString())) {
+        zsys_info("already present : %s", addr.toString().c_str());
+        return false;
+    }
 
     // try communities
     for (auto it: communities) {

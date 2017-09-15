@@ -29,7 +29,7 @@ extern "C" {
 //  @interface
 //  Scan IP address using nut-scanner
 FTY_DISCOVERY_PRIVATE bool
-    scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config);
+    scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config, discovered_devices_t *devices);
 
 //  Self test of this class
 FTY_DISCOVERY_PRIVATE void
