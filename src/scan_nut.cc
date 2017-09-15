@@ -90,6 +90,10 @@ s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::st
         {"device.part", "device.part"},
         {"ups.serial", "serial_no"},
         {"ups.firmware", "firmware"},
+        {"battery.type", "battery.type"},
+        {"input.phases", "phases.input"},
+        {"output.phases", "phases.output"},
+        {"outlet.count", "outlet.count"},
     };
 
     for (auto it: mapping) {
