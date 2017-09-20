@@ -378,6 +378,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
         zsys_debug("config file %s applied successfully",
             self->range_scan_config.config);
     
+    zconfig_destroy(&config);
     return valid;
 }
 
@@ -561,6 +562,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         if (valid)
             zsys_debug("config file %s applied successfully",
                 self->range_scan_config.config);
+        zconfig_destroy(&config);
     } else if (streq(command, REQ_SCAN)) {
         if (self->range_scanner) {
             reset_nb_discovered(self);
@@ -754,6 +756,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                     mlm_client_subject(self->mlm),
                     mlm_client_tracker(self->mlm),
                     1000, &reply);
+            zstr_free(&zuuid);
         } else if (streq(cmd, REQ_PROGRESS)) {
             // PROGRESS
             // REQ <uuid>
@@ -776,6 +779,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                     mlm_client_subject(self->mlm),
                     mlm_client_tracker(self->mlm),
                     1000, &reply);
+            zstr_free(&zuuid);
         } else if (streq(cmd, REQ_STOPSCAN)) {
             // STOPSCAN
             // REQ <uuid>
@@ -796,6 +800,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
 
             zstr_free(&self->range_scan_config.range);
             zstr_free(&self->range_scan_config.range_dest);
+            zstr_free(&zuuid);
 
             self->localscan_subscan.clear();
             self->scan_size = 0;
@@ -830,8 +835,9 @@ s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {
                 if(!streq(ip, "")){
                     self->devices_discovered.mtx_list.lock();
                     zhash_update(self->devices_discovered.device_list, iname, strdup(ip));
+                    zhash_freefn(self->devices_discovered.device_list, iname, free);
                     self->devices_discovered.mtx_list.unlock();
-                }          
+                }
             }
         }
         
