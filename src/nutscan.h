@@ -25,10 +25,11 @@
 #include "src/fty_discovery_classes.h"
 
 /**
- * \brief call nut scan over SNMP
+ * \brief call nut scan over SNMP for range of ips
  *
  * \param[in] name asset name of device
- * \param[in] ip_address ip address of device
+ * \param[in] ip_address_start first ip address of range
+ * \param[in] ip_address_end last ip address of range
  * \param[in] community string, if empty 'public' will be used 
  * \param[in] use_dmf - true means that snmp-usp-dmf driver will be used
  * \param[out] out resulted string with NUT config snippets
@@ -39,25 +40,28 @@
  *                    use_dmf argument
  */
 int
-nut_scan_snmp(
+nut_scan_multi_snmp(
         const std::string& name,
-        const CIDRAddress& ip_address,
+        const CIDRAddress& ip_address_start,
+        const CIDRAddress& ip_address_end,
         const std::string community,
         bool use_dmf,
         std::vector<std::string>& out);
 
 /**
- * \brief call nut scan over XML HTTP
+ * \brief call nut scan over XML HTTP for range of ips
  *
  * \param[in] name asset name of device
- * \param[in] ip_address ip address of device
+ * \param[in] ip_address_start first ip address of range
+ * \param[in] ip_address_end last ip address of range
  * \param[out] out resulted string with NUT config snippets
  * \return 0 if success, -1 otherwise
  */
 int
-nut_scan_xml_http(
+nut_scan_multi_xml_http(
         const std::string& name,
-        const CIDRAddress& ip_address,
+        const CIDRAddress& ip_address_start,
+        const CIDRAddress& ip_address_end,
         std::vector<std::string>& out);
 
 //  Self test of this class

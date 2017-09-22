@@ -154,15 +154,15 @@ range_scan_actor (zsock_t *pipe, void *args)
         CIDRAddress addr_network(range_scan_range (self));
         list.add(addr_network.network());
     }
-    else {    
+    else {
         //real range and not subnetwork, need to scan all ips
-       list.add (range_scan_range (self));  
        CIDRAddress addrStart(range_scan_range (self));
        list.add(addrStart.host());
        addrDest = CIDRAddress(params->range_dest); 
+       list.add(addrDest.host());
     }
 
-    zactor_t *device_actor = device_scan_new(config, params2);
+    zactor_t *device_actor = device_scan_new(&list, config, params2);
     zpoller_t *poller = zpoller_new (pipe, device_actor, NULL);
 
     bool dosomething = list.next (addr);
@@ -197,21 +197,16 @@ range_scan_actor (zsock_t *pipe, void *args)
             zmsg_t *msg = zmsg_recv (which);
             if (msg) {
                 zmsg_print (msg);
-                zmsg_send (&msg, pipe);
-                zmsg_destroy (&msg);
-                dosomething = list.next (addr);
-                self->cursor++;
-                
-                zstr_send (pipe, "PROGRESS");
-                //zstr_sendf (pipe, "%" PRId32, range_scan_progress (self));
-                if (dosomething) {
-                    if(addrDest.valid() && (addr > addrDest))
-                        break;
-                    zsys_debug ("scanning %s", addr.toString().c_str());
-                    zstr_sendx (device_actor, "SCAN", addr.toString().c_str(), NULL);
-                } else {
+                char *cmd = zmsg_popstr(msg);
+                if(streq (cmd, REQ_DONE)) {
+                    zstr_free(&cmd);
+                    zmsg_destroy(&msg);
                     break;
                 }
+                zstr_free(&cmd);
+                zmsg_pushstr(msg, "FOUND");
+                zmsg_send (&msg, pipe);
+                zmsg_destroy (&msg);
             } else {
                 // strange failure
                 break;
@@ -221,6 +216,7 @@ range_scan_actor (zsock_t *pipe, void *args)
     zlist_destroy(&argv);
     zconfig_destroy (&config);
     zactor_destroy (&device_actor);
+    zpoller_destroy(&poller);
     zstr_send (pipe, "DONE");
     range_scan_destroy (&self);
 }
