@@ -123,8 +123,8 @@ s_run_nut_scaner(
 {
     std::string o;
     std::string e;
-    zsys_debug ("START: nut-scanner with timeout 10 ...");
-    int ret = output(args, o, e, 10);
+    zsys_debug ("START: nut-scanner with timeout 20 ...");
+    int ret = output(args, o, e, 20);
     zsys_debug ("       done with code %d", ret);
 
     if (ret != 0)
@@ -187,7 +187,8 @@ nut_scan_multi_xml_http(
         const CIDRAddress& ip_address_end,
         std::vector<std::string>& out)
 {
-    Argv args = {"nut-scanner", "-M", "-s", ip_address_start.toString(), "-e", ip_address_end.toString()};
+     zsys_debug("nut-scanner -M -s %s -e %s", ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
+    Argv args = {"nut-scanner", "-M", "-s", ip_address_start.toString(CIDR_WITHOUT_PREFIX), "-e", ip_address_end.toString(CIDR_WITHOUT_PREFIX)};
     return s_run_nut_scaner(
             args,
             name,

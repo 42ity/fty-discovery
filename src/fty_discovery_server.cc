@@ -424,7 +424,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     std::time_t timestamp = std::time(NULL);
     char mbstr[100];
     if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
-        fty_proto_ext_insert(asset, "discovered_ts", "%s", mbstr);
+        fty_proto_ext_insert(asset, "created_ts", "%s", mbstr);
     }
 
     fty_proto_print(asset);

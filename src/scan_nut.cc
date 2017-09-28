@@ -64,7 +64,12 @@ void s_nut_output_to_fty_messages (std::vector <fty_proto_t *> *assets, std::vec
                 fty_proto_ext_insert (asset, "description", "%s", parsed.second.c_str());
             }
             else if (parsed.first == "port") {
-                std::string ip = parsed.second;
+                std::string ip;
+                size_t pos = parsed.second.find("://");
+                if(pos != std::string::npos)
+                    ip = parsed.second.substr(pos+3);
+                else
+                    ip = parsed.second;
                 if(ip_present(devices, ip)) {
                     found = false;
                     break;
@@ -256,7 +261,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
                     std::string addr = fty_proto_ext_string(msg, "ip.1", "");
 
                     map_string_t nutdata;
-                    if (nut_dumpdata_netxml_ups (addr, nutdata) == 0) {
+                    if (nut_dumpdata_netxml_ups ("http://"+addr, nutdata) == 0) {
                         s_nut_dumpdata_to_fty_message (msg, nutdata);
                     }
 
