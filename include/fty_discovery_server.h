@@ -70,7 +70,10 @@ extern "C" {
 #define RESP_OK  "OK"    
 #define RESP_ERR "ERROR"
     
-#define FTY_ASSET "asset-agent"   
+#define FTY_ASSET "asset-agent"
+    
+#define CREATE_USER "system"
+#define CREATE_MODE "3"
     
 typedef struct _discovered_devices_t {
     std::mutex mtx_list;
