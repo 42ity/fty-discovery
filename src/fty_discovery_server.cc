@@ -807,7 +807,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             self->localscan_subscan.clear();
             self->scan_size = 0;
         } else
-            zsys_error("s_handle_pipe: Unknown actor command: %s.\n", cmd);
+            zsys_error("s_handle_mailbox: Unknown actor command: %s.\n", cmd);
         zstr_free(&cmd);
     }
     zmsg_destroy(&msg);
