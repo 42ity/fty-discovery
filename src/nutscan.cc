@@ -123,8 +123,18 @@ s_run_nut_scaner(
 {
     std::string o;
     std::string e;
-    zsys_debug ("START: nut-scanner with timeout 20 ...");
-    int ret = output(args, o, e, 20);
+
+    zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
+    if (!config) {
+        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        config = zconfig_new("root", NULL);
+    }
+
+    char* strTimeOut = zconfig_get(config, CFG_PARAM_NUTSCAN_TIMEOUT, DEFAULT_NUTSCAN_TIMEOUT);
+    const size_t nut_scanner_timeout = std::stoi(strTimeOut);
+
+    zsys_debug ("START: nut-scanner with timeout %s ...", strTimeOut);
+    int ret = output(args, o, e, nut_scanner_timeout);
     zsys_debug ("       done with code %d", ret);
 
     if (ret != 0)

@@ -36,6 +36,12 @@
 #include <cxxtools/serializationinfo.h>
 #include "fty_discovery_classes.h"
 
+static std::string discovery_config_file = FTY_DISCOVERY_CFG_FILE;
+
+std::string getDiscoveryConfigFile() {
+    return discovery_config_file;
+}
+
 //  Structure of our class
 
 typedef struct _configuration_scan_t {
@@ -497,6 +503,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
     } else if (streq(command, REQ_CONFIG)) {
         zstr_free(&self->range_scan_config.config);
         self->range_scan_config.config = zmsg_popstr(message);
+        discovery_config_file = self->range_scan_config.config;
         zconfig_t *config = zconfig_load(self->range_scan_config.config);
         if (!config) {
             zsys_error("failed to load config file %s", self->range_scan_config.config);
@@ -807,7 +814,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             self->localscan_subscan.clear();
             self->scan_size = 0;
         } else
-            zsys_error("s_handle_pipe: Unknown actor command: %s.\n", cmd);
+            zsys_error("s_handle_mailbox: Unknown actor command: %s.\n", cmd);
         zstr_free(&cmd);
     }
     zmsg_destroy(&msg);

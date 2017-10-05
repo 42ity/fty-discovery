@@ -76,6 +76,8 @@ void s_nut_output_to_fty_messages (std::vector <fty_proto_t *> *assets, std::vec
                 } else {
                     fty_proto_ext_insert (asset, "ip.1", "%s", ip.c_str());
                     fty_proto_aux_insert (asset, "type", "%s", "device");
+                    //temporarily save real "port" here to keep trace of protocol (http, https,...)
+                    fty_proto_ext_insert (asset, "name", "%s", parsed.second.c_str());
                     found = true;
                 }
             }
@@ -166,6 +168,164 @@ bool ask_actor_term(zsock_t *pipe) {
     return false;
 }
 
+void
+dump_data_actor(zsock_t *pipe, void *args) {
+    zsock_signal (pipe, 0);
+    zlist_t *argv = (zlist_t *)args;
+    bool valid = true;
+    fty_proto_t *asset;
+    std::string type, community;
+    zmsg_t *reply;
+    if (!argv || zlist_size(argv) < 2) {
+        valid = false;
+    } else {
+       asset = (fty_proto_t *) zlist_first(argv);
+       type = (char *) zlist_next(argv);
+       if(!asset || type.empty())
+           valid = false;
+
+       if(valid && (type != "snmp") && (type != "xml"))
+           valid = false;
+
+       if(valid && (type == "snmp") && (zlist_size(argv) != 3))
+           valid = false;
+
+       if(valid && (type == "snmp"))
+           community = (char *) zlist_next(argv);
+    }
+
+    if(!valid) {
+        //ERROR
+        zsys_error("Dump data actor error: not enough args");
+        reply = zmsg_new();
+        zmsg_pushstr(reply, "ERROR");
+    } else {
+        std::string addr = fty_proto_ext_string(asset, "name", "");
+        map_string_t nutdata;
+        //warning, do not remove sleep.
+        //it avoid Assertion failed: pfd.revents & POLLIN (signaler.cpp:242) on zpoller_wait for
+        // a pool of zactor who use Subprocess
+        sleep(1);
+        if (type == "snmp") {
+            if (nut_dumpdata_snmp_ups (addr, community,  nutdata) == 0) {
+                s_nut_dumpdata_to_fty_message (asset, nutdata);
+                reply = fty_proto_encode (&asset);
+                zmsg_pushstr (reply, "FOUND");
+            } else {
+                fty_proto_destroy(&asset);
+                zsys_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
+                reply = zmsg_new();
+                zmsg_pushstr(reply, "FAILED");
+            }
+        } else {
+            if (nut_dumpdata_netxml_ups (addr,  nutdata) == 0) {
+                s_nut_dumpdata_to_fty_message (asset, nutdata);
+                reply = fty_proto_encode (&asset);
+                zmsg_pushstr (reply, "FOUND");
+            } else {
+                fty_proto_destroy(&asset);
+                zsys_debug("dumpdata for %s failed.", addr.c_str());
+                reply = zmsg_new();
+                zmsg_pushstr(reply, "FAILED");
+            }
+        }
+    }
+
+    zmsg_send (&reply, pipe);
+
+    bool stop  = false;
+    while(!stop && !zsys_interrupted) {
+        zsys_debug("truc truc et truc");
+        zmsg_t *msg_stop = zmsg_recv(pipe);
+        if(msg_stop) {
+            char *cmd = zmsg_popstr (msg_stop);
+            if(cmd && streq (cmd, "$TERM")) {
+                stop = true;
+            }
+            zstr_free(&cmd);
+            zmsg_destroy(&msg_stop);
+        }
+    }
+    zlist_destroy(&argv);
+}
+
+bool
+create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devices, zsock_t *pipe, std::string community, std::string type) {
+    bool stop_now =false;
+    std::vector<fty_proto_t *> listDiscovered;
+    zpoller_t *poller = zpoller_new(pipe, NULL);
+
+    zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
+    if (!config) {
+        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        config = zconfig_new("root", NULL);
+    }
+
+    char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_POOL_NUMBER, DEFAULT_MAX_POOL_NUMBER);
+    const size_t number_max_pool = std::stoi(strNbPool);
+
+    s_nut_output_to_fty_messages(&listDiscovered , output, devices);
+    size_t number_asset_view = 0;
+    while(number_asset_view < listDiscovered.size()) {
+        if(ask_actor_term(pipe)) stop_now = true;
+        if(zsys_interrupted || stop_now)
+            break;
+        size_t number_pool = 0;
+        while(number_pool < number_max_pool && number_asset_view < listDiscovered.size()) {
+            fty_proto_t *asset = listDiscovered.at(number_asset_view);
+            number_asset_view++;
+            number_pool++;
+            zlist_t *listarg = zlist_new();
+            zlist_append(listarg, asset);
+            zlist_append(listarg, strdup(type.c_str()));
+            zlist_append(listarg, strdup(community.c_str()));
+            zactor_t *actor = zactor_new (dump_data_actor, listarg);
+            zpoller_add(poller, actor);
+        }
+
+        size_t count = 0;
+        while (count < number_pool) {
+            if(zsys_interrupted || stop_now)
+                break;
+            void *which = zpoller_wait(poller, -1);
+            if(which != NULL) {
+                zmsg_t *msg_rec = zmsg_recv(which);
+                if(msg_rec) {
+                    char *cmd = zmsg_popstr (msg_rec);
+                    if(which == pipe) {
+                        if(cmd && streq (cmd, "$TERM")) {
+                            zstr_free(&cmd);
+                            zmsg_destroy(&msg_rec);
+                            stop_now = true;
+                        }
+                    } else if (which != NULL) {
+                        count++;
+                        if(cmd && streq (cmd, "FOUND")) {
+                            zpoller_remove(poller, which);
+                            zactor_t *actor_temp = (zactor_t *) which;
+                            zactor_destroy(&actor_temp);
+                            zmsg_pushstr(msg_rec, "FOUND");
+                            zmsg_send (&msg_rec, pipe);
+                        } else
+                            zmsg_destroy(&msg_rec);
+                        zstr_free(&cmd);
+                    }
+                }
+            }
+        }
+    }
+
+    while(number_asset_view < listDiscovered.size()) {
+        fty_proto_t *asset = listDiscovered.at(number_asset_view);
+        fty_proto_destroy(&asset);
+        number_asset_view++;
+    }
+
+    listDiscovered.clear();
+
+    return stop_now;
+}
+
 //  --------------------------------------------------------------------------
 //  Scan IPs addresses using nut-scanner
 void
@@ -216,27 +376,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
         std::vector<std::string> output;
         nut_scan_multi_snmp ("device", listAddr->firstAddress(), listAddr->lastAddress(), it, false, output);
         if (! output.empty()) {
-            s_nut_output_to_fty_messages(&listDiscovered , output, devices);
-
-            for (auto asset:listDiscovered) {
-                if(ask_actor_term(pipe)) stop_now = true;
-                if(zsys_interrupted || stop_now) {
-                    fty_proto_destroy(&asset);
-                } else {
-                    fty_proto_t *msg = asset;
-                    std::string addr = fty_proto_ext_string(msg, "ip.1", "");
-
-                    map_string_t nutdata;
-                    if (nut_dumpdata_snmp_ups (addr, it,  nutdata) == 0) {
-                        s_nut_dumpdata_to_fty_message (msg, nutdata);
-                    }
-
-                    zmsg_t *reply = fty_proto_encode (&msg);
-                    zmsg_pushstr (reply, "FOUND");
-                    zmsg_send (&reply, pipe);
-                }
-            }
-            listDiscovered.clear();
+            stop_now = create_pool_dumpdata(output, devices, pipe, it, "snmp");
 
             if(ask_actor_term(pipe)) stop_now = true;
             if(zsys_interrupted || stop_now)
@@ -250,29 +390,10 @@ scan_nut_actor(zsock_t *pipe, void *args)
         std::vector<std::string> output;
         nut_scan_multi_xml_http ("device", listAddr->firstAddress(), listAddr->lastAddress(), output);
         if (! output.empty ()) {
-            s_nut_output_to_fty_messages (&listDiscovered , output, devices);
-
-            for (auto asset:listDiscovered) {
-                if(ask_actor_term(pipe)) stop_now = true;
-                if(zsys_interrupted || stop_now) {
-                    fty_proto_destroy(&asset);
-                } else {
-                    fty_proto_t *msg = asset;
-                    std::string addr = fty_proto_ext_string(msg, "ip.1", "");
-
-                    map_string_t nutdata;
-                    if (nut_dumpdata_netxml_ups ("http://"+addr, nutdata) == 0) {
-                        s_nut_dumpdata_to_fty_message (msg, nutdata);
-                    }
-
-                    zmsg_t *reply = fty_proto_encode (&msg);
-                    zmsg_pushstr(reply, "FOUND");
-                    zmsg_send (&reply, pipe);
-                }
-            }
-            listDiscovered.clear();
+            stop_now = create_pool_dumpdata(output, devices, pipe, "", "xml");
         }
     }
+
     zmsg_t *reply = zmsg_new();
     zmsg_pushstr(reply, "DONE");
     zmsg_send (&reply, pipe);

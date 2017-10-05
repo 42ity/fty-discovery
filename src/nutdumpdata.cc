@@ -148,7 +148,16 @@ s_run_nut_dumpdata(
     std::string o;
     std::string e;
     //we assumed that each loop could take up to 30 secondes 
-    int timeout= loop_nb*30;
+    zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
+    if (!config) {
+        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        config = zconfig_new("root", NULL);
+    }
+
+    char* str_loop_time = zconfig_get(config, CFG_PARAM_DUMPDATA_LOOPTIME, DEFAULT_DUMPDATA_LOOPTIME);
+    const size_t loop_time = std::stoi(str_loop_time);
+
+    int timeout= loop_nb*loop_time;
     zsys_debug ("START: %s with timeout %d ...",args[0].c_str(),timeout);
     std::string debug_args;
     for(auto it: args){
