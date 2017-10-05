@@ -34,7 +34,16 @@ extern "C" {
 #define CFG_DISCOVERY_IPS        CFG_DISCOVERY"/ips"
 #define CFG_DISCOVERY_SCANS_NUM  CFG_DISCOVERY_SCANS"/scanNumber"
 #define CFG_DISCOVERY_IPS_NUM    CFG_DISCOVERY_IPS"/ipNumber" 
-    
+
+#define CFG_PARAMETERS              "/parameters"
+#define CFG_PARAM_MAX_POOL_NUMBER   CFG_PARAMETERS"/maxPoolNumber"
+#define CFG_PARAM_NUTSCAN_TIMEOUT   CFG_PARAMETERS"/nutScannerTimeOut"
+#define CFG_PARAM_DUMPDATA_LOOPTIME CFG_PARAMETERS"/dumpDataLoopTime"
+
+#define DEFAULT_MAX_POOL_NUMBER     "15"
+#define DEFAULT_NUTSCAN_TIMEOUT     "20"
+#define DEFAULT_DUMPDATA_LOOPTIME   "30"
+
 #define TYPE_LOCALSCAN 1
 #define TYPE_MULTISCAN 2
 #define TYPE_IPSCAN    3
@@ -97,6 +106,9 @@ FTY_DISCOVERY_EXPORT void
 FTY_DISCOVERY_EXPORT void
     fty_discovery_server_test (bool verbose);
 //  @end
+
+FTY_DISCOVERY_EXPORT
+std::string getDiscoveryConfigFile();
 
 #ifdef __cplusplus
 }

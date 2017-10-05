@@ -13,3 +13,8 @@ discovery
     scans
     ips
 
+parameters
+    maxPoolNumber = 15
+    nutScannerTimeOut = 20
+    dumpdata_looptime = 30
+

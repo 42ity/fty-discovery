@@ -31,7 +31,6 @@
 #include <cxxtools/split.h>
 #include <cxxtools/regex.h>
 #include <algorithm>
-#define NUMBER_MAX_POOL 15
 
 bool ip_present(discovered_devices_t *device_discovered, std::string ip);
 
@@ -185,18 +184,19 @@ dump_data_actor(zsock_t *pipe, void *args) {
        if(!asset || type.empty())
            valid = false;
 
-       if(valid && ((type != "snmp") && (type != "xml")))
+       if(valid && (type != "snmp") && (type != "xml"))
            valid = false;
 
-       if(!valid || ((type == "snmp") && (zlist_size(argv) != 3)) )
+       if(valid && (type == "snmp") && (zlist_size(argv) != 3))
            valid = false;
-       else
+
+       if(valid && (type == "snmp"))
            community = (char *) zlist_next(argv);
     }
 
     if(!valid) {
         //ERROR
-        zsys_debug("Dump data actor error: not enough args");
+        zsys_error("Dump data actor error: not enough args");
         reply = zmsg_new();
         zmsg_pushstr(reply, "ERROR");
     } else {
@@ -234,7 +234,8 @@ dump_data_actor(zsock_t *pipe, void *args) {
     zmsg_send (&reply, pipe);
 
     bool stop  = false;
-    while(!stop) {
+    while(!stop && !zsys_interrupted) {
+        zsys_debug("truc truc et truc");
         zmsg_t *msg_stop = zmsg_recv(pipe);
         if(msg_stop) {
             char *cmd = zmsg_popstr (msg_stop);
@@ -254,6 +255,15 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
     std::vector<fty_proto_t *> listDiscovered;
     zpoller_t *poller = zpoller_new(pipe, NULL);
 
+    zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
+    if (!config) {
+        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        config = zconfig_new("root", NULL);
+    }
+
+    char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_POOL_NUMBER, DEFAULT_MAX_POOL_NUMBER);
+    const size_t number_max_pool = std::stoi(strNbPool);
+
     s_nut_output_to_fty_messages(&listDiscovered , output, devices);
     size_t number_asset_view = 0;
     while(number_asset_view < listDiscovered.size()) {
@@ -261,7 +271,7 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
         if(zsys_interrupted || stop_now)
             break;
         size_t number_pool = 0;
-        while(number_pool < NUMBER_MAX_POOL && number_asset_view < listDiscovered.size()) {
+        while(number_pool < number_max_pool && number_asset_view < listDiscovered.size()) {
             fty_proto_t *asset = listDiscovered.at(number_asset_view);
             number_asset_view++;
             number_pool++;
