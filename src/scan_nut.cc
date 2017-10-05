@@ -217,6 +217,11 @@ dump_data_actor(zsock_t *pipe, void *args) {
                 reply = zmsg_new();
                 zmsg_pushstr(reply, "FAILED");
             }
+            zlist_first(argv);
+            char * temp = (char *) zlist_next(argv);
+            zstr_free(&temp);
+            temp = (char *) zlist_next(argv);
+            zstr_free(&temp);
         } else {
             if (nut_dumpdata_netxml_ups (addr,  nutdata) == 0) {
                 s_nut_dumpdata_to_fty_message (asset, nutdata);
@@ -228,6 +233,9 @@ dump_data_actor(zsock_t *pipe, void *args) {
                 reply = zmsg_new();
                 zmsg_pushstr(reply, "FAILED");
             }
+            zlist_first(argv);
+            char * temp = (char *) zlist_next(argv);
+            zstr_free(&temp);
         }
     }
 
@@ -235,7 +243,6 @@ dump_data_actor(zsock_t *pipe, void *args) {
 
     bool stop  = false;
     while(!stop && !zsys_interrupted) {
-        zsys_debug("truc truc et truc");
         zmsg_t *msg_stop = zmsg_recv(pipe);
         if(msg_stop) {
             char *cmd = zmsg_popstr (msg_stop);
@@ -253,6 +260,7 @@ bool
 create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devices, zsock_t *pipe, std::string community, std::string type) {
     bool stop_now =false;
     std::vector<fty_proto_t *> listDiscovered;
+    std::vector<zactor_t *> listActor;
     zpoller_t *poller = zpoller_new(pipe, NULL);
 
     zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
@@ -280,13 +288,16 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
             zlist_append(listarg, strdup(type.c_str()));
             zlist_append(listarg, strdup(community.c_str()));
             zactor_t *actor = zactor_new (dump_data_actor, listarg);
+            listActor.push_back(actor);
             zpoller_add(poller, actor);
         }
 
         size_t count = 0;
         while (count < number_pool) {
-            if(zsys_interrupted || stop_now)
+            if(zsys_interrupted || stop_now) {
+                stop_now = true;
                 break;
+            }
             void *which = zpoller_wait(poller, -1);
             if(which != NULL) {
                 zmsg_t *msg_rec = zmsg_recv(which);
@@ -302,8 +313,6 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
                         count++;
                         if(cmd && streq (cmd, "FOUND")) {
                             zpoller_remove(poller, which);
-                            zactor_t *actor_temp = (zactor_t *) which;
-                            zactor_destroy(&actor_temp);
                             zmsg_pushstr(msg_rec, "FOUND");
                             zmsg_send (&msg_rec, pipe);
                         } else
@@ -313,6 +322,12 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
                 }
             }
         }
+
+        for(auto actor : listActor) {
+            zactor_destroy(&actor);
+        }
+
+        listActor.clear();
     }
 
     while(number_asset_view < listDiscovered.size()) {
@@ -322,7 +337,8 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
     }
 
     listDiscovered.clear();
-
+    zpoller_destroy(&poller);
+    zconfig_destroy(&config);
     return stop_now;
 }
 

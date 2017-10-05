@@ -136,6 +136,7 @@ s_run_nut_scaner(
     zsys_debug ("START: nut-scanner with timeout %s ...", strTimeOut);
     int ret = output(args, o, e, nut_scanner_timeout);
     zsys_debug ("       done with code %d", ret);
+    zconfig_destroy(&config);
 
     if (ret != 0)
         return -1;

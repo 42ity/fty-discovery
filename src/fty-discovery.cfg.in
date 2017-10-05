@@ -16,5 +16,5 @@ discovery
 parameters
     maxPoolNumber = 15
     nutScannerTimeOut = 20
-    dumpdata_looptime = 30
+    dumpDataLoopTime = 30
 

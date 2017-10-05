@@ -168,6 +168,7 @@ s_run_nut_dumpdata(
     int ret = output(args, o, e, timeout);
     zsys_debug ("       done with code %d", ret);
 
+    zconfig_destroy(&config);
     if (ret != 0)
         return -1;
 
