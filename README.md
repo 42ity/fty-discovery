@@ -48,10 +48,10 @@ The USER peer sends the following messages using MAILBOX SEND to fty-discovery p
 * LAUNCHSCAN/\<correlation_id>
 
 The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
-* <correlation_id>/\OK
-* <correlation_id>/\ERROR
-* <correlation_id>/\RUNNING
-* <correlation_id>/\STOPPING
+* <correlation_id>/OK
+* <correlation_id>/ERROR
+* <correlation_id>/RUNNING
+* <correlation_id>/STOPPING
 
 RUNNING reply means an other scan curently running.
 STOPPING reply means an other scan is currently stopping.
@@ -63,9 +63,9 @@ The USER peer sends the following messages using MAILBOX SEND to fty-discovery p
 * PROGRESS/\<correlation_id>
 
 The fty-discovery peer MUST respond with one of the messages back to USER peer using MAILBOX SEND.
-* <correlation_id>/\OK/\'-1'
-* <correlation_id>/\OK/\<status>/\<percent>/\<nb of discovered devices>/\<nb of discovered ups>/\<nb of discovered epdu>/\<nb of discovered sts>
-* <correlation_id>/\ERROR
+* <correlation_id>/OK/\'-1'
+* <correlation_id>/OK/\<status>/\<percent>/\<nb of discovered devices>/\<nb of discovered ups>/\<nb of discovered epdu>/\<nb of discovered sts>
+* <correlation_id>/ERROR
 
 Where 
 * 'status' is the current status of the scan. It can be '1' for "cancelled by user", '2' for "terminated" and '3' for "in progress" 
@@ -73,7 +73,7 @@ Where
 * 'nb of discovered devices' is the number of all the discovered devices 
 * each 'nb of discovered [...]' are the number of specific type of discovered device.
 
-<correlation_id>/\OK/\'-1' occur if no scan has been launched yet.
+<correlation_id>/OK/\'-1' occur if no scan has been launched yet.
 
 
 ### Stop the current scan
