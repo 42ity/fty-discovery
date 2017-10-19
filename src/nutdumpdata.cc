@@ -148,7 +148,16 @@ s_run_nut_dumpdata(
     std::string o;
     std::string e;
     //we assumed that each loop could take up to 30 secondes 
-    int timeout= loop_nb*30;
+    zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
+    if (!config) {
+        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        config = zconfig_new("root", NULL);
+    }
+
+    char* str_loop_time = zconfig_get(config, CFG_PARAM_DUMPDATA_LOOPTIME, DEFAULT_DUMPDATA_LOOPTIME);
+    const size_t loop_time = std::stoi(str_loop_time);
+
+    int timeout= loop_nb*loop_time;
     zsys_debug ("START: %s with timeout %d ...",args[0].c_str(),timeout);
     std::string debug_args;
     for(auto it: args){
@@ -159,6 +168,7 @@ s_run_nut_dumpdata(
     int ret = output(args, o, e, timeout);
     zsys_debug ("       done with code %d", ret);
 
+    zconfig_destroy(&config);
     if (ret != 0)
         return -1;
 
@@ -193,7 +203,9 @@ nut_dumpdata(
 {
     Argv args;
     //to forge the command line to call the driver
-    //first the driver name
+    //first the sudo cmd
+    args.push_back("sudo");
+    //then the driver name
     args.push_back(driver);
     //ask the driver to do dump-data
     args.push_back("-d");
@@ -242,7 +254,7 @@ nut_dumpdata_snmp_ups(
         comm = "public";
     extra["community"]=comm;
     int loop=s_get_nut_dumpdata_loop();
-    return nut_dumpdata("snmp-ups",
+    return nut_dumpdata("/lib/nut/snmp-ups",
             extra,
             loop,
             out);
@@ -263,7 +275,7 @@ nut_dumpdata_netxml_ups(
     map_string_t extra;
     extra["port"]=port;
     int loop=s_get_nut_dumpdata_loop();
-    return nut_dumpdata("netxml-ups",
+    return nut_dumpdata("/lib/nut/netxml-ups",
             extra,
             loop,
             out);
@@ -284,7 +296,7 @@ nut_dumpdata_dummy_ups(
     map_string_t extra;
     extra["port"]=device;
     int loop=s_get_nut_dumpdata_loop();
-    return nut_dumpdata("dummy-ups",
+    return nut_dumpdata("/lib/nut/dummy-ups",
             extra,
             loop,
             out);

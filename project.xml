@@ -43,7 +43,7 @@
     <class name = "assets"       private = "1">Cache of assets</class>
     <class name = "fty_uuid"     private = "1">UUID generating</class>
 
-    <class name = "ftydiscovery" state = "stable">Manages discovery requests, provides feedback</class>
+    <class name = "fty-discovery-server" state = "stable">Manages discovery requests, provides feedback</class>
     <main name = "fty-discovery" service = "1">
         Agent performing device discovery in network
     </main>

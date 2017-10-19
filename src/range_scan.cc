@@ -81,27 +81,6 @@ range_scan_range (range_scan_t *self)
 }
 
 //  --------------------------------------------------------------------------
-//  Do the scan
-
-void
-range_scan_scan (const char *cidr)
-{
-    CIDRList list;
-    list.add (cidr);
-    CIDRAddress addr;
-
-    zconfig_t *cfg = zconfig_load ("/etc/default/fty.cfg");
-    zactor_t *ds = device_scan_new (cfg);
-    while (list.next (addr)) {
-        zstr_sendx (ds, "SCAN", addr.toString().c_str (), NULL);
-        zmsg_t *result = zmsg_recv (ds);
-        zmsg_print (result);
-        zmsg_destroy (&result);
-    }
-}
-
-
-//  --------------------------------------------------------------------------
 //  Destroy the range_scan
 
 void
@@ -123,23 +102,41 @@ range_scan_actor (zsock_t *pipe, void *args)
 {
     zsock_signal (pipe, 0);
     range_scan_args_t *params;
+    discovered_devices_t *params2;
+    zlist_t *argv;
     {
         // args check
-        params = (range_scan_args_t *)args;
-        if (! params || !params->range || !params->config) {
+        if (! args ) {
+            zsys_error ("Scanning params not defined!");
+            zstr_send (pipe, "DONE");
+            return;
+        }
+        argv = (zlist_t *) args;
+        if(! argv || zlist_size(argv) != 2) {
+            zsys_error ("Error in parameters");
+            zstr_send (pipe, "DONE");
+            zlist_destroy(&argv);
+            return;
+        }
+        params = (range_scan_args_t *) zlist_first(argv);
+        params2 = (discovered_devices_t *) zlist_tail(argv);
+        if (! params || !params->range || !params->config || !params2) {
             zsys_error ("Scanning range not defined!");
             zstr_send (pipe, "DONE");
+            zlist_destroy(&argv);
             return;
         }
         CIDRAddress addrcheck (params->range);
         if (!addrcheck.valid ()) {
             zsys_error ("Address range (%s) is not valid!", params->range);
             zstr_send (pipe, "DONE");
+            zlist_destroy(&argv);
             return;
         }
         if (addrcheck.protocol () != 4) {
             zsys_error ("Scanning is not supported for such range (%s)!", params->range);
             zstr_send (pipe, "DONE");
+            zlist_destroy(&argv);
             return;
         }
     }
@@ -157,15 +154,15 @@ range_scan_actor (zsock_t *pipe, void *args)
         CIDRAddress addr_network(range_scan_range (self));
         list.add(addr_network.network());
     }
-    else {    
+    else {
         //real range and not subnetwork, need to scan all ips
-       list.add (range_scan_range (self));  
        CIDRAddress addrStart(range_scan_range (self));
        list.add(addrStart.host());
        addrDest = CIDRAddress(params->range_dest); 
+       list.add(addrDest.host());
     }
 
-    zactor_t *device_actor = zactor_new (device_scan_actor, config);
+    zactor_t *device_actor = device_scan_new(&list, config, params2);
     zpoller_t *poller = zpoller_new (pipe, device_actor, NULL);
 
     bool dosomething = list.next (addr);
@@ -200,29 +197,26 @@ range_scan_actor (zsock_t *pipe, void *args)
             zmsg_t *msg = zmsg_recv (which);
             if (msg) {
                 zmsg_print (msg);
-                zmsg_send (&msg, pipe);
-                zmsg_destroy (&msg);
-                dosomething = list.next (addr);
-                self->cursor++;
-                
-                zstr_send (pipe, "PROGRESS");
-                //zstr_sendf (pipe, "%" PRId32, range_scan_progress (self));
-                if (dosomething) {
-                    if(addrDest.valid() && (addr > addrDest))
-                        break;
-                    zsys_debug ("scanning %s", addr.toString().c_str());
-                    zstr_sendx (device_actor, "SCAN", addr.toString().c_str(), NULL);
-                } else {
+                char *cmd = zmsg_popstr(msg);
+                if(streq (cmd, REQ_DONE)) {
+                    zstr_free(&cmd);
+                    zmsg_destroy(&msg);
                     break;
                 }
+                zstr_free(&cmd);
+                zmsg_pushstr(msg, "FOUND");
+                zmsg_send (&msg, pipe);
+                zmsg_destroy (&msg);
             } else {
                 // strange failure
                 break;
             }
         }
     }
+    zlist_destroy(&argv);
     zconfig_destroy (&config);
     zactor_destroy (&device_actor);
+    zpoller_destroy(&poller);
     zstr_send (pipe, "DONE");
     range_scan_destroy (&self);
 }

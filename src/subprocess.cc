@@ -116,6 +116,7 @@ std::string SubProcess::argvString() const
 
 bool SubProcess::run() {
 
+    int status;
     // do nothing if some process has been already started
     if (_state != SubProcessState::NOT_STARTED) {
         return true;
@@ -151,6 +152,8 @@ bool SubProcess::run() {
             ::dup2(_errpair[1], STDERR_FILENO);
         }
 
+        // enter in stopped state to warn parent
+        ::kill(getpid(), SIGSTOP);
         auto argv = _mk_argv(_cxx_argv);
         if (!argv) {
             // need to exit from the child gracefully
@@ -164,6 +167,10 @@ bool SubProcess::run() {
     }
     // we are in parent
     _state = SubProcessState::RUNNING;
+    //make sure child make fd operations before continue.
+    waitpid(_fork.getPid(), &status, WUNTRACED);
+    //wake up child
+    ::kill(_fork.getPid(), SIGCONT);
     ::close(_inpair[0]);
     ::close(_outpair[1]);
     ::close(_errpair[1]);

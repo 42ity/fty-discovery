@@ -28,8 +28,9 @@ extern "C" {
 
 //  @interface
 //  Scan IP address using nut-scanner
-FTY_DISCOVERY_PRIVATE bool
-    scan_nut (fty_proto_t *msg, const char *address, zconfig_t *config);
+//  One device scan actor
+FTY_DISCOVERY_PRIVATE void
+    scan_nut_actor (zsock_t *pipe, void *args);
 
 //  Self test of this class
 FTY_DISCOVERY_PRIVATE void

@@ -14,7 +14,7 @@ pkgconfig_DATA = src/libfty_discovery.pc
 
 include_HEADERS = \
     include/fty_discovery.h \
-    include/ftydiscovery.h \
+    include/fty_discovery_server.h \
     include/fty_discovery_library.h
 
 src_libfty_discovery_la_SOURCES = \
@@ -28,7 +28,7 @@ src_libfty_discovery_la_SOURCES = \
     src/scan_nut.cc \
     src/assets.cc \
     src/fty_uuid.cc \
-    src/ftydiscovery.cc \
+    src/fty_discovery_server.cc \
     src/platform.h
 
 if ENABLE_DRAFTS
@@ -102,7 +102,10 @@ src: \
 SELFTEST_DIR_RO = src/selftest-ro
 SELFTEST_DIR_RW = src/selftest-rw
 
+# This is recreated on every invocation (as a selftest dependency),
+# so tests run in a clean environment
 $(abs_top_builddir)/$(SELFTEST_DIR_RW):
+	rm -rf "$@"
 	mkdir -p "$@"
 
 $(abs_top_builddir)/$(SELFTEST_DIR_RO): $(abs_top_srcdir)/$(SELFTEST_DIR_RO)
@@ -137,11 +140,22 @@ clean-local-selftest-rw:
 		fi; \
 	fi
 
+check-empty-selftest-rw:
+	if test -e $(abs_top_builddir)/$(SELFTEST_DIR_RW) ; then \
+		if test `find "$(abs_top_builddir)/$(SELFTEST_DIR_RW)" | wc -l` -lt 1 ; then \
+			echo "FATAL: selftest did not tidy up the data it wrote" >&2 ; \
+			find "$(abs_top_builddir)/$(SELFTEST_DIR_RW)" ; \
+			exit 2; \
+		else true ; fi; \
+	else true ; fi
+
 check-local: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/fty_discovery_selftest
+	$(MAKE) check-empty-selftest-rw
 
 check-verbose: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/fty_discovery_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary under valgrind to check for memory leaks
 memcheck: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
@@ -149,20 +163,43 @@ memcheck: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(ab
 		--leak-check=full --show-reachable=yes --error-exitcode=1 \
 		--suppressions=$(srcdir)/src/.valgrind.supp \
 		$(builddir)/src/fty_discovery_selftest
+	$(MAKE) check-empty-selftest-rw
+
+memcheck-verbose: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=memcheck \
+		--leak-check=full --show-reachable=yes --error-exitcode=1 \
+		--suppressions=$(srcdir)/src/.valgrind.supp \
+		$(builddir)/src/fty_discovery_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary under valgrind to check for performance leaks
 callcheck: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
 		$(builddir)/src/fty_discovery_selftest
+	$(MAKE) check-empty-selftest-rw
+
+callcheck-verbose: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute valgrind --tool=callgrind \
+		$(builddir)/src/fty_discovery_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary under gdb for debugging
 debug: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute gdb -q \
 		$(builddir)/src/fty_discovery_selftest
+	$(MAKE) check-empty-selftest-rw
+
+debug-verbose: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
+	$(LIBTOOL) --mode=execute gdb -q \
+		$(builddir)/src/fty_discovery_selftest -v
+	$(MAKE) check-empty-selftest-rw
 
 # Run the selftest binary with verbose switch for tracing
 animate: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
 	$(LIBTOOL) --mode=execute $(builddir)/src/fty_discovery_selftest -v
+	$(MAKE) check-empty-selftest-rw
+
+animate-verbose: animate
 
 if WITH_GCOV
 coverage: src/fty_discovery_selftest $(abs_top_builddir)/$(SELFTEST_DIR_RW) $(abs_top_builddir)/$(SELFTEST_DIR_RO)
