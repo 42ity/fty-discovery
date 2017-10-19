@@ -29,6 +29,7 @@
 #define FTY_DISCOVERY_ENDPOINT   "ipc://@/malamute"
 
 #define FTY_DISCOVERY_CFG_FILE "/etc/fty-discovery/fty-discovery.cfg"
+#define FTY_DEFAULT_CFG_FILE "/etc/default/fty.cfg"
 
 //  Add your own public definitions here, if you need them
 

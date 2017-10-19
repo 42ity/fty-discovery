@@ -168,6 +168,27 @@ bool ask_actor_term(zsock_t *pipe) {
     return false;
 }
 
+bool inform_and_wait(zsock_t* pipe) {
+    bool stop_now = true;
+    zmsg_t *msg_ready = zmsg_new();
+    zmsg_pushstr(msg_ready, "READY");
+    zmsg_send (&msg_ready, pipe);
+
+    zmsg_t *msg_run = zmsg_recv(pipe);
+    if(msg_run) {
+        char *cmd = zmsg_popstr(msg_run);
+        if(cmd && streq (cmd, "CONTINUE")) {
+            stop_now = false;
+        }
+        zstr_free(&cmd);
+        zmsg_destroy(&msg_run);
+    }
+
+    if(zsys_interrupted) stop_now = true;
+
+    return stop_now;
+}
+
 void
 dump_data_actor(zsock_t *pipe, void *args) {
     zsock_signal (pipe, 0);
@@ -202,10 +223,13 @@ dump_data_actor(zsock_t *pipe, void *args) {
     } else {
         std::string addr = fty_proto_ext_string(asset, "name", "");
         map_string_t nutdata;
-        //warning, do not remove sleep.
+        //waiting message from caller
         //it avoid Assertion failed: pfd.revents & POLLIN (signaler.cpp:242) on zpoller_wait for
         // a pool of zactor who use Subprocess
-        sleep(1);
+        if(inform_and_wait(pipe)) {
+            zlist_destroy(&argv);
+            return;
+        }
         if (type == "snmp") {
             if (nut_dumpdata_snmp_ups (addr, community,  nutdata) == 0) {
                 s_nut_dumpdata_to_fty_message (asset, nutdata);
@@ -269,7 +293,7 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
         config = zconfig_new("root", NULL);
     }
 
-    char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_POOL_NUMBER, DEFAULT_MAX_POOL_NUMBER);
+    char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_DUMPPOOL_NUMBER, DEFAULT_MAX_DUMPPOOL_NUMBER);
     const size_t number_max_pool = std::stoi(strNbPool);
 
     s_nut_output_to_fty_messages(&listDiscovered , output, devices);
@@ -282,14 +306,48 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
         while(number_pool < number_max_pool && number_asset_view < listDiscovered.size()) {
             fty_proto_t *asset = listDiscovered.at(number_asset_view);
             number_asset_view++;
-            number_pool++;
             zlist_t *listarg = zlist_new();
             zlist_append(listarg, asset);
             zlist_append(listarg, strdup(type.c_str()));
-            zlist_append(listarg, strdup(community.c_str()));
+            if(type == "snmp")
+                zlist_append(listarg, strdup(community.c_str()));
             zactor_t *actor = zactor_new (dump_data_actor, listarg);
-            listActor.push_back(actor);
-            zpoller_add(poller, actor);
+
+            zmsg_t *msg_ready = zmsg_recv(actor);
+            if(msg_ready) {
+                char *cmd = zmsg_popstr(msg_ready);
+                if(cmd && streq (cmd, "READY")) {
+                    number_pool++;
+                    listActor.push_back(actor);
+                    zpoller_add(poller,actor);
+                } else {
+                    zactor_destroy(&actor);
+                }
+                zstr_free(&cmd);
+                zmsg_destroy(&msg_ready);
+            }
+        }
+
+        //All subactor createdfor this one, inform and wait
+        zmsg_t *msg_ready = zmsg_new();
+        zmsg_pushstr(msg_ready, "READY");
+        zmsg_send (&msg_ready, pipe);
+        //wait
+        stop_now = true;
+        zmsg_t *msg_run = zmsg_recv(pipe);
+        if(msg_run) {
+            char *cmd = zmsg_popstr(msg_run);
+            if(cmd && streq (cmd, "CONTINUE")) {
+                stop_now = false;
+                //All subactor created, they can continue
+                for(auto actor : listActor) {
+                    zmsg_t *msg_cont = zmsg_new();
+                    zmsg_pushstr(msg_cont, "CONTINUE");
+                    zmsg_send (&msg_cont, actor);
+                }
+            }
+            zstr_free(&cmd);
+            zmsg_destroy(&msg_run);
         }
 
         size_t count = 0;
@@ -351,48 +409,67 @@ scan_nut_actor(zsock_t *pipe, void *args)
     zsock_signal (pipe, 0);
     if (! args ) {
         zsys_error ("%s : actor created without parameters", __FUNCTION__);
+        zmsg_t *reply = zmsg_new();
+        zmsg_pushstr(reply, "DONE");
+        zmsg_send (&reply, pipe);
         return;
     }
 
     zlist_t *argv = (zlist_t *)args;
-    if (!argv || zlist_size(argv) != 3) {
+    if (!argv || zlist_size(argv) != 2) {
         zsys_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
+        zmsg_t *reply = zmsg_new();
+        zmsg_pushstr(reply, "DONE");
+        zmsg_send (&reply, pipe);
         return;
     }
 
     CIDRList *listAddr = (CIDRList *) zlist_first(argv);
-    zconfig_t *config = (zconfig_t *) zlist_next(argv);
     discovered_devices_t *devices = (discovered_devices_t*) zlist_tail(argv);
-    if (!listAddr || !config || !devices) {
+    if (!listAddr || !devices) {
         zsys_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
+        zmsg_t *reply = zmsg_new();
+        zmsg_pushstr(reply, "DONE");
+        zmsg_send (&reply, pipe);
+        if(listAddr)
+            delete listAddr;
         return;
     }
 
-    std::vector<fty_proto_t *> listDiscovered;
     // read community names from cfg
+    zconfig_t *config_com = zconfig_load(FTY_DEFAULT_CFG_FILE);
+    if (!config_com) {
+        zsys_error("failed to load config file %s", FTY_DEFAULT_CFG_FILE);
+        config_com = zconfig_new("root", NULL);
+    }
     std::vector <std::string> communities;
-    zconfig_t *section = zconfig_locate (config, "/snmp/community");
+    zconfig_t *section = zconfig_locate (config_com, "/snmp/community");
     if (section) {
         zconfig_t *item = zconfig_child (section);
         while (item) {
-            communities.push_back (zconfig_value (item));
+            std::string temp = zconfig_value(item);
+            if(!temp.empty())
+                communities.push_back (zconfig_value (item));
             item = zconfig_next (item);
         }
     }
+    zconfig_destroy(&config_com);
 
     //take care of have always public community
     if (std::find(communities.begin(), communities.end(), "public") == communities.end()) {
         communities.push_back("public");
     }
 
-    //try communities
-    for (auto it:communities) {
-        std::vector<std::string> output;
-        nut_scan_multi_snmp ("device", listAddr->firstAddress(), listAddr->lastAddress(), it, false, output);
-        if (! output.empty()) {
-            stop_now = create_pool_dumpdata(output, devices, pipe, it, "snmp");
+    stop_now = inform_and_wait(pipe);
+
+    std::vector<std::pair<std::vector<std::string>, std::string>> outputs;
+    if(!stop_now) {
+        for(auto it:communities) {
+            std::vector<std::string> output;
+            nut_scan_multi_snmp ("device", listAddr->firstAddress(), listAddr->lastAddress(), it, false, output);
+            outputs.push_back(std::make_pair(output, it));
 
             if(ask_actor_term(pipe)) stop_now = true;
             if(zsys_interrupted || stop_now)
@@ -400,13 +477,47 @@ scan_nut_actor(zsock_t *pipe, void *args)
         }
     }
 
-    // try xml
+    std::vector<std::string> outputXml;
+    if(!zsys_interrupted && !stop_now) {
+        nut_scan_multi_xml_http ("device", listAddr->firstAddress(), listAddr->lastAddress(), outputXml);
+    }
+
+    if(ask_actor_term(pipe)) stop_now = true;
+
+    if(zsys_interrupted || stop_now ) {
+        zlist_destroy(&argv);
+        zmsg_t *reply = zmsg_new();
+        zmsg_pushstr(reply, "DONE");
+        zmsg_send (&reply, pipe);
+        delete listAddr;
+        return;
+    }
+
+    stop_now = inform_and_wait(pipe);
+
+    if(zsys_interrupted || stop_now ) {
+        zlist_destroy(&argv);
+        zmsg_t *reply = zmsg_new();
+        zmsg_pushstr(reply, "DONE");
+        zmsg_send (&reply, pipe);
+        delete listAddr;
+        return;
+    }
+
+    for(auto outputP:outputs) {
+        if (! outputP.first.empty()) {
+            stop_now = create_pool_dumpdata(outputP.first, devices, pipe, outputP.second, "snmp");
+
+            if(ask_actor_term(pipe)) stop_now = true;
+            if(zsys_interrupted || stop_now)
+                break;
+        }
+    }
+
     if(ask_actor_term(pipe)) stop_now = true;
     if(!zsys_interrupted && !stop_now){
-        std::vector<std::string> output;
-        nut_scan_multi_xml_http ("device", listAddr->firstAddress(), listAddr->lastAddress(), output);
-        if (! output.empty ()) {
-            stop_now = create_pool_dumpdata(output, devices, pipe, "", "xml");
+        if (! outputXml.empty ()) {
+            stop_now = create_pool_dumpdata(outputXml, devices, pipe, "", "xml");
         }
     }
 
@@ -414,6 +525,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     zmsg_pushstr(reply, "DONE");
     zmsg_send (&reply, pipe);
     zlist_destroy(&argv);
+    delete listAddr;
     zsys_debug ("scan nut actor exited");
 }
 
