@@ -311,13 +311,13 @@ void configure_local_scan(fty_discovery_server_t *self) {
     }
 }
 
-bool compute_configuration_file(fty_discovery_server_t *self) {         
+bool compute_configuration_file(fty_discovery_server_t *self) {
     zconfig_t *config = zconfig_load(self->range_scan_config.config);
     if (!config) {
         zsys_error("failed to load config file %s", self->range_scan_config.config);
         config = zconfig_new("root", NULL);
     }
-    
+
     char* strType = zconfig_get(config, CFG_DISCOVERY_TYPE, DISCOVERY_TYPE_LOCAL);
     std::vector<std::string> list_scans, listIp;
     bool valid = true;
@@ -361,7 +361,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
                 self->configuration_scan.type = TYPE_MULTISCAN;
                 self->configuration_scan.scan_size = sizeTemp;
                 self->configuration_scan.scan_list.clear();
-                self->configuration_scan.scan_list = list_scans;					
+                self->configuration_scan.scan_list = list_scans;
             }
         } else if(streq(strType, DISCOVERY_TYPE_IP)) {
             if(!compute_ip_list(&listIp)) {
@@ -371,7 +371,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
                 self->configuration_scan.type = TYPE_IPSCAN;
                 self->configuration_scan.scan_size = listIp.size();
                 self->configuration_scan.scan_list.clear();
-                self->configuration_scan.scan_list = listIp;					
+                self->configuration_scan.scan_list = listIp;
             }
         } else if(streq(strType, DISCOVERY_TYPE_LOCAL)) {
             self->configuration_scan.type = TYPE_LOCALSCAN;
@@ -383,7 +383,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
     if (valid)
         zsys_debug("config file %s applied successfully",
             self->range_scan_config.config);
-    
+
     list_scans.clear();
     listIp.clear();
     zconfig_destroy(&config);
@@ -443,6 +443,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
     fty_proto_t *assetDup = fty_proto_dup(asset);
     zmsg_t *msg = fty_proto_encode(&assetDup);
+    zmsg_pushstrf (msg, "%s", "READONLY");
     zsys_debug("about to send create message");
     int rv = mlm_client_sendto(self->mlm, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
     if (rv == -1) {
@@ -651,8 +652,8 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
 }
 
 //  --------------------------------------------------------------------------
-//  process message from MAILBOX DELIVER 
-//  * SETCONFIG, 
+//  process message from MAILBOX DELIVER
+//  * SETCONFIG,
 //       REQ : <uuid> <type_of_scan><nb_of_scan><scan1><scan2>..
 //  * GETCONFIG
 //       REQ : <uuid>
@@ -851,20 +852,20 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
 //  process message stream
 
 void static
-s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {    
+s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {
     if (is_fty_proto(message)) {
         // handle fty_proto protocol here
         fty_proto_t *fmsg = fty_proto_decode(&message);
-        
-        if (fmsg && (fty_proto_id(fmsg) == FTY_PROTO_ASSET)) { 
-            
+
+        if (fmsg && (fty_proto_id(fmsg) == FTY_PROTO_ASSET)) {
+
             const char *operation = fty_proto_operation(fmsg);
-            
+
             if (streq(operation, FTY_PROTO_ASSET_OP_DELETE)) {
                 const char *iname = fty_proto_name(fmsg);
                 self->devices_discovered.mtx_list.lock();
                 zhash_delete(self->devices_discovered.device_list, iname);
-                self->devices_discovered.mtx_list.unlock();                
+                self->devices_discovered.mtx_list.unlock();
             } else if (streq(operation, FTY_PROTO_ASSET_OP_CREATE) || streq(operation, FTY_PROTO_ASSET_OP_UPDATE)) {
                 const char *iname = fty_proto_name(fmsg);
                 const char *ip = fty_proto_ext_string(fmsg, "ip.1", "");
@@ -876,7 +877,7 @@ s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {
                 }
             }
         }
-        
+
         fty_proto_destroy(&fmsg);
     }
     zmsg_destroy(&message);
