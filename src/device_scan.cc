@@ -74,7 +74,7 @@ bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_
                         zstr_free (&cmd);
                         zmsg_destroy (&msg);
                         break;
-                    } else if (streq (cmd, "DONE")) {
+                    } else if (streq (cmd, REQ_DONE)) {
                         zstr_free (&cmd);
                         zmsg_destroy (&msg);
                         auto end_actor = std::find(listActor.begin(), listActor.end(), (zactor_t *) which );
@@ -91,17 +91,17 @@ bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_
                         else if(number_end_actor >= listActor.size()) {
                             for(auto actor : listActor) {
                                 zmsg_t* msg_cont = zmsg_new();
-                                zmsg_pushstr(msg_cont, "CONTINUE");
+                                zmsg_pushstr(msg_cont, CMD_CONTINUE);
                                 zmsg_send(&msg_cont, actor);
                             }
                             number_end_actor = 0;
                         }
-                    } else if (streq (cmd, "READY")) {
+                    } else if (streq (cmd, INFO_READY)) {
                         number_end_actor++;
                         if(number_end_actor >= listActor.size()) {
                             for(auto actor : listActor) {
                                 zmsg_t* msg_cont = zmsg_new();
-                                zmsg_pushstr(msg_cont, "CONTINUE");
+                                zmsg_pushstr(msg_cont, CMD_CONTINUE);
                                 zmsg_send(&msg_cont, actor);
                             }
                             number_end_actor = 0;
@@ -193,7 +193,7 @@ device_scan_actor (zsock_t *pipe, void *args)
                 zlist_destroy(&listScans);
 
                 zmsg_t *end = zmsg_new();
-                zmsg_pushstr(end, "DONE");
+                zmsg_pushstr(end, REQ_DONE);
                 zmsg_send(&end, pipe);
                 break;
             }

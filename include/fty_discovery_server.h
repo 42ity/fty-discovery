@@ -80,7 +80,10 @@ extern "C" {
     
 #define RESP_OK  "OK"    
 #define RESP_ERR "ERROR"
-    
+
+#define INFO_READY      "READY"
+#define CMD_CONTINUE    "CONTINUE"
+
 #define FTY_ASSET "asset-agent"
     
 #define CREATE_USER "system"

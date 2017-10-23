@@ -108,13 +108,13 @@ range_scan_actor (zsock_t *pipe, void *args)
         // args check
         if (! args ) {
             zsys_error ("Scanning params not defined!");
-            zstr_send (pipe, "DONE");
+            zstr_send (pipe, REQ_DONE);
             return;
         }
         argv = (zlist_t *) args;
         if(! argv || zlist_size(argv) != 2) {
             zsys_error ("Error in parameters");
-            zstr_send (pipe, "DONE");
+            zstr_send (pipe, REQ_DONE);
             zlist_destroy(&argv);
             return;
         }
@@ -122,7 +122,7 @@ range_scan_actor (zsock_t *pipe, void *args)
         params2 = (discovered_devices_t *) zlist_tail(argv);
         if (! params || (params->ranges.size() < 1) || !params->config || !params2) {
             zsys_error ("Scanning range not defined!");
-            zstr_send (pipe, "DONE");
+            zstr_send (pipe, REQ_DONE);
             zlist_destroy(&argv);
             return;
         }
@@ -131,13 +131,13 @@ range_scan_actor (zsock_t *pipe, void *args)
             CIDRAddress addrcheck (range.first);
             if (!addrcheck.valid ()) {
                 zsys_error ("Address range (%s) is not valid!", range.first);
-                zstr_send (pipe, "DONE");
+                zstr_send (pipe, REQ_DONE);
                 zlist_destroy(&argv);
                 return;
             }
             if (addrcheck.protocol () != 4) {
                 zsys_error ("Scanning is not supported for such range (%s)!", range.first);
-                zstr_send (pipe, "DONE");
+                zstr_send (pipe, REQ_DONE);
                 zlist_destroy(&argv);
                 return;
             }
@@ -217,7 +217,7 @@ range_scan_actor (zsock_t *pipe, void *args)
     zlist_destroy(&argv);
     zactor_destroy (&device_actor);
     zpoller_destroy(&poller);
-    zstr_send (pipe, "DONE");
+    zstr_send (pipe, REQ_DONE);
 }
 
 //  --------------------------------------------------------------------------

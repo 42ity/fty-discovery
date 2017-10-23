@@ -171,13 +171,13 @@ bool ask_actor_term(zsock_t *pipe) {
 bool inform_and_wait(zsock_t* pipe) {
     bool stop_now = true;
     zmsg_t *msg_ready = zmsg_new();
-    zmsg_pushstr(msg_ready, "READY");
+    zmsg_pushstr(msg_ready, INFO_READY);
     zmsg_send (&msg_ready, pipe);
 
     zmsg_t *msg_run = zmsg_recv(pipe);
     if(msg_run) {
         char *cmd = zmsg_popstr(msg_run);
-        if(cmd && streq (cmd, "CONTINUE")) {
+        if(cmd && streq (cmd, CMD_CONTINUE)) {
             stop_now = false;
         }
         zstr_free(&cmd);
@@ -316,7 +316,7 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
             zmsg_t *msg_ready = zmsg_recv(actor);
             if(msg_ready) {
                 char *cmd = zmsg_popstr(msg_ready);
-                if(cmd && streq (cmd, "READY")) {
+                if(cmd && streq (cmd, INFO_READY)) {
                     number_pool++;
                     listActor.push_back(actor);
                     zpoller_add(poller,actor);
@@ -330,19 +330,19 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
 
         //All subactor createdfor this one, inform and wait
         zmsg_t *msg_ready = zmsg_new();
-        zmsg_pushstr(msg_ready, "READY");
+        zmsg_pushstr(msg_ready, INFO_READY);
         zmsg_send (&msg_ready, pipe);
         //wait
         stop_now = true;
         zmsg_t *msg_run = zmsg_recv(pipe);
         if(msg_run) {
             char *cmd = zmsg_popstr(msg_run);
-            if(cmd && streq (cmd, "CONTINUE")) {
+            if(cmd && streq (cmd, CMD_CONTINUE)) {
                 stop_now = false;
                 //All subactor created, they can continue
                 for(auto actor : listActor) {
                     zmsg_t *msg_cont = zmsg_new();
-                    zmsg_pushstr(msg_cont, "CONTINUE");
+                    zmsg_pushstr(msg_cont, CMD_CONTINUE);
                     zmsg_send (&msg_cont, actor);
                 }
             }
@@ -410,7 +410,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     if (! args ) {
         zsys_error ("%s : actor created without parameters", __FUNCTION__);
         zmsg_t *reply = zmsg_new();
-        zmsg_pushstr(reply, "DONE");
+        zmsg_pushstr(reply, REQ_DONE);
         zmsg_send (&reply, pipe);
         return;
     }
@@ -420,7 +420,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
         zsys_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
-        zmsg_pushstr(reply, "DONE");
+        zmsg_pushstr(reply, REQ_DONE);
         zmsg_send (&reply, pipe);
         return;
     }
@@ -431,7 +431,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
         zsys_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
-        zmsg_pushstr(reply, "DONE");
+        zmsg_pushstr(reply, REQ_DONE);
         zmsg_send (&reply, pipe);
         if(listAddr)
             delete listAddr;
@@ -487,7 +487,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     if(zsys_interrupted || stop_now ) {
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
-        zmsg_pushstr(reply, "DONE");
+        zmsg_pushstr(reply, REQ_DONE);
         zmsg_send (&reply, pipe);
         delete listAddr;
         return;
@@ -498,7 +498,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     if(zsys_interrupted || stop_now ) {
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
-        zmsg_pushstr(reply, "DONE");
+        zmsg_pushstr(reply, REQ_DONE);
         zmsg_send (&reply, pipe);
         delete listAddr;
         return;
@@ -522,7 +522,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     zmsg_t *reply = zmsg_new();
-    zmsg_pushstr(reply, "DONE");
+    zmsg_pushstr(reply, REQ_DONE);
     zmsg_send (&reply, pipe);
     zlist_destroy(&argv);
     delete listAddr;
