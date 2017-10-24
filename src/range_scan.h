@@ -27,8 +27,7 @@ extern "C" {
 #endif
 
 typedef struct _range_scan_args_t {
-    char *range;
-    char *range_dest;
+    std::vector<std::pair<char*, char*>> ranges;
     char *config;
 } range_scan_args_t;
 

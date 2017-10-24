@@ -384,6 +384,8 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
         zsys_debug("config file %s applied successfully",
             self->range_scan_config.config);
 
+    list_scans.clear();
+    listIp.clear();
     zconfig_destroy(&config);
     return valid;
 }
@@ -562,6 +564,8 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                     self->configuration_scan.scan_list.clear();
                     self->configuration_scan.scan_list = listIp;
                 }
+                listIp.clear();
+                list_scans.clear();
             } else {
                 valid = false;
                 zsys_error("error in config file %s: error in scans",
@@ -582,11 +586,17 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         self->ongoing_stop = false;
         self->localscan_subscan.clear();
         self->scan_size = 0;
-        zstr_free(&self->range_scan_config.range);
-        zstr_free(&self->range_scan_config.range_dest);
-        self->range_scan_config.range = zmsg_popstr(message);
-        if (self->range_scan_config.range) {
-            CIDRAddress addrCIDR(self->range_scan_config.range);
+
+        for(auto range : self->range_scan_config.ranges) {
+            zstr_free(&(range.first));
+            zstr_free(&(range.second));
+        }
+        self->range_scan_config.ranges.clear();
+
+        char *secondNull = NULL;
+        self->range_scan_config.ranges.push_back(std::make_pair(zmsg_popstr(message), secondNull));
+        if ((self->range_scan_config.ranges[0]).first) {
+            CIDRAddress addrCIDR((self->range_scan_config.ranges[0]).first);
 
             if (addrCIDR.prefix() != -1) {
                 //all the subnet (1 << (32- prefix) ) minus subnet and broadcast address
@@ -597,8 +607,9 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
             } else {
                 //not a valid range
                 zsys_error("Address range (%s) is not valid!",
-                        self->range_scan_config.range);
-                zstr_free(&self->range_scan_config.range);
+                        (self->range_scan_config.ranges[0]).first);
+                zstr_free(&((self->range_scan_config.ranges[0]).first));
+                self->range_scan_config.ranges.clear();
             }
 
         }
@@ -613,16 +624,24 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         self->localscan_subscan.clear();
         self->scan_size = 0;
         configure_local_scan(self);
-        if (self->scan_size > 0) {
-            zstr_free(&self->range_scan_config.range);
-            zstr_free(&self->range_scan_config.range_dest);
 
-            zmsg_t *zmfalse = zmsg_new();
-            zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
-            self->range_scan_config.range = zmsg_popstr(zmfalse);
+        for(auto range : self->range_scan_config.ranges) {
+            zstr_free(&(range.first));
+            zstr_free(&(range.second));
+        }
+        self->range_scan_config.ranges.clear();
+        if (self->scan_size > 0) {
+            while (self->localscan_subscan.size() > 0) {
+                zmsg_t *zmfalse = zmsg_new();
+                zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
+
+                char *secondNull = NULL;
+                self->range_scan_config.ranges.push_back(std::make_pair(zmsg_popstr(zmfalse), secondNull));
+                self->localscan_subscan.pop_back();
+                zmsg_destroy(&zmfalse);
+            }
 
             reset_nb_discovered(self);
-            zmsg_destroy(&zmfalse);
         }
 
     } else
@@ -683,8 +702,11 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 self->scan_size = 0;
                 self->nb_percent = 0;
 
-                zstr_free(&self->range_scan_config.range);
-                zstr_free(&self->range_scan_config.range_dest);
+                for(auto range : self->range_scan_config.ranges) {
+                    zstr_free(&(range.first));
+                    zstr_free(&(range.second));
+                }
+                self->range_scan_config.ranges.clear();
 
                 if(compute_configuration_file(self)) {
                     if (self->configuration_scan.type == TYPE_LOCALSCAN) {
@@ -692,14 +714,18 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         configure_local_scan(self);
 
                         if (self->scan_size > 0) {
-                            zmsg_t *zmfalse = zmsg_new();
-                            zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
-                            self->range_scan_config.range = zmsg_popstr(zmfalse);
+                            while(self->localscan_subscan.size() > 0) {
+                                zmsg_t *zmfalse = zmsg_new();
+                                zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
+                                char *secondNull = NULL;
+                                self->range_scan_config.ranges.push_back(std::make_pair(zmsg_popstr(zmfalse), secondNull));
 
-                            zsys_debug("Range scanner requested for %s with config file %s",
-                                    self->range_scan_config.range,
-                                    self->range_scan_config.config);
-
+                                zsys_debug("Range scanner requested for %s with config file %s",
+                                        self->range_scan_config.ranges.back().first,
+                                        self->range_scan_config.config);
+                                zmsg_destroy(&zmfalse);
+                                self->localscan_subscan.pop_back();
+                            }
                             // create range scanner
                             if (self->range_scanner) {
                                 zpoller_remove(poller, self->range_scanner);
@@ -710,7 +736,6 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                             zpoller_add(poller, self->range_scanner);
                             self->status_scan = STATUS_PROGESS;
 
-                            zmsg_destroy(&zmfalse);
                             zmsg_addstr(reply, RESP_OK);
                         } else
                             zmsg_addstr(reply, RESP_ERR);
@@ -721,28 +746,33 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         self->localscan_subscan = self->configuration_scan.scan_list;
                         self->scan_size = self->configuration_scan.scan_size;
 
-                        zmsg_t *zmfalse = zmsg_new();
-                        std::string next_scan = self->localscan_subscan.back();
+                        while(self->localscan_subscan.size() > 0) {
+                            zmsg_t *zmfalse = zmsg_new();
+                            std::string next_scan = self->localscan_subscan.back();
 
-                        int ms_range_pos = next_scan.find("-");
-                        if (ms_range_pos == -1) {
-                            //Subnet
-                            zmsg_addstr(zmfalse, next_scan.c_str());
-                            self->range_scan_config.range = zmsg_popstr(zmfalse);
-                        } else {
-                            //range
+                            int ms_range_pos = next_scan.find("-");
+                            if (ms_range_pos == -1) {
+                                //Subnet
+                                zmsg_addstr(zmfalse, next_scan.c_str());
+                                char *secondNull = NULL;
+                                self->range_scan_config.ranges.push_back(std::make_pair(zmsg_popstr(zmfalse), secondNull));
+                            } else {
+                                //range
 
-                            zmsg_addstr(zmfalse, next_scan.substr(0, ms_range_pos).c_str());
-                            self->range_scan_config.range = zmsg_popstr(zmfalse);
+                                zmsg_addstr(zmfalse, next_scan.substr(0, ms_range_pos).c_str());
+                                char *firstIP = zmsg_popstr(zmfalse);
 
-                            zmsg_addstr(zmfalse, next_scan.substr(ms_range_pos + 1).c_str());
-                            self->range_scan_config.range_dest = zmsg_popstr(zmfalse);
+                                zmsg_addstr(zmfalse, next_scan.substr(ms_range_pos + 1).c_str());
+                                self->range_scan_config.ranges.push_back(std::make_pair(firstIP, zmsg_popstr(zmfalse)));
+                            }
+
+                            zsys_debug("Range scanner requested for %s with config file %s",
+                                    next_scan.c_str(),
+                                    self->range_scan_config.config);
+
+                            zmsg_destroy(&zmfalse);
+                            self->localscan_subscan.pop_back();
                         }
-
-                        zsys_debug("Range scanner requested for %s with config file %s",
-                                next_scan.c_str(),
-                                self->range_scan_config.config);
-
                         // create range scanner
                         if (self->range_scanner) {
                             zpoller_remove(poller, self->range_scanner);
@@ -753,7 +783,6 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         zpoller_add(poller, self->range_scanner);
 
                         self->status_scan = STATUS_PROGESS;
-                        zmsg_destroy(&zmfalse);
                         zmsg_addstr(reply, RESP_OK);
                     } else {
                         zmsg_addstr(reply, RESP_ERR);
@@ -808,8 +837,6 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zstr_send(self->range_scanner, REQ_TERM);
             }
 
-            zstr_free(&self->range_scan_config.range);
-            zstr_free(&self->range_scan_config.range_dest);
             zstr_free(&zuuid);
 
             self->localscan_subscan.clear();
@@ -877,55 +904,17 @@ s_handle_range_scanner(fty_discovery_server_t* self,
         if (self->ongoing_stop && self->range_scanner) {
             zpoller_remove(poller, self->range_scanner);
             zactor_destroy(&self->range_scanner);
-        } else if (self->localscan_subscan.size() > 1) {
-            //not done yet, still the others subnets to do
-
-            //remove the done subnet
-            self->localscan_subscan.pop_back();
-
-            //start another one
-            zstr_free(&self->range_scan_config.range);
-            zstr_free(&self->range_scan_config.range_dest);
-
-            zmsg_t *zmfalse = zmsg_new();
-            std::string next_scan = self->localscan_subscan.back();
-            int ms_range_pos = next_scan.find("-");
-
-            if (ms_range_pos == -1) {
-                //Subnet
-                zmsg_addstr(zmfalse, next_scan.c_str());
-                self->range_scan_config.range = zmsg_popstr(zmfalse);
-            } else {
-                //range
-                zmsg_addstr(zmfalse, next_scan.substr(0, ms_range_pos).c_str());
-                self->range_scan_config.range = zmsg_popstr(zmfalse);
-
-                zmsg_addstr(zmfalse, next_scan.substr(ms_range_pos + 1).c_str());
-                self->range_scan_config.range_dest = zmsg_popstr(zmfalse);
-            }
-
-            zsys_debug("Range scanner requested for %s with config file %s",
-                    next_scan.c_str(),
-                    self->range_scan_config.config);
-
-            // create range scanner
-            if (self->range_scanner) {
-                zpoller_remove(poller, self->range_scanner);
-                zactor_destroy(&self->range_scanner);
-            }
-
-            self->range_scanner = range_scanner_new(self);
-            zpoller_add(poller, self->range_scanner);
-
-            zmsg_destroy(&zmfalse);
         } else {
             zstr_send(pipe, REQ_DONE);
             if (!self->localscan_subscan.empty())
                 self->localscan_subscan.clear();
 
             self->status_scan = STATUS_FINISHED;
-            zstr_free(&self->range_scan_config.range);
-            zstr_free(&self->range_scan_config.range_dest);
+            for(auto range : self->range_scan_config.ranges) {
+                zstr_free(&(range.first));
+                zstr_free(&(range.second));
+            }
+            self->range_scan_config.ranges.clear();
 
             zpoller_remove(poller, self->range_scanner);
             zactor_destroy(&self->range_scanner);
@@ -984,11 +973,11 @@ fty_discovery_server(zsock_t *pipe, void *args) {
             s_handle_range_scanner(self, message, poller, pipe);
         }
         // check that scanner is NULL && we have to do scan
-        if (self->range_scan_config.range && !self->range_scanner) {
+        if (self->range_scan_config.ranges.size() > 0 && !self->range_scanner) {
             if (zclock_mono() - assets_last_change(self->assets) > 5000) {
                 // no asset change for last 5 secs => we can start range scan
                 zsys_debug("Range scanner start for %s with config file %s",
-                        self->range_scan_config.range,
+                        self->range_scan_config.ranges.front().first,
                         self->range_scan_config.config);
                 // create range scanner
                 // TODO: send list of IPs to skip
@@ -1026,8 +1015,6 @@ fty_discovery_server_new() {
     self->ongoing_stop = false;
     self->status_scan = -1;
     self->range_scan_config.config = strdup(FTY_DISCOVERY_CFG_FILE);
-    self->range_scan_config.range = NULL;
-    self->range_scan_config.range_dest = NULL;
     self->configuration_scan.type = TYPE_LOCALSCAN;
     self->configuration_scan.scan_size = 0;
     self->devices_discovered.device_list = zhash_new();
@@ -1046,16 +1033,24 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
         assets_destroy(&self->assets);
         if (self->range_scan_config.config)
             zstr_free(&self->range_scan_config.config);
-        if (self->range_scan_config.range)
-            zstr_free(&self->range_scan_config.range);
-        if (self->range_scan_config.range_dest)
-            zstr_free(&self->range_scan_config.range_dest);
+        if (self->range_scan_config.ranges.size() > 0) {
+            for(auto range : self->range_scan_config.ranges) {
+                zstr_free(&(range.first));
+                zstr_free(&(range.second));
+            }
+            self->range_scan_config.ranges.clear();
+        }
+        self->range_scan_config.ranges.shrink_to_fit();
         if (self->percent)
             zstr_free(&self->percent);
         if (self->range_scanner)
             zactor_destroy(&self->range_scanner);
         if (self->devices_discovered.device_list)
             zhash_destroy(&self->devices_discovered.device_list);
+        self->configuration_scan.scan_list.clear();
+        self->configuration_scan.scan_list.shrink_to_fit();
+        self->localscan_subscan.clear();
+        self->localscan_subscan.shrink_to_fit();
         //  Free object itself
         free(self);
         *self_p = NULL;

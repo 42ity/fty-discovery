@@ -14,7 +14,8 @@ discovery
     ips
 
 parameters
-    maxPoolNumber = 15
+    maxDumpPoolNumber = 15
+    maxScanPoolNumber = 4
     nutScannerTimeOut = 20
     dumpDataLoopTime = 30
 
