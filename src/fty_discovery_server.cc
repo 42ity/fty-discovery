@@ -437,6 +437,20 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     fty_proto_ext_insert(asset, "create_user", CREATE_USER);
     fty_proto_ext_insert(asset, "create_mode", CREATE_MODE);
 
+    self->devices_discovered.mtx_list.lock();
+    char* c = (char*) zhash_first( self->devices_discovered.device_list);
+
+    while(c && !streq(c, ip)) {
+        c = (char*) zhash_next( self->devices_discovered.device_list);
+    }
+
+    if(c != NULL) {
+        self->devices_discovered.mtx_list.unlock();
+        zsys_info("Asset with IP address %s already exists", ip);
+        fty_proto_destroy(&asset);
+        return;
+    }
+
     fty_proto_print(asset);
     zsys_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
     fty_proto_set_operation(asset, "create");
@@ -451,12 +465,42 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     } else {
         zsys_info("Create message has been sent to asset-agent (rv = %i)", rv);
 
+        zmsg_t *response = mlm_client_recv(self->mlm);
+        if(!response) {
+            self->devices_discovered.mtx_list.unlock();
+            fty_proto_destroy(&asset);
+            return;
+        }
+
+        char *str_resp = zmsg_popstr(response);
+
+        if(!str_resp || !streq(str_resp, "OK")) {
+            self->devices_discovered.mtx_list.unlock();
+            zsys_info("Error during asset creation.");
+            fty_proto_destroy(&asset);
+            return;
+        }
+
+        zstr_free(&str_resp);
+        str_resp = zmsg_popstr(response);
+        if(!str_resp) {
+            self->devices_discovered.mtx_list.unlock();
+            zsys_info("Error during asset creation.");
+            fty_proto_destroy(&asset);
+            return;
+        }
+
+        zhash_update(self->devices_discovered.device_list, str_resp, strdup(ip));
+        zhash_freefn(self->devices_discovered.device_list, str_resp, free);
+        zstr_free(&str_resp);
+
         name = fty_proto_aux_string(asset, "subtype", NULL);
         if (streq(name, "ups")) self->nb_ups_discovered++;
         else if (streq(name, "epdu")) self->nb_epdu_discovered++;
         else if (streq(name, "sts")) self->nb_sts_discovered++;
         self->nb_discovered++;
     }
+    self->devices_discovered.mtx_list.unlock();
     fty_proto_destroy(&asset);
 }
 
