@@ -52,6 +52,7 @@ typedef struct _configuration_scan_t {
 
 struct _fty_discovery_server_t {
     mlm_client_t *mlm;
+    mlm_client_t *mlmCreate;
     zactor_t *scanner;
     assets_t *assets;
     int64_t nb_percent;
@@ -403,7 +404,8 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     const char *ip = fty_proto_ext_string(asset, "ip.1", NULL);
     if (!ip) return;
 
-    if (assets_find(self->assets, "ip", ip)) {
+    bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
+    if (!daisy_chain && assets_find(self->assets, "ip", ip)) {
         zsys_info("Asset with IP address %s already exists", ip);
         return;
     }
@@ -429,6 +431,16 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         }
     }
 
+    if(daisy_chain) {
+        const char* dc_number = fty_proto_ext_string(asset, "daisy_chain", NULL);
+        name = fty_proto_ext_string(asset, "name", NULL);
+
+        if(streq (dc_number, "1"))
+            fty_proto_ext_insert(asset, "name", "%s Master%s", name, dc_number);
+        else
+            fty_proto_ext_insert(asset, "name", "%s Slave%s", name, dc_number);
+    }
+
     std::time_t timestamp = std::time(NULL);
     char mbstr[100];
     if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
@@ -438,17 +450,19 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     fty_proto_ext_insert(asset, "create_mode", CREATE_MODE);
 
     self->devices_discovered.mtx_list.lock();
-    char* c = (char*) zhash_first( self->devices_discovered.device_list);
+    if(!daisy_chain) {
+        char* c = (char*) zhash_first( self->devices_discovered.device_list);
 
-    while(c && !streq(c, ip)) {
-        c = (char*) zhash_next( self->devices_discovered.device_list);
-    }
+        while(c && !streq(c, ip)) {
+            c = (char*) zhash_next( self->devices_discovered.device_list);
+        }
 
-    if(c != NULL) {
-        self->devices_discovered.mtx_list.unlock();
-        zsys_info("Asset with IP address %s already exists", ip);
-        fty_proto_destroy(&asset);
-        return;
+        if(c != NULL) {
+            self->devices_discovered.mtx_list.unlock();
+            zsys_info("Asset with IP address %s already exists", ip);
+            fty_proto_destroy(&asset);
+            return;
+        }
     }
 
     fty_proto_print(asset);
@@ -459,13 +473,13 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     zmsg_t *msg = fty_proto_encode(&assetDup);
     zmsg_pushstrf (msg, "%s", "READONLY");
     zsys_debug("about to send create message");
-    int rv = mlm_client_sendto(self->mlm, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
+    int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
     if (rv == -1) {
         zsys_error("Failed to send ASSET_MANIPULATION message to asset-agent");
     } else {
         zsys_info("Create message has been sent to asset-agent (rv = %i)", rv);
 
-        zmsg_t *response = mlm_client_recv(self->mlm);
+        zmsg_t *response = mlm_client_recv(self->mlmCreate);
         if(!response) {
             self->devices_discovered.mtx_list.unlock();
             fty_proto_destroy(&asset);
@@ -534,6 +548,9 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         char *myname = zmsg_popstr(message);
         assert(endpoint && myname);
         mlm_client_connect(self->mlm, endpoint, 5000, myname);
+        char *nameadd = zsys_sprintf ("%s.create", myname);
+        mlm_client_connect(self->mlmCreate, endpoint, 5000, nameadd);
+        zstr_free(&nameadd);
         zstr_free(&endpoint);
         zstr_free(&myname);
     } else if (streq(command, REQ_CONSUMER)) {
@@ -1049,6 +1066,7 @@ fty_discovery_server_new() {
     assert(self);
     //  Initialize class properties here
     self->mlm = mlm_client_new();
+    self->mlmCreate = mlm_client_new();
     self->scanner = NULL;
     self->assets = assets_new();
     self->nb_discovered = 0;
@@ -1074,6 +1092,7 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
         //  Free class properties here
         zactor_destroy(&self->scanner);
         mlm_client_destroy(&self->mlm);
+        mlm_client_destroy(&self->mlmCreate);
         assets_destroy(&self->assets);
         if (self->range_scan_config.config)
             zstr_free(&self->range_scan_config.config);

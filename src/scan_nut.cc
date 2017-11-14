@@ -134,6 +134,71 @@ s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::st
     }
 }
 
+void
+s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, std::map <std::string, std::string> &dump, zsock_t* pipe)
+{
+    if(! asset) return;
+
+    auto item = dump.find ("device.count");
+    if(item == dump.end () || streq(item->second.c_str(), "1")) {
+        s_nut_dumpdata_to_fty_message(asset, dump);
+        return;
+    }
+    int nbDevice = std::stoi(item->second);
+
+    for(int i= 1; i <= nbDevice; i++) {
+        std::string first_part = "device." + std::to_string(i);
+        static std::map <std::string, std::string> mapping = {
+            {first_part + ".model", "model"},
+            {first_part + ".ups.model", "model"},
+            {first_part + ".mfr", "manufacturer"},
+            {first_part + ".ups.mfr", "manufacturer"},
+            {first_part + ".serial", "serial_no"},
+            {first_part + ".description", "device.description"},
+            {"device.contact", "device.contact"},
+            {"device.location", "device.location"},
+            {first_part + ".part", "device.part"},
+            {first_part + ".ups.serial", "serial_no"},
+            {first_part + ".ups.firmware", "firmware"},
+            {first_part + ".input.phases", "phases.input"},
+            {first_part + ".outlet.count", "outlet.count"}
+        };
+
+        fty_proto_t *fmsg;
+        if(i != 1) {
+            fmsg = fty_proto_new(FTY_PROTO_ASSET);
+
+            fty_proto_ext_insert (fmsg, "ip.1", "%s", fty_proto_ext_string(asset,"ip.1", ""));
+            fty_proto_aux_insert (fmsg, "type", "%s", fty_proto_aux_string(asset,"type", ""));
+        } else
+            fmsg = asset;
+        for (auto it: mapping) {
+            auto item = dump.find (it.first);
+            if (item != dump.end ()) {
+                // item found
+                fty_proto_ext_insert (fmsg, it.second.c_str (), "%s", item->second.c_str ());
+            }
+        }
+        {
+            // get type from dump is safer than parsing driver name
+            auto item = dump.find ("device.type");
+            if (item != dump.end ()) {
+                const char *device = item->second.c_str ();
+                if (streq (device, "pdu")) device = "epdu";
+                if (streq (device, "ats")) device = "sts";
+                fty_proto_aux_insert (fmsg, "subtype", "%s", device);
+            }
+        }
+        fty_proto_ext_insert(fmsg, "daisy_chain", "%" PRIi32, i);
+
+        if(i != 1) {
+            zmsg_t *reply = fty_proto_encode (&fmsg);
+            zmsg_pushstr (reply, "FOUND_DC");
+            zmsg_send (&reply, pipe);
+        }
+    }
+}
+
 //
 bool
 ip_present(discovered_devices_t *device_discovered, std::string ip) {
@@ -232,7 +297,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
         }
         if (type == "snmp") {
             if (nut_dumpdata_snmp_ups (addr, community,  nutdata) == 0) {
-                s_nut_dumpdata_to_fty_message (asset, nutdata);
+                s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
                 reply = fty_proto_encode (&asset);
                 zmsg_pushstr (reply, "FOUND");
             } else {
@@ -373,8 +438,14 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
                             zpoller_remove(poller, which);
                             zmsg_pushstr(msg_rec, "FOUND");
                             zmsg_send (&msg_rec, pipe);
-                        } else
+                        } else if (cmd && streq (cmd, "FOUND_DC")) {
+                            zmsg_pushstr(msg_rec, "FOUND");
+                            zmsg_send(&msg_rec, pipe);
+                            count--;
+                        } else { //Dump failed
+                            zpoller_remove(poller, which);
                             zmsg_destroy(&msg_rec);
+                        }
                         zstr_free(&cmd);
                     }
                 }
