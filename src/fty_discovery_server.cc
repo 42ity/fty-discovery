@@ -436,9 +436,11 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         name = fty_proto_ext_string(asset, "name", NULL);
 
         if(streq (dc_number, "1"))
-            fty_proto_ext_insert(asset, "name", "%s Master%s", name, dc_number);
-        else
-            fty_proto_ext_insert(asset, "name", "%s Slave%s", name, dc_number);
+            fty_proto_ext_insert(asset, "name", "%s Host", name);
+        else {
+            int dc_numberI = atoi(dc_number);
+            fty_proto_ext_insert(asset, "name", "%s Device%i", name, dc_numberI-1);
+        }
     }
 
     std::time_t timestamp = std::time(NULL);
