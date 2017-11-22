@@ -148,7 +148,7 @@ s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, std::map <std::str
 
     for(int i= 1; i <= nbDevice; i++) {
         std::string first_part = "device." + std::to_string(i);
-        static std::map <std::string, std::string> mapping = {
+        std::map <std::string, std::string> mapping = {
             {first_part + ".model", "model"},
             {first_part + ".ups.model", "model"},
             {first_part + ".mfr", "manufacturer"},
