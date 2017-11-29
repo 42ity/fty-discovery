@@ -11,6 +11,8 @@ User=bios
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut:"
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
+Environment="NUT_ALTPIDPATH=\"\""
+Environment="NUT_STATEPATH=/tmp"
 ExecStart=@prefix@/bin/fty-discovery --agent
 Restart=always
 

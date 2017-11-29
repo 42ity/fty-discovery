@@ -203,9 +203,7 @@ nut_dumpdata(
 {
     Argv args;
     //to forge the command line to call the driver
-    //first the sudo cmd
-    args.push_back("sudo");
-    //then the driver name
+    //first the driver name
     args.push_back(driver);
     //ask the driver to do dump-data
     args.push_back("-d");
@@ -216,7 +214,7 @@ nut_dumpdata(
     //set a unique name with the driver name
     args.push_back("-s");
     std::string name="dumpdata";
-    name.append( std::to_string(rand() % 1000 + 1));
+    name.append( std::to_string(rand() % 100000 + 1));
     args.push_back(name);
     //add all extra parameters
     for (auto it: extra) {
