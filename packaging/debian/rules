@@ -49,4 +49,5 @@ override_dh_auto_configure:
 %:
 	dh $@ \
 		--with systemd \
+		--parallel \
 		--with autoreconf

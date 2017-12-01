@@ -28,6 +28,7 @@
 %else
 %define DRAFTS no
 %endif
+%define SYSTEMD_UNIT_DIR %(pkg-config --variable=systemdsystemunitdir systemd)
 Name:           fty-discovery
 Version:        1.0.0
 Release:        1
@@ -50,6 +51,7 @@ BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
 BuildRequires:  gcc-c++
+BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
@@ -80,6 +82,7 @@ This package contains shared library for fty-discovery: 42ity service for discov
 Summary:        42ity service for discovering devices
 Group:          System/Libraries
 Requires:       libfty_discovery0 = %{version}
+Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
@@ -122,7 +125,7 @@ find %{buildroot} -name '*.la' | xargs rm -f
 %{_bindir}/fty-discovery
 %{_mandir}/man1/fty-discovery*
 %config(noreplace) %{_sysconfdir}/fty-discovery/fty-discovery.cfg
-/usr/lib/systemd/system/fty-discovery.service
+%{SYSTEMD_UNIT_DIR}/fty-discovery.service
 %dir %{_sysconfdir}/fty-discovery
 %if 0%{?suse_version} > 1315
 %post
