@@ -11,6 +11,12 @@
     <target name = "debian" />
     <target name = "redhat" />
     <target name = "travis" />
+    <target name = "jenkins" >
+        <option name = "agent_label" value = "devel-image-ipm_1.3 &amp;&amp; x86_64" />
+        <option name = "triggers_pollSCM" value = "H/2 * * * *" />
+        <option name = "test_cppcheck" value = "1" />
+        <option name = "build_docs" value = "1" />
+    </target>
 
     <include filename = "license.xml" />
     <version major = "1" minor = "0" patch = "0" />
