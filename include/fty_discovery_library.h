@@ -62,6 +62,9 @@
 #       define FTY_DISCOVERY_EXPORT __declspec(dllimport)
 #   endif
 #   define FTY_DISCOVERY_PRIVATE
+#elif defined (__CYGWIN__)
+#   define FTY_DISCOVERY_EXPORT
+#   define FTY_DISCOVERY_PRIVATE
 #else
 #   define FTY_DISCOVERY_EXPORT
 #   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
