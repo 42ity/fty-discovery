@@ -148,7 +148,7 @@ s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, std::map <std::str
 
     for(int i= 1; i <= nbDevice; i++) {
         std::string first_part = "device." + std::to_string(i);
-        static std::map <std::string, std::string> mapping = {
+        std::map <std::string, std::string> mapping = {
             {first_part + ".model", "model"},
             {first_part + ".ups.model", "model"},
             {first_part + ".mfr", "manufacturer"},
@@ -300,6 +300,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
                 s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
                 reply = fty_proto_encode (&asset);
                 zmsg_pushstr (reply, "FOUND");
+                zsys_debug("dumpdata for %s on %s success.", addr.c_str(), community.c_str());
             } else {
                 fty_proto_destroy(&asset);
                 zsys_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
@@ -316,6 +317,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
                 s_nut_dumpdata_to_fty_message (asset, nutdata);
                 reply = fty_proto_encode (&asset);
                 zmsg_pushstr (reply, "FOUND");
+                zsys_debug("dumpdata for %s success.", addr.c_str());
             } else {
                 fty_proto_destroy(&asset);
                 zsys_debug("dumpdata for %s failed.", addr.c_str());
@@ -449,6 +451,10 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
                         zstr_free(&cmd);
                     }
                 }
+            } else {
+                zsys_debug("Error on create_pool_dumpdata");
+                stop_now = true;
+                break;
             }
         }
 
