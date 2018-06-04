@@ -4,7 +4,7 @@
     Runs all private classes selftests.
 
     -------------------------------------------------------------------------
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2018 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,19 +35,29 @@
 //
 
 void
-fty_discovery_private_selftest (bool verbose)
+fty_discovery_private_selftest (bool verbose, const char *subtest)
 {
 // Tests for stable private classes:
-    cidr_test (verbose);
-    subprocess_test (verbose);
-    nutscan_test (verbose);
-    nutdumpdata_test (verbose);
-    range_scan_test (verbose);
-    device_scan_test (verbose);
-    scan_dns_test (verbose);
-    scan_nut_test (verbose);
-    assets_test (verbose);
-    fty_uuid_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "cidr_test"))
+        cidr_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "subprocess_test"))
+        subprocess_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nutscan_test"))
+        nutscan_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "nutdumpdata_test"))
+        nutdumpdata_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "range_scan_test"))
+        range_scan_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "device_scan_test"))
+        device_scan_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "scan_dns_test"))
+        scan_dns_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "scan_nut_test"))
+        scan_nut_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "assets_test"))
+        assets_test (verbose);
+    if (streq (subtest, "$ALL") || streq (subtest, "fty_uuid_test"))
+        fty_uuid_test (verbose);
 }
 /*
 ################################################################################

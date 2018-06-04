@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty-discovery - generated layer of public API
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2018 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -66,11 +66,12 @@
 #   define FTY_DISCOVERY_EXPORT
 #   define FTY_DISCOVERY_PRIVATE
 #else
-#   define FTY_DISCOVERY_EXPORT
 #   if (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
 #       define FTY_DISCOVERY_PRIVATE __attribute__ ((visibility ("hidden")))
+#       define FTY_DISCOVERY_EXPORT __attribute__ ((visibility ("default")))
 #   else
 #       define FTY_DISCOVERY_PRIVATE
+#       define FTY_DISCOVERY_EXPORT
 #   endif
 #endif
 
@@ -84,9 +85,18 @@ typedef struct _fty_discovery_server_t fty_discovery_server_t;
 #include "fty_discovery_server.h"
 
 #ifdef FTY_DISCOVERY_BUILD_DRAFT_API
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //  Self test for private classes
 FTY_DISCOVERY_EXPORT void
-    fty_discovery_private_selftest (bool verbose);
+    fty_discovery_private_selftest (bool verbose, const char *subtest);
+
+#ifdef __cplusplus
+}
+#endif
 #endif // FTY_DISCOVERY_BUILD_DRAFT_API
 
 #endif
