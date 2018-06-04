@@ -4,7 +4,7 @@
     Runs all selftests.
 
     -------------------------------------------------------------------------
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2018 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,19 +29,45 @@
 
 #include "fty_discovery_classes.h"
 
+#ifndef streq
+/*
+ *  Allow projects without czmq dependency:
+ *  The generated code expects that czmq pulls in a few headers and macro
+ *  definitions. This is a minimal fix for the generated selftest file in
+ *  C++ mode.
+ */
+#include <string.h>
+#define streq(s1,s2)    (!strcmp ((s1), (s2)))
+#endif
+
 typedef struct {
-    const char *testname;
-    void (*test) (bool);
+    const char *testname;           // test name, can be called from command line this way
+    void (*test) (bool);            // function to run the test (or NULL for private tests)
+    bool stable;                    // true if class is declared as stable
+    bool pub;                       // true if class is declared as public
+    const char *subtest;            // name of private subtest to run
 } test_item_t;
 
 static test_item_t
 all_tests [] = {
 // Tests for stable public classes:
-    { "fty_discovery_server", fty_discovery_server_test },
+    { "fty_discovery_server", fty_discovery_server_test, true, true, NULL },
 #ifdef FTY_DISCOVERY_BUILD_DRAFT_API
-    { "private_classes", fty_discovery_private_selftest },
+// Tests for stable/draft private classes:
+// Now built only with --enable-drafts, so even stable builds are hidden behind the flag
+    { "cidr", NULL, true, false, "cidr_test" },
+    { "subprocess", NULL, true, false, "subprocess_test" },
+    { "nutscan", NULL, true, false, "nutscan_test" },
+    { "nutdumpdata", NULL, true, false, "nutdumpdata_test" },
+    { "range_scan", NULL, true, false, "range_scan_test" },
+    { "device_scan", NULL, true, false, "device_scan_test" },
+    { "scan_dns", NULL, true, false, "scan_dns_test" },
+    { "scan_nut", NULL, true, false, "scan_nut_test" },
+    { "assets", NULL, true, false, "assets_test" },
+    { "fty_uuid", NULL, true, false, "fty_uuid_test" },
+    { "private_classes", NULL, false, false, "$ALL" }, // compat option for older projects
 #endif // FTY_DISCOVERY_BUILD_DRAFT_API
-    {0, 0}          //  Sentinel
+    {NULL, NULL, 0, 0, NULL}          //  Sentinel
 };
 
 //  -------------------------------------------------------------------------
@@ -53,7 +79,7 @@ test_item_t *
 test_available (const char *testname)
 {
     test_item_t *item;
-    for (item = all_tests; item->test; item++) {
+    for (item = all_tests; item->testname; item++) {
         if (streq (testname, item->testname))
             return item;
     }
@@ -69,10 +95,43 @@ test_runall (bool verbose)
 {
     test_item_t *item;
     printf ("Running fty-discovery selftests...\n");
-    for (item = all_tests; item->test; item++)
-        item->test (verbose);
+    for (item = all_tests; item->testname; item++) {
+        if (streq (item->testname, "private_classes"))
+            continue;
+        if (!item->subtest)
+            item->test (verbose);
+#ifdef FTY_DISCOVERY_BUILD_DRAFT_API // selftest is still in draft
+        else
+            fty_discovery_private_selftest (verbose, item->subtest);
+#endif // FTY_DISCOVERY_BUILD_DRAFT_API
+    }
 
     printf ("Tests passed OK\n");
+}
+
+static void
+test_list (void)
+{
+    test_item_t *item;
+    puts ("Available tests:");
+    for (item = all_tests; item->testname; item++)
+        printf ("    %-40s - %s	%s\n",
+            item->testname,
+            item->stable ? "stable" : "draft",
+            item->pub ? "public" : "private"
+        );
+}
+
+static void
+test_number (void)
+{
+    int n = 0;
+    test_item_t *item;
+    for (item = all_tests; item->testname; item++) {
+        if (! streq (item->testname, "private_classes"))
+            n++;
+    }
+    printf ("%d\n", n);
 }
 
 int
@@ -98,15 +157,13 @@ main (int argc, char **argv)
         else
         if (streq (argv [argn], "--number")
         ||  streq (argv [argn], "-n")) {
-            puts ("11");
+            test_number ();
             return 0;
         }
         else
         if (streq (argv [argn], "--list")
         ||  streq (argv [argn], "-l")) {
-            puts ("Available tests:");
-            puts ("    fty_discovery_server\t\t- stable");
-            puts ("    private_classes\t- draft");
+            test_list ();
             return 0;
         }
         else
@@ -144,7 +201,12 @@ main (int argc, char **argv)
 
     if (test) {
         printf ("Running fty-discovery test '%s'...\n", test->testname);
-        test->test (verbose);
+        if (!test->subtest)
+            test->test (verbose);
+#ifdef FTY_DISCOVERY_BUILD_DRAFT_API // selftest is still in draft
+        else
+            fty_discovery_private_selftest (verbose, test->subtest);
+#endif // FTY_DISCOVERY_BUILD_DRAFT_API
     }
     else
         test_runall (verbose);

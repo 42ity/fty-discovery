@@ -42,9 +42,9 @@ SUFFIXES=.txt .adoc .xml .xml7 .1 .3 .7
 	asciidoc -d manpage -b docbook -f $(srcdir)/asciidoc.conf \
         -afty-discovery_version=@PACKAGE_VERSION@ -o$@ $<
 .xml.1:
-	xmlto man $<
+	xmlto -o $(@D) man $<
 .xml.3:
-	xmlto man $<
+	xmlto -o $(@D) man $<
 
 # Special handling for project overview whose basename may collide
 # with a main or class name
@@ -52,7 +52,7 @@ SUFFIXES=.txt .adoc .xml .xml7 .1 .3 .7
 	asciidoc -d manpage -b docbook -f $(srcdir)/asciidoc.conf \
         -afty-discovery_version=@PACKAGE_VERSION@ -o$@ $<
 .xml7.7:
-	xmlto man $<
+	xmlto -o $(@D) man $<
 
 # List of *.txt and *.doc files generated during build from comments
 # in project program source files and further processed into manpages.
@@ -68,8 +68,12 @@ GENERATED_DOCS += fty_discovery_server.txt fty_discovery_server.doc
 fty_discovery_server.txt: $(top_srcdir)/src/fty_discovery_server.cc
 	"$(srcdir)/mkman" "fty_discovery_server" "$(builddir)/fty_discovery_server.txt" "$(srcdir)/.."
 
+### Note: for mains, we keep the source name rather than flattened name:c
+### so that the manpages for binary programs match their name, at expense
+### of perhaps being built in a subdirectory under doc/.
 GENERATED_DOCS += fty-discovery.txt fty-discovery.doc
 fty-discovery.txt: $(top_srcdir)/src/fty_discovery.cc
+	mkdir -p "$(builddir)/$(@D)"
 	"$(srcdir)/mkman" "fty_discovery" "$(builddir)/fty-discovery.txt" "$(srcdir)/.."
 
 

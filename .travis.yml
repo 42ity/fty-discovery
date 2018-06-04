@@ -1,9 +1,10 @@
 # Travis CI script
 # This is a skeleton created by zproject.
 # You can add hand-written code here.
+### Note: Customized after generation; take care upon regens
 
 language:
-- c
+- cpp
 
 cache:
 - ccache
@@ -22,17 +23,22 @@ sudo: false
 #dist:
 #- trusty
 
+# Note: was uncommented in earlier builds (TODO: Check if needed)
 services:
 - docker
 
 # Set CI_TIME=true to enable build-step profiling in Travis
 # Set CI_TRACE=true to enable shell script tracing in Travis
 # Set CI_CONFIG_QUIET=true to enable "configure --quiet" (only report stderr)
+# Set CI_REQUIRE_GOOD_GITIGNORE=false to NOT fail if "git status -s" is not clean
+# Set CI_REQUIRE_GOOD_CLANG_FORMAT=true to fail if "clang-format" check is not clean
 env:
   global:
     - CI_TIME=false
     - CI_TRACE=false
     - CI_CONFIG_QUIET=true
+    - CI_REQUIRE_GOOD_GITIGNORE=false
+    - CI_REQUIRE_GOOD_CLANG_FORMAT=false
     # tokens to deploy releases on OBS and create/delete temporary branch on Github.
     # 1) Create a token on https://github.com/settings/tokens/new with "public_repo"
     #    capability and encrypt it with travis encrypt --org -r <org>/<repo> GH_TOKEN="<token>"
@@ -46,18 +52,30 @@ env:
   matrix:
     - BUILD_TYPE=default
     - BUILD_TYPE=default-Werror
+### Note: we don't use CMake
 #   - BUILD_TYPE=cmake
 #   - BUILD_TYPE=android
 #   - BUILD_TYPE=check-py
 
+# Prerequisite packages provided by OS distro and used "as is"
+pkg_deps_prereqs_distro: &pkg_deps_prereqs_distro
+    - libssl-dev
+
+# Prerequisite packages that may be built from source or used from
+# prebuilt packages of that source (usually not from an OS distro)
+pkg_deps_prereqs_source: &pkg_deps_prereqs_source
+    - libsodium-dev
+    - libzmq3-dev
+    - libczmq-dev
+    - libmlm-dev
+    - libfty-proto-dev
+    - libcidr0-dev
+    - cxxtools-dev
+
+# NOTE: Our forks are checked out and built without pkg dependencies in use
 pkg_deps_prereqs: &pkg_deps_prereqs
-# Manual edit: We build our own forks
-#    - libzmq3-dev
-#    - libczmq-dev
-#    - libmlm-dev
-#    - libfty-proto-dev
-#    - libcidr0-dev
-#    - cxxtools-dev
+#    - *pkg_deps_prereqs_source
+    - *pkg_deps_prereqs_distro
 
 pkg_deps_doctools: &pkg_deps_doctools
     - asciidoc
@@ -79,7 +97,7 @@ pkg_src_zeromq_ubuntu14: &pkg_src_zeromq_ubuntu14
 # is needed for C++11 support; docker envs are usually faster to start up
 addons:
   apt:
-    sources: *pkg_src_zeromq_ubuntu12
+    sources: *pkg_src_zeromq_ubuntu14
     packages: &pkg_deps_common
     - *pkg_deps_devtools
     - *pkg_deps_prereqs
@@ -88,10 +106,11 @@ matrix:
   include:
   - env: BUILD_TYPE=default-with-docs
     os: linux
-    services: docker
+# Note: was uncommented in earlier builds (TODO: Check if needed)
+#    services: docker
     addons:
       apt:
-        sources: *pkg_src_zeromq_ubuntu12
+        sources: *pkg_src_zeromq_ubuntu14
         packages:
         - *pkg_deps_common
         - *pkg_deps_doctools
@@ -112,9 +131,25 @@ matrix:
         sources: *pkg_src_zeromq_ubuntu14
         packages:
         - *pkg_deps_common
+# - env: BUILD_TYPE=cmake DO_CLANG_FORMAT_CHECK=1 CLANG_FORMAT=clang-format-5.0
+# For non-cmake users, there is an autotools solution with a bit more overhead
+# to have dependencies ready and pass configure script before making this check).
+# Note that the autotools variant will also require dependencies preinstalled to
+# pass its configure script:
+  - env: BUILD_TYPE=clang-format-check CLANG_FORMAT=clang-format-5.0
+    os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - llvm-toolchain-trusty-5.0
+        packages:
+        - clang-5.0
+        - clang-format-5.0
+        - *pkg_deps_prereqs
 
 before_install:
-- if [ "$TRAVIS_OS_NAME" == "osx" ] ; then brew update; brew install binutils ; fi
+- if [ "$TRAVIS_OS_NAME" == "osx" -a "$BUILD_TYPE" == "android" ] ; then brew install binutils ; fi
 - if [ "$TRAVIS_OS_NAME" == "osx" -a "$BUILD_TYPE" == "valgrind" ] ; then brew install valgrind ; fi
 
 # Hand off to generated script for each BUILD_TYPE

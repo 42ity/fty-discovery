@@ -1,6 +1,9 @@
 # This is a skeleton created by zproject.
 # You can add hand-written code here.
+### Note: Customized after generation; take care upon regens
+
 save.xml
+
 # Object files
 *.o
 *.so
@@ -29,10 +32,10 @@ src/fty_discovery_selftest
 *.app
 core
 
- # Distcheck workspace and archives
-fty-discovery-1.0.0/
-fty-discovery-1.0.0.tar.gz
-fty-discovery-1.0.0.zip
+# Distcheck workspace and archives
+fty-discovery-*/
+fty-discovery-*.tar.gz
+fty-discovery-*.zip
 
 # Man pages
 doc/*.1
@@ -72,7 +75,13 @@ DartConfiguration.tcl
 install_manifest.txt
 Testing/
 
+# CMake in general
+builds/cmake/
+CMake*
+*.cmake
+
 # Repositories downloaded by CI integration scripts
+libsodium/
 libzmq/
 czmq/
 malamute/
@@ -107,7 +116,7 @@ src/app/gen/
 src/app/obj/
 src/app/local.properties
 
-# Android -dependencies
+# Android - dependencies
 src/app/jni/output
 
 # Python build directory
@@ -128,6 +137,9 @@ bindings/qt/selftest/selftest
 *.swp
 *.bak
 .test*
+
+# Netbeans directory
+nbproject/
 
 # editor backups
 *~
