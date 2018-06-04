@@ -201,7 +201,8 @@ output(
 
 
 //  Self test of this class
-FTY_DISCOVERY_EXPORT void
+//  NOTE: Keep definition in sync with generated fty_discovery_classes.h
+FTY_DISCOVERY_PRIVATE void
     subprocess_test (bool verbose);
 
 #endif
