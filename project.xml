@@ -12,7 +12,7 @@
     <target name = "redhat" />
     <target name = "travis" />
     <target name = "jenkins" >
-        <option name = "agent_label" value = "devel-image &amp;&amp; x86_64" />
+        <option name = "agent_label" value = "devel-image-ipm_1.4 &amp;&amp; x86_64" />
         <option name = "triggers_pollSCM" value = "H/2 * * * *" />
         <option name = "use_test_timeout" value = "30" />
         <option name = "test_cppcheck" value = "1" />
@@ -25,26 +25,27 @@
 
     <use project = "czmq"
         repository="https://github.com/42ity/czmq.git"
-        release = "v3.0.2-FTY-master"
+        release = "release/IPM_Infra-1.4"
         min_major = "3" min_minor = "0" min_patch = "2" >
         <use project = "libzmq"
             repository="https://github.com/42ity/libzmq.git"
-            release = "4.2.0-FTY-master" >
+            release = "release/IPM_Infra-1.4" >
             <use project = "libsodium" prefix = "sodium"
                 repository = "https://github.com/42ity/libsodium.git"
-                release = "1.0.5-FTY-master"
+                release = "release/IPM_Infra-1.4"
                 test = "sodium_init" />
         </use>
     </use>
 
     <use project = "malamute" min_major = "1" test = "mlm_server_test"
         repository="https://github.com/42ity/malamute.git"
-        release = "1.0-FTY-master"
+        release = "release/IPM_Infra-1.4"
         />
 
     <use project = "fty-proto" libname = "libfty_proto" header="ftyproto.h" prefix="fty_proto"
         min_major = "1" min_minor = "0" min_patch = "0"
         repository = "https://github.com/42ity/fty-proto.git"
+        release = "release/IPM_Infra-1.4"
         test = "fty_proto_test" >
         <use project = "malamute" />
     </use>
@@ -52,11 +53,11 @@
     <use project = "cidr" test = "cidr_alloc" header="libcidr.h"
         debian_name = "libcidr0-dev" redhat_name = "libcidr-devel"
         repository = "https://github.com/42ity/libcidr.git"
-        release = "1.2.3-FTY-master" />
+        release = "release/IPM_Infra-1.4" />
 
     <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
         repository = "https://github.com/42ity/cxxtools.git"
-        release = "2.2-FTY-master"
+        release = "release/IPM_Infra-1.4"
         />
 
     <use project = "openssl" header = "openssl/sha.h" debian_name="libssl-dev" />
