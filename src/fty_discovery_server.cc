@@ -510,11 +510,12 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         zhash_freefn(self->devices_discovered.device_list, str_resp, free);
         zstr_free(&str_resp);
 
-        name = fty_proto_aux_string(asset, "subtype", NULL);
+        name = fty_proto_aux_string(asset, "subtype", "error");
         if (streq(name, "ups")) self->nb_ups_discovered++;
         else if (streq(name, "epdu")) self->nb_epdu_discovered++;
         else if (streq(name, "sts")) self->nb_sts_discovered++;
-        self->nb_discovered++;
+        if(!streq(name, "error"))
+          self->nb_discovered++;
     }
     self->devices_discovered.mtx_list.unlock();
     fty_proto_destroy(&asset);
@@ -924,7 +925,8 @@ s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {
 
             const char *operation = fty_proto_operation(fmsg);
 
-            if (streq(operation, FTY_PROTO_ASSET_OP_DELETE)) {
+            //TODO : Remove as soon as we can this ugly hack of "_no_not_really"
+            if (streq(operation, FTY_PROTO_ASSET_OP_DELETE) && !zhash_lookup(fty_proto_aux(fmsg), "_no_not_really")) {
                 const char *iname = fty_proto_name(fmsg);
                 self->devices_discovered.mtx_list.lock();
                 zhash_delete(self->devices_discovered.device_list, iname);
