@@ -141,13 +141,13 @@ s_valid_dumpdata (std::map <std::string, std::string> &dump)
     return false;
   }
 
-  if(dump.find("device.model") == dump.end() && dump.find("device.ups.model") == dump.end() &&
+  if(dump.find("device.model") == dump.end() && dump.find("ups.model") == dump.end() &&
           dump.find("device.1.model") == dump.end() && dump.find("device.1.ups.model") == dump.end()) {
     zsys_error("No model for this device");
     return false;
   }
 
-  if(dump.find("device.mfr") == dump.end() && dump.find("device.ups.mfr") == dump.end() &&
+  if(dump.find("device.mfr") == dump.end() && dump.find("ups.mfr") == dump.end() &&
           dump.find("device.1.mfr") == dump.end() && dump.find("device.1.ups.mfr") == dump.end()) {
     zsys_error("No subtype for this device");
     return false;
