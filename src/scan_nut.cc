@@ -133,6 +133,29 @@ s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::st
         }
     }
 }
+bool
+s_valid_dumpdata (std::map <std::string, std::string> &dump)
+{
+  if(dump.find("device.type") == dump.end()) {
+    zsys_error("No subtype for this device");
+    return false;
+  }
+
+  if(dump.find("device.model") == dump.end() && dump.find("ups.model") == dump.end() &&
+          dump.find("device.1.model") == dump.end() && dump.find("device.1.ups.model") == dump.end()) {
+    zsys_error("No model for this device");
+    return false;
+  }
+
+  if(dump.find("device.mfr") == dump.end() && dump.find("ups.mfr") == dump.end() &&
+          dump.find("device.1.mfr") == dump.end() && dump.find("device.1.ups.mfr") == dump.end()) {
+    zsys_error("No subtype for this device");
+    return false;
+  }
+
+  return true;
+}
+
 
 void
 s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, std::map <std::string, std::string> &dump, zsock_t* pipe)
@@ -163,6 +186,12 @@ s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, std::map <std::str
             {first_part + ".input.phases", "phases.input"},
             {first_part + ".outlet.count", "outlet.count"}
         };
+
+        if(dump.find(first_part+".mfr") == dump.end() && dump.find(first_part+".ups.mfr") == dump.end() &&
+          dump.find(first_part+".model") == dump.end() && dump.find(first_part+".ups.model") == dump.end()) {
+          zsys_error("No manufacturer or model for the  %i th device ", i);
+          break;
+        }
 
         fty_proto_t *fmsg;
         if(i != 1) {
@@ -297,10 +326,17 @@ dump_data_actor(zsock_t *pipe, void *args) {
         }
         if (type == "snmp") {
             if (nut_dumpdata_snmp_ups (addr, community,  nutdata) == 0) {
-                s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
-                reply = fty_proto_encode (&asset);
-                zmsg_pushstr (reply, "FOUND");
-                zsys_debug("dumpdata for %s on %s success.", addr.c_str(), community.c_str());
+                if(!s_valid_dumpdata(nutdata)) {
+                  fty_proto_destroy(&asset);
+                  zsys_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
+                  reply = zmsg_new();
+                  zmsg_pushstr(reply, "FAILED");
+                } else {
+                  s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
+                  reply = fty_proto_encode (&asset);
+                  zmsg_pushstr (reply, "FOUND");
+                  zsys_debug("dumpdata for %s on %s success.", addr.c_str(), community.c_str());
+                }
             } else {
                 fty_proto_destroy(&asset);
                 zsys_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
@@ -314,10 +350,17 @@ dump_data_actor(zsock_t *pipe, void *args) {
             zstr_free(&temp);
         } else {
             if (nut_dumpdata_netxml_ups (addr,  nutdata) == 0) {
-                s_nut_dumpdata_to_fty_message (asset, nutdata);
-                reply = fty_proto_encode (&asset);
-                zmsg_pushstr (reply, "FOUND");
-                zsys_debug("dumpdata for %s success.", addr.c_str());
+                if(!s_valid_dumpdata (nutdata)) {
+                  fty_proto_destroy(&asset);
+                  zsys_debug("dumpdata for %s failed.", addr.c_str());
+                  reply = zmsg_new();
+                  zmsg_pushstr(reply, "FAILED");
+                } else {
+                  s_nut_dumpdata_to_fty_message (asset, nutdata);
+                  reply = fty_proto_encode (&asset);
+                  zmsg_pushstr (reply, "FOUND");
+                  zsys_debug("dumpdata for %s success.", addr.c_str());
+                }
             } else {
                 fty_proto_destroy(&asset);
                 zsys_debug("dumpdata for %s failed.", addr.c_str());
