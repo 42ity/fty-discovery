@@ -126,16 +126,16 @@ s_run_nut_scaner(
 
     zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
     if (!config) {
-        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        log_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
         config = zconfig_new("root", NULL);
     }
 
     char* strTimeOut = zconfig_get(config, CFG_PARAM_NUTSCAN_TIMEOUT, DEFAULT_NUTSCAN_TIMEOUT);
     const size_t nut_scanner_timeout = std::stoi(strTimeOut);
 
-    zsys_debug ("START: nut-scanner with timeout %s ...", strTimeOut);
+    log_debug ("START: nut-scanner with timeout %s ...", strTimeOut);
     int ret = output(args, o, e, nut_scanner_timeout);
-    zsys_debug ("       done with code %d", ret);
+    log_debug ("       done with code %d", ret);
     zconfig_destroy(&config);
 
     if (ret != 0)
@@ -170,18 +170,18 @@ nut_scan_multi_snmp(
     int r = -1;
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
-        zsys_debug("nut-scanner --community %s -z -s %s -e %s",comm.c_str(), ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
+        log_debug("nut-scanner --community %s -z -s %s -e %s",comm.c_str(), ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
         Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address_start.toString(), "-e", ip_address_end.toString()};
         r = s_run_nut_scaner(
                 args,
                 name,
                 out);
-        
+
             return r;
     }
 
     // DMF not available
-    zsys_debug("nut-scanner --community %s -S -s %s -e %s",comm.c_str(), ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
+    log_debug("nut-scanner --community %s -S -s %s -e %s",comm.c_str(), ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
     Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address_start.toString(CIDR_WITHOUT_PREFIX), "-e", ip_address_end.toString(CIDR_WITHOUT_PREFIX)};
     r = s_run_nut_scaner(
             args,
@@ -198,7 +198,7 @@ nut_scan_multi_xml_http(
         const CIDRAddress& ip_address_end,
         std::vector<std::string>& out)
 {
-     zsys_debug("nut-scanner -M -s %s -e %s", ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
+     log_debug("nut-scanner -M -s %s -e %s", ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
     Argv args = {"nut-scanner", "-M", "-s", ip_address_start.toString(CIDR_WITHOUT_PREFIX), "-e", ip_address_end.toString(CIDR_WITHOUT_PREFIX)};
     return s_run_nut_scaner(
             args,

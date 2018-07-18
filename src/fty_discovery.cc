@@ -35,18 +35,19 @@ int main (int argc, char *argv [])
     bool agent = false;
     const char *range = NULL;
     const char *config = FTY_DISCOVERY_CFG_FILE;
+    ManageFtyLog::setInstanceFtylog(FTY_DISCOVERY_ACTOR_NAME);
 
     int argn;
     for (argn = 1; argn < argc; argn++) {
         if (streq (argv [argn], "--help")
         ||  streq (argv [argn], "-h")) {
             puts ("fty-discovery [options] ...");
-            puts ("  --verbose / -v         verbose test output");
+            puts ("  --verbose / -v         verbose output");
             puts ("  --help / -h            this information");
             puts ("  --agent / -a           stay running, listen to rest api commands");
             puts ("  --range / -r           scan this range (192.168.1.0/24 format). If -a and -r are not");
             puts ("                         present, scan of attached networks is performed (localscan)");
-            printf("  --config / -c          config file [%s]\n",FTY_DISCOVERY_CFG_FILE);
+            printf("  --config / -c         agent config file [%s]\n",FTY_DISCOVERY_CFG_FILE);
             return 0;
         }
         else if (streq (argv [argn], "--verbose") ||  streq (argv [argn], "-v")) {
@@ -72,12 +73,22 @@ int main (int argc, char *argv [])
             return 1;
         }
     }
+    std::string logConfigFile;
+    zconfig_t *zconf = zconfig_load (config);
+    if (zconf) {
+        logConfigFile = std::string(zconfig_get(zconf, "log/config", "/etc/fty/ftylog.cfg"));
+        if (!logConfigFile.empty()) {
+            ManageFtyLog::getInstanceFtylog()->setConfigFile(logConfigFile);
+        }
+        else
+            log_error ("configuration not loaded %s", logConfigFile.c_str());
+    }
+
+    if (verbose)
+        ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
     zsys_init ();
-    if (verbose) {
-        zsys_info ("fty_discovery - Agent performing device discovery in network");
-        zsys_debug ("range: %s, agent %i", range ? range : "none", agent);
-    }
+    log_debug ("fty_discovery - range: %s, agent %i", range ? range : "none", agent);
 
     // configure actor
     zactor_t *discovery_server = zactor_new (fty_discovery_server, NULL);
@@ -101,7 +112,7 @@ int main (int argc, char *argv [])
         zmsg_t *msg = zmsg_recv (discovery_server);
         if (msg) {
             char *cmd = zmsg_popstr (msg);
-            zsys_debug ("main: %s command received", cmd ? cmd : "(null)");
+            log_debug ("main: %s command received", cmd ? cmd : "(null)");
             if (cmd) {
                 if (!agent && streq (cmd, REQ_DONE)) {
                     zstr_free (&cmd);

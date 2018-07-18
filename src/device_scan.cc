@@ -80,7 +80,7 @@ bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_
                         auto end_actor = std::find(listActor.begin(), listActor.end(), (zactor_t *) which );
                         if (end_actor == listActor.end()) {
                             //ERROR ? Normaly can't happened
-                            zsys_error("%s Error : actor not in the actor list", __FUNCTION__);
+                            log_error("%s Error : actor not in the actor list", __FUNCTION__);
                         } else {
                             listActor.erase(end_actor);
                         }
@@ -127,7 +127,7 @@ bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_
 
     listActor.clear();
     zlist_destroy(&listScans);
-    zsys_debug("QUIT device scan scan");
+    log_debug("QUIT device scan scan");
     zpoller_destroy (&poller);
     return term;
 }
@@ -140,27 +140,27 @@ device_scan_actor (zsock_t *pipe, void *args)
 {
     zsock_signal (pipe, 0);
     if (! args ) {
-        zsys_error ("dsa: actor created without parameters");
+        log_error ("dsa: actor created without parameters");
         return;
     }
-    
+
     zlist_t *argv = (zlist_t *)args;
-    
+
     if (!argv || zlist_size(argv) != 2) {
-        zsys_error ("dsa: actor created without config");
+        log_error ("dsa: actor created without config");
         zlist_destroy(&argv);
         return;
     }
     zlist_t *listScans = (zlist_t *) zlist_first(argv);
     if(zlist_size(listScans) < 1) {
-        zsys_error ("dsa: actor created without any scans");
+        log_error ("dsa: actor created without any scans");
         zlist_destroy(&argv);
         zlist_destroy(&listScans);
         return;
     }
     discovered_devices_t *devices = (discovered_devices_t*) zlist_tail(argv);
 
-    zsys_debug ("dsa: device scan actor created");
+    log_debug ("dsa: device scan actor created");
     while (!zsys_interrupted) {
         zmsg_t *msg = zmsg_recv (pipe);
         if (msg) {
@@ -174,7 +174,7 @@ device_scan_actor (zsock_t *pipe, void *args)
                 zmsg_destroy(&msg);
                 zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
                 if(!config) {
-                    zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+                    log_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
                     config = zconfig_new("root", NULL);
                 }
                 char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_SCANPOOL_NUMBER, DEFAULT_MAX_SCANPOOL_NUMBER);
@@ -200,7 +200,7 @@ device_scan_actor (zsock_t *pipe, void *args)
             zmsg_destroy (&msg);
         }
     }
-    zsys_debug ("dsa: device scan actor exited");
+    log_debug ("dsa: device scan actor exited");
     zlist_destroy(&argv);
 }
 
