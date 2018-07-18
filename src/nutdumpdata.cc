@@ -1,21 +1,21 @@
 /*  =========================================================================
     nutdumpdata - Wrapper around nut --dump-data tool
 
-    Copyright (C) 2014 - 2017 Eaton                                        
-                                                                           
-    This program is free software; you can redistribute it and/or modify   
-    it under the terms of the GNU General Public License as published by   
-    the Free Software Foundation; either version 2 of the License, or      
-    (at your option) any later version.                                    
-                                                                           
-    This program is distributed in the hope that it will be useful,        
-    but WITHOUT ANY WARRANTY; without even the implied warranty of         
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          
-    GNU General Public License for more details.                           
-                                                                           
+    Copyright (C) 2014 - 2017 Eaton
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.            
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
 
@@ -37,10 +37,10 @@ static int dumpdata_loop=-1;
 /**
  * \brief get number of driver loop to collect data
  * \return number of loop the driver will try to collect data (2 by default)
- * 
+ *
  * Environment variables:
  * BIOS_NUT_DUMPDATA - could be used to set this parameter
- **/ 
+ **/
 static
 int
 s_get_nut_dumpdata_loop(){
@@ -52,17 +52,17 @@ s_get_nut_dumpdata_loop(){
     //default value in any case
     if(dumpdata_loop<=0)
         dumpdata_loop=DEFAULT_DUMPDATA_LOOP;
-    
+
     return dumpdata_loop;
 }
 
 /**
  * \brief set number of driver loop to collect data
  * \param[in] loop_nb - number of loop the driver will try to collect data (2 by default)
- * 
+ *
  * Environment variables:
  * BIOS_NUT_DUMPDATA - could be used to set this paramter
- **/ 
+ **/
 void
 set_nut_dumpdata_loop(unsigned int loop_nb){
     assert(loop_nb>0);
@@ -125,12 +125,12 @@ s_parse_nut_dumpdata_output(
 
         if (line.size() == 0)
             continue;
-        
+
         //the expected format is key: value
         std::size_t pos=line.find(":");
         if(pos==std::string::npos)
             continue;
-        //zsys_debug("'%s' : '%s'\n",line.substr(0,pos).c_str(),line.substr(pos+2,line.size()-pos-3).c_str());
+        //log_debug("'%s' : '%s'\n",line.substr(0,pos).c_str(),line.substr(pos+2,line.size()-pos-3).c_str());
         out[line.substr(0,pos)]=line.substr(pos+2,line.size()-pos-3);
     }
 }
@@ -147,10 +147,10 @@ s_run_nut_dumpdata(
 {
     std::string o;
     std::string e;
-    //we assumed that each loop could take up to 30 secondes 
+    //we assumed that each loop could take up to 30 secondes
     zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
     if (!config) {
-        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        log_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
         config = zconfig_new("root", NULL);
     }
 
@@ -158,15 +158,15 @@ s_run_nut_dumpdata(
     const size_t loop_time = std::stoi(str_loop_time);
 
     int timeout= loop_nb*loop_time;
-    zsys_debug ("START: %s with timeout %d ...",args[0].c_str(),timeout);
+    log_debug ("START: %s with timeout %d ...",args[0].c_str(),timeout);
     std::string debug_args;
     for(auto it: args){
         debug_args.append(it);
         debug_args.append(" ");
     }
-    zsys_debug ("       %s",debug_args.c_str());
+    log_debug ("       %s",debug_args.c_str());
     int ret = output(args, o, e, timeout);
-    zsys_debug ("       done with code %d", ret);
+    log_debug ("       done with code %d", ret);
 
     zconfig_destroy(&config);
     if (ret != 0)
@@ -231,7 +231,7 @@ nut_dumpdata(
 
 
 /**
- * \brief helper method to get data from a snmp-ups  
+ * \brief helper method to get data from a snmp-ups
  *
  * \param[in] port      - port (ip:port)
  * \param[in] community - community name. If empty, use "public"
@@ -259,7 +259,7 @@ nut_dumpdata_snmp_ups(
 }
 
 /**
- * \brief helper method to get data from a netxml-ups driver 
+ * \brief helper method to get data from a netxml-ups driver
  *
  * \param[in] port   - port (ip:port)
  * \param[out] out   - map of key/value returned by driver with output
@@ -280,7 +280,7 @@ nut_dumpdata_netxml_ups(
 }
 
 /**
- * \brief helper method to get data from a dummy driver 
+ * \brief helper method to get data from a dummy driver
  *
  * \param[in] device - dummy file device name (it is supposed to be in /etc/nut)
  * \param[out] out   - map of key/value returned by driver with output
@@ -308,7 +308,7 @@ void
 nutdumpdata_test (bool verbose)
 {
     printf (" * nutdumpdata ... \n");
-    //drop and prepare a dummy dev file 
+    //drop and prepare a dummy dev file
     std::remove("/etc/nut/test.dev");
     std::ofstream testfile("/etc/nut/test.dev");
     if (testfile.is_open())
@@ -322,7 +322,7 @@ nutdumpdata_test (bool verbose)
         printf (" * nutdumpdata: OK\n");
         return;
     }
-    //set minimum loop 
+    //set minimum loop
     set_nut_dumpdata_loop(1);
     map_string_t out;
     int rv=nut_dumpdata_dummy_ups("test.dev",out);

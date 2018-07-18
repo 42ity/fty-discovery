@@ -19,3 +19,5 @@ parameters
     nutScannerTimeOut = 20
     dumpDataLoopTime = 90
 
+log
+    config = "/etc/fty/ftylog.cfg"     #   Path to the log configuration file (optional)

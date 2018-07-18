@@ -90,11 +90,11 @@ bool compute_ip_list(std::vector<std::string>* listIp) {
         std::string ips = listIp->at(iPosIp);
         CIDRAddress addrCIDR(ips, 32);
         if (addrCIDR.prefix() != -1) {
-            zsys_debug("valid ip %s", ips.c_str());
+            log_debug("valid ip %s", ips.c_str());
             listIp->at(iPosIp) = addrCIDR.toString();
         } else {
             //not a valid address
-            zsys_error("Address (%s) is not valid!", ips.c_str());
+            log_error("Address (%s) is not valid!", ips.c_str());
             return false;
         }
     }
@@ -113,7 +113,7 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
             CIDRAddress addrCIDR(scan);
 
             if (addrCIDR.prefix() != -1) {
-                zsys_debug("valid subnet %s", scan.c_str());
+                log_debug("valid subnet %s", scan.c_str());
                 //all the subnet (1 << (32- prefix) ) minus subnet and broadcast address
                 if (addrCIDR.prefix() <= 30)
                     (*scan_size) += ((1 << (32 - addrCIDR.prefix())) - 2);
@@ -121,7 +121,7 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
                     (*scan_size) += (1 << (32 - addrCIDR.prefix()));
             } else {
                 //not a valid range
-                zsys_error("Address subnet (%s) is not valid!", scan.c_str());
+                log_error("Address subnet (%s) is not valid!", scan.c_str());
                 return false;
             }
         }// else : range
@@ -132,7 +132,7 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
             CIDRAddress addrEnd(rangeEnd);
 
             if (!addrStart.valid() || !addrEnd.valid() || (addrStart > addrEnd)) {
-                zsys_error("(%s) is not a valid range!", scan.c_str());
+                log_error("(%s) is not a valid range!", scan.c_str());
                 return false;
             }
 
@@ -184,7 +184,7 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
             std::string correct_range = rangeStart + "/0-" + rangeEnd + "/0";
             list_scan->at(iPosScan) = correct_range;
 
-            zsys_debug("valid range (%s-%s). Size: %" PRIi64, rangeStart.c_str(), rangeEnd.c_str(), (size2 - size1) + 1);
+            log_debug("valid range (%s-%s). Size: %" PRIi64, rangeStart.c_str(), rangeEnd.c_str(), (size2 - size1) + 1);
         }
     }
 
@@ -265,13 +265,13 @@ void configure_local_scan(fty_discovery_server_t *self) {
 
             s = getnameinfo(ifa->ifa_addr, sizeof (struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
             if (s != 0) {
-                zsys_debug("IP address parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
+                log_debug("IP address parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
                 continue;
             } else
                 addr.assign(host);
 
             if (ifa->ifa_netmask == NULL) {
-                zsys_debug("No netmask found for %s", ifa->ifa_name);
+                log_debug("No netmask found for %s", ifa->ifa_name);
                 continue;
             }
 
@@ -281,7 +281,7 @@ void configure_local_scan(fty_discovery_server_t *self) {
 
             s = getnameinfo(ifa->ifa_netmask, sizeof (struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
             if (s != 0) {
-                zsys_debug("Netmask parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
+                log_debug("Netmask parsing error for %s : %s", ifa->ifa_name, gai_strerror(s));
                 continue;
             } else
                 netm.assign(host);
@@ -304,7 +304,7 @@ void configure_local_scan(fty_discovery_server_t *self) {
             addrmask.assign(addrCidr.network().toString());
 
             self->localscan_subscan.push_back(addrmask);
-            zsys_info("Localscan subnet found for %s : %s", ifa->ifa_name, addrmask.c_str());
+            log_info("Localscan subnet found for %s : %s", ifa->ifa_name, addrmask.c_str());
 
         }
 
@@ -315,7 +315,7 @@ void configure_local_scan(fty_discovery_server_t *self) {
 bool compute_configuration_file(fty_discovery_server_t *self) {
     zconfig_t *config = zconfig_load(self->range_scan_config.config);
     if (!config) {
-        zsys_error("failed to load config file %s", self->range_scan_config.config);
+        log_error("failed to load config file %s", self->range_scan_config.config);
         config = zconfig_new("root", NULL);
     }
 
@@ -346,18 +346,18 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
     }
     if (list_scans.empty() && streq(strType, DISCOVERY_TYPE_MULTI)) {
         valid = false;
-        zsys_error("error in config file %s : can't have rangescan without range",
+        log_error("error in config file %s : can't have rangescan without range",
                 self->range_scan_config.config);
     } else if (listIp.empty() && streq(strType, DISCOVERY_TYPE_IP)) {
         valid = false;
-        zsys_error("error in config file %s : can't have ipscan without ip list",
+        log_error("error in config file %s : can't have ipscan without ip list",
                 self->range_scan_config.config);
     } else {
         int64_t sizeTemp = 0;
         if(streq(strType, DISCOVERY_TYPE_MULTI)) {
             if(!compute_scans_size(&list_scans, &sizeTemp)) {
                 valid = false;
-                zsys_error("Error in config file %s: error in range or subnet", self->range_scan_config.config);
+                log_error("Error in config file %s: error in range or subnet", self->range_scan_config.config);
             } else {
                 self->configuration_scan.type = TYPE_MULTISCAN;
                 self->configuration_scan.scan_size = sizeTemp;
@@ -367,7 +367,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
         } else if(streq(strType, DISCOVERY_TYPE_IP)) {
             if(!compute_ip_list(&listIp)) {
                 valid = false;
-                zsys_error("Error in config file %s: error in ip list", self->range_scan_config.config);
+                log_error("Error in config file %s: error in ip list", self->range_scan_config.config);
             } else {
                 self->configuration_scan.type = TYPE_IPSCAN;
                 self->configuration_scan.scan_size = listIp.size();
@@ -382,7 +382,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
     }
 
     if (valid)
-        zsys_debug("config file %s applied successfully",
+        log_debug("config file %s applied successfully",
             self->range_scan_config.config);
 
     list_scans.clear();
@@ -406,13 +406,13 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
     bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
     if (!daisy_chain && assets_find(self->assets, "ip", ip)) {
-        zsys_info("Asset with IP address %s already exists", ip);
+        log_info("Asset with IP address %s already exists", ip);
         return;
     }
 
     const char *uuid = fty_proto_ext_string(asset, "uuid", NULL);
     if (uuid && assets_find(self->assets, "uuid", uuid)) {
-        zsys_info("Asset with uuid %s already exists", uuid);
+        log_info("Asset with uuid %s already exists", uuid);
         return;
     }
 
@@ -461,25 +461,25 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
         if(c != NULL) {
             self->devices_discovered.mtx_list.unlock();
-            zsys_info("Asset with IP address %s already exists", ip);
+            log_info("Asset with IP address %s already exists", ip);
             fty_proto_destroy(&asset);
             return;
         }
     }
 
     fty_proto_print(asset);
-    zsys_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
+    log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
     fty_proto_set_operation(asset, "create");
 
     fty_proto_t *assetDup = fty_proto_dup(asset);
     zmsg_t *msg = fty_proto_encode(&assetDup);
     zmsg_pushstrf (msg, "%s", "READONLY");
-    zsys_debug("about to send create message");
+    log_debug("about to send create message");
     int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
     if (rv == -1) {
-        zsys_error("Failed to send ASSET_MANIPULATION message to asset-agent");
+        log_error("Failed to send ASSET_MANIPULATION message to asset-agent");
     } else {
-        zsys_info("Create message has been sent to asset-agent (rv = %i)", rv);
+        log_info("Create message has been sent to asset-agent (rv = %i)", rv);
 
         zmsg_t *response = mlm_client_recv(self->mlmCreate);
         if(!response) {
@@ -492,7 +492,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
         if(!str_resp || !streq(str_resp, "OK")) {
             self->devices_discovered.mtx_list.unlock();
-            zsys_info("Error during asset creation.");
+            log_info("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
@@ -501,7 +501,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         str_resp = zmsg_popstr(response);
         if(!str_resp) {
             self->devices_discovered.mtx_list.unlock();
-            zsys_info("Error during asset creation.");
+            log_info("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
@@ -537,12 +537,12 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
     char *command = zmsg_popstr(message);
     if (!command) {
         zmsg_destroy(&message);
-        zsys_warning("Empty command.");
+        log_warning("Empty command.");
         return true;
     }
-    zsys_debug("s_handle_pipe DO %s", command);
+    log_debug("s_handle_pipe DO %s", command);
     if (streq(command, REQ_TERM)) {
-        zsys_info("Got $TERM");
+        log_info("Got $TERM");
         zmsg_destroy(&message);
         zstr_free(&command);
         return false;
@@ -573,7 +573,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         discovery_config_file = self->range_scan_config.config;
         zconfig_t *config = zconfig_load(self->range_scan_config.config);
         if (!config) {
-            zsys_error("failed to load config file %s", self->range_scan_config.config);
+            log_error("failed to load config file %s", self->range_scan_config.config);
             config = zconfig_new("root", NULL);
         }
         char* strType = zconfig_get(config, CFG_DISCOVERY_TYPE, DISCOVERY_TYPE_LOCAL);
@@ -603,11 +603,11 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         }
         if (list_scans.empty() && streq(strType, DISCOVERY_TYPE_MULTI)) {
             valid = false;
-            zsys_error("error in config file %s : can't have rangescan without range",
+            log_error("error in config file %s : can't have rangescan without range",
                     self->range_scan_config.config);
         } else if (listIp.empty() && streq(strType, DISCOVERY_TYPE_IP)) {
             valid = false;
-            zsys_error("error in config file %s : can't have ipscan without ip list",
+            log_error("error in config file %s : can't have ipscan without ip list",
                     self->range_scan_config.config);
         } else {
             int64_t sizeTemp = 0;
@@ -632,13 +632,13 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                 list_scans.clear();
             } else {
                 valid = false;
-                zsys_error("error in config file %s: error in scans",
+                log_error("error in config file %s: error in scans",
                         self->range_scan_config.config);
             }
         }
 
         if (valid)
-            zsys_debug("config file %s applied successfully",
+            log_debug("config file %s applied successfully",
                 self->range_scan_config.config);
         zconfig_destroy(&config);
     } else if (streq(command, REQ_SCAN)) {
@@ -670,7 +670,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                     self->scan_size = (1 << (32 - addrCIDR.prefix()));
             } else {
                 //not a valid range
-                zsys_error("Address range (%s) is not valid!",
+                log_error("Address range (%s) is not valid!",
                         (self->range_scan_config.ranges[0]).first);
                 zstr_free(&((self->range_scan_config.ranges[0]).first));
                 self->range_scan_config.ranges.clear();
@@ -709,7 +709,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         }
 
     } else
-        zsys_error("s_handle_pipe: Unknown command: %s.\n", command);
+        log_error("s_handle_pipe: Unknown command: %s.\n", command);
     zstr_free(&command);
     zmsg_destroy(&message);
     return true;
@@ -739,10 +739,10 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
         char *cmd = zmsg_popstr(msg);
         if (!cmd) {
             zmsg_destroy(&msg);
-            zsys_warning("s_handle_mailbox Empty command.");
+            log_warning("s_handle_mailbox Empty command.");
             return;
         }
-        zsys_debug("s_handle_mailbox DO : %s", cmd);
+        log_debug("s_handle_mailbox DO : %s", cmd);
         if (streq(cmd, REQ_LAUNCHSCAN)) {
             // LAUNCHSCAN
             // REQ <uuid>
@@ -784,7 +784,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                                 char *secondNull = NULL;
                                 self->range_scan_config.ranges.push_back(std::make_pair(zmsg_popstr(zmfalse), secondNull));
 
-                                zsys_debug("Range scanner requested for %s with config file %s",
+                                log_debug("Range scanner requested for %s with config file %s",
                                         self->range_scan_config.ranges.back().first,
                                         self->range_scan_config.config);
                                 zmsg_destroy(&zmfalse);
@@ -830,7 +830,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                                 self->range_scan_config.ranges.push_back(std::make_pair(firstIP, zmsg_popstr(zmfalse)));
                             }
 
-                            zsys_debug("Range scanner requested for %s with config file %s",
+                            log_debug("Range scanner requested for %s with config file %s",
                                     next_scan.c_str(),
                                     self->range_scan_config.config);
 
@@ -906,7 +906,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
             self->localscan_subscan.clear();
             self->scan_size = 0;
         } else
-            zsys_error("s_handle_mailbox: Unknown actor command: %s.\n", cmd);
+            log_error("s_handle_mailbox: Unknown actor command: %s.\n", cmd);
         zstr_free(&cmd);
     }
     zmsg_destroy(&msg);
@@ -961,10 +961,10 @@ s_handle_range_scanner(fty_discovery_server_t* self,
     char *cmd = zmsg_popstr(msg);
     if (!cmd) {
         zmsg_destroy(&msg);
-        zsys_warning("s_handle_range_scanner Empty command.");
+        log_warning("s_handle_range_scanner Empty command.");
         return;
     }
-    zsys_debug("s_handle_range_scanner DO : %s", cmd);
+    log_debug("s_handle_range_scanner DO : %s", cmd);
     if (streq(cmd, REQ_DONE)) {
         if (self->ongoing_stop && self->range_scanner) {
             zpoller_remove(poller, self->range_scanner);
@@ -1000,7 +1000,7 @@ s_handle_range_scanner(fty_discovery_server_t* self,
         zmsg_destroy(&zmfalse);
     // other cmd. NOTFOUND must not be treated
     } else if(!streq(cmd, "NOTFOUND"))
-        zsys_error("s_handle_range_scanner: Unknown  command: %s.\n", cmd);
+        log_error("s_handle_range_scanner: Unknown  command: %s.\n", cmd);
     zstr_free(&cmd);
     zmsg_destroy(&msg);
 }
@@ -1041,7 +1041,7 @@ fty_discovery_server(zsock_t *pipe, void *args) {
         if (self->range_scan_config.ranges.size() > 0 && !self->range_scanner) {
             if (zclock_mono() - assets_last_change(self->assets) > 5000) {
                 // no asset change for last 5 secs => we can start range scan
-                zsys_debug("Range scanner start for %s with config file %s",
+                log_debug("Range scanner start for %s with config file %s",
                         self->range_scan_config.ranges.front().first,
                         self->range_scan_config.config);
                 // create range scanner

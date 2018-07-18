@@ -137,19 +137,19 @@ bool
 s_valid_dumpdata (std::map <std::string, std::string> &dump)
 {
   if(dump.find("device.type") == dump.end()) {
-    zsys_error("No subtype for this device");
+    log_error("No subtype for this device");
     return false;
   }
 
   if(dump.find("device.model") == dump.end() && dump.find("ups.model") == dump.end() &&
           dump.find("device.1.model") == dump.end() && dump.find("device.1.ups.model") == dump.end()) {
-    zsys_error("No model for this device");
+    log_error("No model for this device");
     return false;
   }
 
   if(dump.find("device.mfr") == dump.end() && dump.find("ups.mfr") == dump.end() &&
           dump.find("device.1.mfr") == dump.end() && dump.find("device.1.ups.mfr") == dump.end()) {
-    zsys_error("No subtype for this device");
+    log_error("No subtype for this device");
     return false;
   }
 
@@ -189,7 +189,7 @@ s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, std::map <std::str
 
         if(dump.find(first_part+".mfr") == dump.end() && dump.find(first_part+".ups.mfr") == dump.end() &&
           dump.find(first_part+".model") == dump.end() && dump.find(first_part+".ups.model") == dump.end()) {
-          zsys_error("No manufacturer or model for the  %i th device ", i);
+          log_error("No manufacturer or model for the  %i th device ", i);
           break;
         }
 
@@ -311,7 +311,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
 
     if(!valid) {
         //ERROR
-        zsys_error("Dump data actor error: not enough args");
+        log_error("Dump data actor error: not enough args");
         reply = zmsg_new();
         zmsg_pushstr(reply, "ERROR");
     } else {
@@ -328,18 +328,18 @@ dump_data_actor(zsock_t *pipe, void *args) {
             if (nut_dumpdata_snmp_ups (addr, community,  nutdata) == 0) {
                 if(!s_valid_dumpdata(nutdata)) {
                   fty_proto_destroy(&asset);
-                  zsys_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
+                  log_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
                   reply = zmsg_new();
                   zmsg_pushstr(reply, "FAILED");
                 } else {
                   s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
                   reply = fty_proto_encode (&asset);
                   zmsg_pushstr (reply, "FOUND");
-                  zsys_debug("dumpdata for %s on %s success.", addr.c_str(), community.c_str());
+                  log_debug("dumpdata for %s on %s success.", addr.c_str(), community.c_str());
                 }
             } else {
                 fty_proto_destroy(&asset);
-                zsys_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
+                log_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
                 reply = zmsg_new();
                 zmsg_pushstr(reply, "FAILED");
             }
@@ -352,18 +352,18 @@ dump_data_actor(zsock_t *pipe, void *args) {
             if (nut_dumpdata_netxml_ups (addr,  nutdata) == 0) {
                 if(!s_valid_dumpdata (nutdata)) {
                   fty_proto_destroy(&asset);
-                  zsys_debug("dumpdata for %s failed.", addr.c_str());
+                  log_debug("dumpdata for %s failed.", addr.c_str());
                   reply = zmsg_new();
                   zmsg_pushstr(reply, "FAILED");
                 } else {
                   s_nut_dumpdata_to_fty_message (asset, nutdata);
                   reply = fty_proto_encode (&asset);
                   zmsg_pushstr (reply, "FOUND");
-                  zsys_debug("dumpdata for %s success.", addr.c_str());
+                  log_debug("dumpdata for %s success.", addr.c_str());
                 }
             } else {
                 fty_proto_destroy(&asset);
-                zsys_debug("dumpdata for %s failed.", addr.c_str());
+                log_debug("dumpdata for %s failed.", addr.c_str());
                 reply = zmsg_new();
                 zmsg_pushstr(reply, "FAILED");
             }
@@ -399,7 +399,7 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
 
     zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
     if (!config) {
-        zsys_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
+        log_error("failed to load config file %s", getDiscoveryConfigFile().c_str());
         config = zconfig_new("root", NULL);
     }
 
@@ -495,7 +495,7 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
                     }
                 }
             } else {
-                zsys_debug("Error on create_pool_dumpdata");
+                log_debug("Error on create_pool_dumpdata");
                 stop_now = true;
                 break;
             }
@@ -528,7 +528,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     bool stop_now =false;
     zsock_signal (pipe, 0);
     if (! args ) {
-        zsys_error ("%s : actor created without parameters", __FUNCTION__);
+        log_error ("%s : actor created without parameters", __FUNCTION__);
         zmsg_t *reply = zmsg_new();
         zmsg_pushstr(reply, REQ_DONE);
         zmsg_send (&reply, pipe);
@@ -537,7 +537,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
 
     zlist_t *argv = (zlist_t *)args;
     if (!argv || zlist_size(argv) != 2) {
-        zsys_error ("%s : actor created without config or devices list", __FUNCTION__);
+        log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
         zmsg_pushstr(reply, REQ_DONE);
@@ -548,7 +548,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     CIDRList *listAddr = (CIDRList *) zlist_first(argv);
     discovered_devices_t *devices = (discovered_devices_t*) zlist_tail(argv);
     if (!listAddr || !devices) {
-        zsys_error ("%s : actor created without config or devices list", __FUNCTION__);
+        log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
         zmsg_pushstr(reply, REQ_DONE);
@@ -561,7 +561,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     // read community names from cfg
     zconfig_t *config_com = zconfig_load(FTY_DEFAULT_CFG_FILE);
     if (!config_com) {
-        zsys_error("failed to load config file %s", FTY_DEFAULT_CFG_FILE);
+        log_error("failed to load config file %s", FTY_DEFAULT_CFG_FILE);
         config_com = zconfig_new("root", NULL);
     }
     std::vector <std::string> communities;
@@ -646,7 +646,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     zmsg_send (&reply, pipe);
     zlist_destroy(&argv);
     delete listAddr;
-    zsys_debug ("scan nut actor exited");
+    log_debug ("scan nut actor exited");
 }
 
 
