@@ -91,13 +91,9 @@ SubProcess::~SubProcess() {
     }
 
     // close pipes
-    ::close(_inpair[0]);
     ::close(_outpair[0]);
     ::close(_errpair[0]);
     ::close(_inpair[1]);
-    ::close(_outpair[1]);
-    ::close(_errpair[1]);
-
     errno = _saved_errno;
 }
 
@@ -169,11 +165,11 @@ bool SubProcess::run() {
     _state = SubProcessState::RUNNING;
     //make sure child make fd operations before continue.
     waitpid(_fork.getPid(), &status, WUNTRACED);
-    //wake up child
-    ::kill(_fork.getPid(), SIGCONT);
     ::close(_inpair[0]);
     ::close(_outpair[1]);
     ::close(_errpair[1]);
+    //wake up child
+    ::kill(_fork.getPid(), SIGCONT);
     // update a state
     poll();
     return true;

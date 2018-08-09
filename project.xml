@@ -42,6 +42,23 @@
         release = "1.0-FTY-master"
         />
 
+    <use project = "fty-common-logging" libname = "libfty_common_logging" header="fty_log.h"
+        repository = "https://github.com/42ity/fty-common-logging.git"
+        release = "master"
+        test = "fty_log_selftest" >
+
+        <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
+            repository = "https://github.com/42ity/log4cplus.git"
+            release = "1.1.2-FTY-master"
+            />
+
+        <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
+            repository = "https://github.com/42ity/cxxtools.git"
+            release = "2.2-FTY-master"
+            />
+
+    </use>
+
     <use project = "fty-proto" libname = "libfty_proto" header="ftyproto.h" prefix="fty_proto"
         min_major = "1" min_minor = "0" min_patch = "0"
         repository = "https://github.com/42ity/fty-proto.git"
@@ -61,22 +78,6 @@
 
     <use project = "openssl" header = "openssl/sha.h" debian_name="libssl-dev" />
 
-    <use project = "fty-common-logging" libname = "libfty_common_logging" header="fty_log.h"
-        repository = "https://github.com/42ity/fty-common-logging.git"
-        release = "master"
-        test = "fty_log_selftest" >
-
-        <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-            repository = "https://github.com/42ity/log4cplus.git"
-            release = "1.1.2-FTY-master"
-            />
-
-        <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
-            repository = "https://github.com/42ity/cxxtools.git"
-            release = "2.2-FTY-master"
-            />
-
-    </use>
 
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "subprocess"   private = "1">C++ Wrapper around cxxtools::Fork</class>

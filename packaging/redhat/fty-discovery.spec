@@ -55,12 +55,12 @@ BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel
 BuildRequires:  malamute-devel
+BuildRequires:  log4cplus-devel
+BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-proto-devel
 BuildRequires:  libcidr-devel
 BuildRequires:  cxxtools-devel
 BuildRequires:  openssl-devel
-BuildRequires:  log4cplus-devel
-BuildRequires:  fty-common-logging-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -88,12 +88,12 @@ Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel
 Requires:       malamute-devel
+Requires:       log4cplus-devel
+Requires:       fty-common-logging-devel
 Requires:       fty-proto-devel
 Requires:       libcidr-devel
 Requires:       cxxtools-devel
 Requires:       openssl-devel
-Requires:       log4cplus-devel
-Requires:       fty-common-logging-devel
 
 %description devel
 42ity service for discovering devices development tools
