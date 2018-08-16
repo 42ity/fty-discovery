@@ -51,12 +51,19 @@
             repository = "https://github.com/42ity/log4cplus.git"
             release = "1.1.2-FTY-master"
             />
+    </use>
 
-        <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
-            repository = "https://github.com/42ity/cxxtools.git"
-            release = "2.2-FTY-master"
-            />
-
+    <use project = "fty-common-mlm" libname = "libfty_common_mlm" header="fty_common_mlm.h"
+        repository = "https://github.com/42ity/fty-common-mlm.git"
+        test = "fty_commmon_mlm_selftest" >
+	<use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
+	     repository = "https://github.com/42ity/cxxtools.git"
+             release = "2.2-FTY-master"
+             />
+	<use project = "libsodium" prefix = "sodium"
+             repository = "https://github.com/42ity/libsodium.git"
+             release = "1.0.5-FTY-master"
+             test = "sodium_init" />
     </use>
 
     <use project = "fty-proto" libname = "libfty_proto" header="ftyproto.h" prefix="fty_proto"
@@ -70,17 +77,9 @@
         debian_name = "libcidr0-dev" redhat_name = "libcidr-devel"
         repository = "https://github.com/42ity/libcidr.git"
         release = "1.2.3-FTY-master" />
-
-    <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
-        repository = "https://github.com/42ity/cxxtools.git"
-        release = "2.2-FTY-master"
-        />
-
     <use project = "openssl" header = "openssl/sha.h" debian_name="libssl-dev" />
 
-
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
-    <class name = "subprocess"   private = "1">C++ Wrapper around cxxtools::Fork</class>
     <class name = "nutscan"      private = "1">Wrapper around nut-scanner tool</class>
     <class name = "nutdumpdata"  private = "1">Wrapper around nut --dump-data tool</class>
     <class name = "range_scan"   private = "1">Perform one range scan</class>
@@ -88,7 +87,6 @@
     <class name = "scan_dns"     private = "1">collect information from DNS</class>
     <class name = "scan_nut"     private = "1">collect information from DNS</class>
     <class name = "assets"       private = "1">Cache of assets</class>
-    <class name = "fty_uuid"     private = "1">UUID generating</class>
 
     <class name = "fty-discovery-server" state = "stable">Manages discovery requests, provides feedback</class>
     <main name = "fty-discovery" service = "1">

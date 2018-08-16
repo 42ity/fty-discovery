@@ -14,7 +14,6 @@ pkgconfig_DATA = src/libfty_discovery.pc
 
 src_libfty_discovery_la_SOURCES = \
     src/cidr.cc \
-    src/subprocess.cc \
     src/nutscan.cc \
     src/nutdumpdata.cc \
     src/range_scan.cc \
@@ -22,7 +21,6 @@ src_libfty_discovery_la_SOURCES = \
     src/scan_dns.cc \
     src/scan_nut.cc \
     src/assets.cc \
-    src/fty_uuid.cc \
     src/fty_discovery_server.cc \
     src/platform.h
 

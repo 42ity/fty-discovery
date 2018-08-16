@@ -40,8 +40,6 @@ fty_discovery_private_selftest (bool verbose, const char *subtest)
 // Tests for stable private classes:
     if (streq (subtest, "$ALL") || streq (subtest, "cidr_test"))
         cidr_test (verbose);
-    if (streq (subtest, "$ALL") || streq (subtest, "subprocess_test"))
-        subprocess_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "nutscan_test"))
         nutscan_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "nutdumpdata_test"))
@@ -56,8 +54,6 @@ fty_discovery_private_selftest (bool verbose, const char *subtest)
         scan_nut_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "assets_test"))
         assets_test (verbose);
-    if (streq (subtest, "$ALL") || streq (subtest, "fty_uuid_test"))
-        fty_uuid_test (verbose);
 }
 /*
 ################################################################################
