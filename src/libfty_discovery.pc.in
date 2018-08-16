@@ -12,7 +12,7 @@ Name: libfty_discovery
 Description: 42ity service for discovering devices
 Version: @VERSION@
 
-Requires:@pkgconfig_name_libsodium@ @pkgconfig_name_libzmq@ @pkgconfig_name_libczmq@ >= 3.0.2 @pkgconfig_name_libmlm@ >= 1.0.0 @pkgconfig_name_log4cplus@ @pkgconfig_name_libfty_common_logging@ @pkgconfig_name_libfty_proto@ >= 1.0.0 @pkgconfig_name_cidr@ @pkgconfig_name_cxxtools@ @pkgconfig_name_openssl@
+Requires:@pkgconfig_name_libsodium@ @pkgconfig_name_libzmq@ @pkgconfig_name_libczmq@ >= 3.0.2 @pkgconfig_name_libmlm@ >= 1.0.0 @pkgconfig_name_log4cplus@ @pkgconfig_name_libfty_common_logging@ @pkgconfig_name_cxxtools@ @pkgconfig_name_libfty_common_mlm@ @pkgconfig_name_libfty_proto@ >= 1.0.0 @pkgconfig_name_cidr@ @pkgconfig_name_openssl@
 
 Libs: -L${libdir} -lfty_discovery
 Cflags: -I${includedir} @pkg_config_defines@

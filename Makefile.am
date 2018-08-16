@@ -18,14 +18,15 @@ AM_CPPFLAGS = \
     ${malamute_CFLAGS} \
     ${log4cplus_CFLAGS} \
     ${fty_common_logging_CFLAGS} \
+    ${cxxtools_CFLAGS} \
+    ${fty_common_mlm_CFLAGS} \
     ${fty_proto_CFLAGS} \
     ${cidr_CFLAGS} \
-    ${cxxtools_CFLAGS} \
     ${openssl_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${cxxtools_LIBS} ${openssl_LIBS}
+project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${cxxtools_LIBS} ${fty_common_mlm_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${openssl_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -52,9 +53,10 @@ EXTRA_DIST += \
     Findmalamute.cmake \
     Findlog4cplus.cmake \
     Findfty_common_logging.cmake \
+    Findcxxtools.cmake \
+    Findfty_common_mlm.cmake \
     Findfty_proto.cmake \
     Findcidr.cmake \
-    Findcxxtools.cmake \
     Findopenssl.cmake \
     builds/cmake/Modules/ClangFormat.cmake \
     builds/cmake/clang-format-check.sh.in \
@@ -64,7 +66,6 @@ endif
 
 EXTRA_DIST += \
     src/cidr.h \
-    src/subprocess.h \
     src/nutscan.h \
     src/nutdumpdata.h \
     src/range_scan.h \
@@ -72,7 +73,6 @@ EXTRA_DIST += \
     src/scan_dns.h \
     src/scan_nut.h \
     src/assets.h \
-    src/fty_uuid.h \
     README.md \
     src/fty_discovery_classes.h
 

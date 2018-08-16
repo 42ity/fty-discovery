@@ -56,7 +56,6 @@ all_tests [] = {
 // Tests for stable/draft private classes:
 // Now built only with --enable-drafts, so even stable builds are hidden behind the flag
     { "cidr", NULL, true, false, "cidr_test" },
-    { "subprocess", NULL, true, false, "subprocess_test" },
     { "nutscan", NULL, true, false, "nutscan_test" },
     { "nutdumpdata", NULL, true, false, "nutdumpdata_test" },
     { "range_scan", NULL, true, false, "range_scan_test" },
@@ -64,7 +63,6 @@ all_tests [] = {
     { "scan_dns", NULL, true, false, "scan_dns_test" },
     { "scan_nut", NULL, true, false, "scan_nut_test" },
     { "assets", NULL, true, false, "assets_test" },
-    { "fty_uuid", NULL, true, false, "fty_uuid_test" },
     { "private_classes", NULL, false, false, "$ALL" }, // compat option for older projects
 #endif // FTY_DISCOVERY_BUILD_DRAFT_API
     {NULL, NULL, 0, 0, NULL}          //  Sentinel
