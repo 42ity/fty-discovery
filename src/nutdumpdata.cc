@@ -141,7 +141,7 @@ s_parse_nut_dumpdata_output(
 static
 int
 s_run_nut_dumpdata(
-        const Argv& args,
+        const MlmSubprocess::Argv& args,
         const int loop_nb,
         map_string_t& out)
 {
@@ -165,7 +165,7 @@ s_run_nut_dumpdata(
         debug_args.append(" ");
     }
     log_debug ("       %s",debug_args.c_str());
-    int ret = output(args, o, e, timeout);
+    int ret = MlmSubprocess::output(args, o, e, timeout);
     log_debug ("       done with code %d", ret);
 
     zconfig_destroy(&config);
@@ -201,7 +201,7 @@ nut_dumpdata(
         const unsigned int loop_nb,
         map_string_t& out)
 {
-    Argv args;
+    MlmSubprocess::Argv args;
     //to forge the command line to call the driver
     //first the driver name
     args.push_back(driver);

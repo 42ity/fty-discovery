@@ -117,9 +117,9 @@ s_parse_nut_scanner_output(
 static
 int
 s_run_nut_scaner(
-        const Argv& args,
-        const std::string& name,
-        std::vector<std::string>& out)
+    const MlmSubprocess::Argv& args,
+    const std::string& name,
+    std::vector<std::string>& out)
 {
     std::string o;
     std::string e;
@@ -134,7 +134,7 @@ s_run_nut_scaner(
     const size_t nut_scanner_timeout = std::stoi(strTimeOut);
 
     log_debug ("START: nut-scanner with timeout %s ...", strTimeOut);
-    int ret = output(args, o, e, nut_scanner_timeout);
+    int ret = MlmSubprocess::output(args, o, e, nut_scanner_timeout);
     log_debug ("       done with code %d", ret);
     zconfig_destroy(&config);
 
@@ -171,7 +171,7 @@ nut_scan_multi_snmp(
     // DMF enabled and available
     if (use_dmf || ::getenv ("BIOS_NUT_USE_DMF")) {
         log_debug("nut-scanner --community %s -z -s %s -e %s",comm.c_str(), ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
-        Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address_start.toString(), "-e", ip_address_end.toString()};
+        MlmSubprocess::Argv args = {"nut-scanner", "--community", comm, "-z", "-s", ip_address_start.toString(), "-e", ip_address_end.toString()};
         r = s_run_nut_scaner(
                 args,
                 name,
@@ -182,7 +182,7 @@ nut_scan_multi_snmp(
 
     // DMF not available
     log_debug("nut-scanner --community %s -S -s %s -e %s",comm.c_str(), ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
-    Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address_start.toString(CIDR_WITHOUT_PREFIX), "-e", ip_address_end.toString(CIDR_WITHOUT_PREFIX)};
+    MlmSubprocess::Argv args = {"nut-scanner", "--community", comm, "-S", "-s", ip_address_start.toString(CIDR_WITHOUT_PREFIX), "-e", ip_address_end.toString(CIDR_WITHOUT_PREFIX)};
     r = s_run_nut_scaner(
             args,
             name,
@@ -199,7 +199,7 @@ nut_scan_multi_xml_http(
         std::vector<std::string>& out)
 {
      log_debug("nut-scanner -M -s %s -e %s", ip_address_start.toString(CIDR_WITHOUT_PREFIX).c_str() , ip_address_end.toString(CIDR_WITHOUT_PREFIX).c_str());
-    Argv args = {"nut-scanner", "-M", "-s", ip_address_start.toString(CIDR_WITHOUT_PREFIX), "-e", ip_address_end.toString(CIDR_WITHOUT_PREFIX)};
+    MlmSubprocess::Argv args = {"nut-scanner", "-M", "-s", ip_address_start.toString(CIDR_WITHOUT_PREFIX), "-e", ip_address_end.toString(CIDR_WITHOUT_PREFIX)};
     return s_run_nut_scaner(
             args,
             name,
