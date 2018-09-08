@@ -56,11 +56,11 @@
     <use project = "fty-common-mlm" libname = "libfty_common_mlm" header="fty_common_mlm.h"
         repository = "https://github.com/42ity/fty-common-mlm.git"
         test = "fty_commmon_mlm_selftest" >
-	<use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
-	     repository = "https://github.com/42ity/cxxtools.git"
+        <use project = "cxxtools" test="cxxtools::Utf8Codec::Utf8Codec" header="cxxtools/allocator.h"
+             repository = "https://github.com/42ity/cxxtools.git"
              release = "2.2-FTY-master"
              />
-	<use project = "libsodium" prefix = "sodium"
+        <use project = "libsodium" prefix = "sodium"
              repository = "https://github.com/42ity/libsodium.git"
              release = "1.0.5-FTY-master"
              test = "sodium_init" />
