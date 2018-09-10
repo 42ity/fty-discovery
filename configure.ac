@@ -644,7 +644,7 @@ AS_IF([test x"${search_libfty_common_logging}" = xyes], [
                 )
         fi
 
-        AC_CHECK_LIB([fty-common-logging], [fty_log_selftest],
+        AC_CHECK_LIB([fty-common-logging], [fty_common_logging_selftest],
             [
                 was_fty_common_logging_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-logging"
