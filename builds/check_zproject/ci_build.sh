@@ -6,6 +6,8 @@ set -ex
 [ -n "${REPO_DIR-}" ] || exit 1
 
 # Verify all required dependencies with repos can be checked out
+# Note: certain zproject scripts that deal with deeper dependencies expect that
+# such checkouts are directly in the same parent directory as "this" project.
 cd "$REPO_DIR/.."
 git clone --quiet --depth 1 -b 1.0.5-FTY-master https://github.com/42ity/libsodium.git libsodium
 git clone --quiet --depth 1 -b 4.2.0-FTY-master https://github.com/42ity/libzmq.git libzmq
@@ -14,8 +16,9 @@ git clone --quiet --depth 1 -b 1.0-FTY-master https://github.com/42ity/malamute.
 git clone --quiet --depth 1 -b 1.1.2-FTY-master https://github.com/42ity/log4cplus.git log4cplus
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-logging.git fty-common-logging
 git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
-git clone --quiet --depth 1 https://github.com/42ity/fty-common-mlm.git fty-common-mlm
-git clone --quiet --depth 1 https://github.com/42ity/fty-proto.git fty-proto
+git clone --quiet --depth 1 https://github.com/42ity/fty-common.git fty-common
+git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-mlm.git fty-common-mlm
+git clone --quiet --depth 1 -b master https://github.com/42ity/fty-proto.git fty-proto
 git clone --quiet --depth 1 -b 1.2.3-FTY-master https://github.com/42ity/libcidr.git cidr
 cd -
 

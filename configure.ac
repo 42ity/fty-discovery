@@ -173,7 +173,6 @@ AS_IF([test x"${search_libsodium}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([libsodium], [libsodium >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libsodium_LIBS"
@@ -203,7 +202,6 @@ AS_IF([test x"${search_libsodium}" = xyes], [
             [
                 was_libsodium_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lsodium"
-                found_linkname="sodium"
             ],
             [AC_MSG_ERROR([cannot link with -lsodium, install libsodium])])
     ])
@@ -211,12 +209,12 @@ AS_IF([test x"${search_libsodium}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libsodium
     AS_CASE(["x${was_libsodium_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libsodium],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_libsodium],["${found_pkgconfig}"])
                 CFLAGS="${libsodium_CFLAGS} ${CFLAGS}"
                 LIBS="${libsodium_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libsodium],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_libsodium],[""])
                 CFLAGS="${libsodium_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${libsodium_synthetic_libs} ${LDFLAGS}"
                 LIBS="${libsodium_synthetic_libs} ${LIBS}"
@@ -225,7 +223,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libsodium
                 AC_SUBST([libsodium_LIBS],[${libsodium_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libsodium],[libsodium])
+                AC_SUBST([pkgconfig_name_libsodium],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libsodium 0.0.0 or higher])
     ])
 ])
@@ -262,7 +260,6 @@ AS_IF([test x"${search_libzmq}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([libzmq], [libzmq >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $libzmq_LIBS"
@@ -292,7 +289,6 @@ AS_IF([test x"${search_libzmq}" = xyes], [
             [
                 was_libzmq_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lzmq"
-                found_linkname="zmq"
             ],
             [AC_MSG_ERROR([cannot link with -lzmq, install libzmq])])
     ])
@@ -300,12 +296,12 @@ AS_IF([test x"${search_libzmq}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libzmq
     AS_CASE(["x${was_libzmq_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libzmq],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_libzmq],["${found_pkgconfig}"])
                 CFLAGS="${libzmq_CFLAGS} ${CFLAGS}"
                 LIBS="${libzmq_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libzmq],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_libzmq],[""])
                 CFLAGS="${libzmq_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${libzmq_synthetic_libs} ${LDFLAGS}"
                 LIBS="${libzmq_synthetic_libs} ${LIBS}"
@@ -314,7 +310,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libzmq
                 AC_SUBST([libzmq_LIBS],[${libzmq_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libzmq],[libzmq])
+                AC_SUBST([pkgconfig_name_libzmq],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libzmq 0.0.0 or higher])
     ])
 ])
@@ -351,7 +347,6 @@ AS_IF([test x"${search_libczmq}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([czmq], [libczmq >= 3.0.2],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $czmq_LIBS"
@@ -381,7 +376,6 @@ AS_IF([test x"${search_libczmq}" = xyes], [
             [
                 was_czmq_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lczmq"
-                found_linkname="czmq"
             ],
             [AC_MSG_ERROR([cannot link with -lczmq, install libczmq])])
     ])
@@ -389,12 +383,12 @@ AS_IF([test x"${search_libczmq}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libczmq
     AS_CASE(["x${was_czmq_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libczmq],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_libczmq],["${found_pkgconfig} >= 3.0.2"])
                 CFLAGS="${czmq_CFLAGS} ${CFLAGS}"
                 LIBS="${czmq_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libczmq],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_libczmq],[""])
                 CFLAGS="${czmq_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${czmq_synthetic_libs} ${LDFLAGS}"
                 LIBS="${czmq_synthetic_libs} ${LIBS}"
@@ -403,7 +397,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libczmq
                 AC_SUBST([czmq_LIBS],[${czmq_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libczmq],[libczmq])
+                AC_SUBST([pkgconfig_name_libczmq],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libczmq 3.0.2 or higher])
     ])
 ])
@@ -440,7 +434,6 @@ AS_IF([test x"${search_libmlm}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([malamute], [libmlm >= 1.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $malamute_LIBS"
@@ -470,7 +463,6 @@ AS_IF([test x"${search_libmlm}" = xyes], [
             [
                 was_malamute_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lmlm"
-                found_linkname="mlm"
             ],
             [AC_MSG_ERROR([cannot link with -lmlm, install libmlm])])
     ])
@@ -478,12 +470,12 @@ AS_IF([test x"${search_libmlm}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libmlm
     AS_CASE(["x${was_malamute_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libmlm],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_libmlm],["${found_pkgconfig} >= 1.0.0"])
                 CFLAGS="${malamute_CFLAGS} ${CFLAGS}"
                 LIBS="${malamute_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libmlm],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_libmlm],[""])
                 CFLAGS="${malamute_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${malamute_synthetic_libs} ${LDFLAGS}"
                 LIBS="${malamute_synthetic_libs} ${LIBS}"
@@ -492,7 +484,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libmlm
                 AC_SUBST([malamute_LIBS],[${malamute_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libmlm],[libmlm])
+                AC_SUBST([pkgconfig_name_libmlm],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libmlm 1.0.0 or higher])
     ])
 ])
@@ -529,7 +521,6 @@ AS_IF([test x"${search_log4cplus}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([log4cplus], [log4cplus >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $log4cplus_LIBS"
@@ -559,7 +550,6 @@ AS_IF([test x"${search_log4cplus}" = xyes], [
             [
                 was_log4cplus_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -llog4cplus"
-                found_linkname="log4cplus"
             ],
             [AC_MSG_ERROR([cannot link with -llog4cplus, install log4cplus])])
     ])
@@ -567,12 +557,12 @@ AS_IF([test x"${search_log4cplus}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for log4cplus
     AS_CASE(["x${was_log4cplus_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_log4cplus],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_log4cplus],["${found_pkgconfig}"])
                 CFLAGS="${log4cplus_CFLAGS} ${CFLAGS}"
                 LIBS="${log4cplus_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_log4cplus],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_log4cplus],[""])
                 CFLAGS="${log4cplus_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${log4cplus_synthetic_libs} ${LDFLAGS}"
                 LIBS="${log4cplus_synthetic_libs} ${LIBS}"
@@ -581,7 +571,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for log4cplus
                 AC_SUBST([log4cplus_LIBS],[${log4cplus_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_log4cplus],[log4cplus])
+                AC_SUBST([pkgconfig_name_log4cplus],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for log4cplus 0.0.0 or higher])
     ])
 ])
@@ -618,7 +608,6 @@ AS_IF([test x"${search_libfty_common_logging}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([fty_common_logging], [libfty_common_logging >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_logging_LIBS"
@@ -648,7 +637,6 @@ AS_IF([test x"${search_libfty_common_logging}" = xyes], [
             [
                 was_fty_common_logging_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-logging"
-                found_linkname="fty-common-logging"
             ],
             [AC_MSG_ERROR([cannot link with -lfty-common-logging, install libfty_common_logging])])
     ])
@@ -656,12 +644,12 @@ AS_IF([test x"${search_libfty_common_logging}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_logging
     AS_CASE(["x${was_fty_common_logging_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_common_logging],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_libfty_common_logging],["${found_pkgconfig}"])
                 CFLAGS="${fty_common_logging_CFLAGS} ${CFLAGS}"
                 LIBS="${fty_common_logging_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_common_logging],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_libfty_common_logging],[""])
                 CFLAGS="${fty_common_logging_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${fty_common_logging_synthetic_libs} ${LDFLAGS}"
                 LIBS="${fty_common_logging_synthetic_libs} ${LIBS}"
@@ -670,7 +658,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_logging
                 AC_SUBST([fty_common_logging_LIBS],[${fty_common_logging_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libfty_common_logging],[libfty_common_logging])
+                AC_SUBST([pkgconfig_name_libfty_common_logging],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_logging 0.0.0 or higher])
     ])
 ])
@@ -707,7 +695,6 @@ AS_IF([test x"${search_cxxtools}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([cxxtools], [cxxtools >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cxxtools_LIBS"
@@ -737,7 +724,6 @@ AS_IF([test x"${search_cxxtools}" = xyes], [
             [
                 was_cxxtools_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcxxtools"
-                found_linkname="cxxtools"
             ],
             [AC_MSG_ERROR([cannot link with -lcxxtools, install cxxtools])])
     ])
@@ -745,12 +731,12 @@ AS_IF([test x"${search_cxxtools}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
     AS_CASE(["x${was_cxxtools_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_cxxtools],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_cxxtools],["${found_pkgconfig}"])
                 CFLAGS="${cxxtools_CFLAGS} ${CFLAGS}"
                 LIBS="${cxxtools_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_cxxtools],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_cxxtools],[""])
                 CFLAGS="${cxxtools_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${cxxtools_synthetic_libs} ${LDFLAGS}"
                 LIBS="${cxxtools_synthetic_libs} ${LIBS}"
@@ -759,11 +745,98 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for cxxtools
                 AC_SUBST([cxxtools_LIBS],[${cxxtools_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_cxxtools],[cxxtools])
+                AC_SUBST([pkgconfig_name_cxxtools],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for cxxtools 0.0.0 or higher])
     ])
 ])
 dnl END of enabled attempts to search for cxxtools
+
+
+was_fty_common_check_lib_detected=no
+
+search_libfty_common="yes"
+
+AC_ARG_WITH([libfty_common],
+    [
+        AS_HELP_STRING([--with-libfty_common],
+        [yes or no. Optionally specify libfty_common prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common="yes"
+    ],
+    [
+        search_libfty_common="yes"
+    ])
+AS_CASE([x"${with_libfty_common}"],
+    [xyes], [search_libfty_common="yes"],
+    [xno],  [search_libfty_common="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common was explicitly disabled during configuration by '--with-libfty_common=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_common}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common], [libfty_common >= 0.0.0],
+    [
+        PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_LIBS"
+        was_fty_common_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common not found; falling back to defined compilability tests])
+
+        fty_common_synthetic_cflags=""
+        fty_common_synthetic_libs="-lfty-common"
+
+        if test -n "${with_libfty_common}" && test x"${with_libfty_common}" != xyes && test x"${with_libfty_common}" != xno; then
+            if test -r "${with_libfty_common}/include/fty_common.h"; then
+                fty_common_synthetic_cflags="-I${with_libfty_common}/include"
+                fty_common_synthetic_libs="-L${with_libfty_common}/lib -lfty-common"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common}/include/fty_common.h was not found. Please check libfty_common prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common.h], [],
+            AC_MSG_ERROR([Header file fty_common.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common], [fty_commmon_selftest],
+            [
+                was_fty_common_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common, install libfty_common])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common
+    AS_CASE(["x${was_fty_common_check_lib_detected}"],
+        [xpkgcfg], [
+                AC_SUBST([pkgconfig_name_libfty_common],["${found_pkgconfig}"])
+                CFLAGS="${fty_common_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                AC_SUBST([pkgconfig_name_libfty_common],[""])
+                CFLAGS="${fty_common_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_CFLAGS],[${fty_common_synthetic_cflags}])
+                AC_SUBST([fty_common_LIBS],[${fty_common_synthetic_libs}])
+            ],
+        [xno], [
+                AC_SUBST([pkgconfig_name_libfty_common],[""])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common
 
 
 was_fty_common_mlm_check_lib_detected=no
@@ -796,7 +869,6 @@ AS_IF([test x"${search_libfty_common_mlm}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([fty_common_mlm], [libfty_common_mlm >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_common_mlm_LIBS"
@@ -826,7 +898,6 @@ AS_IF([test x"${search_libfty_common_mlm}" = xyes], [
             [
                 was_fty_common_mlm_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-mlm"
-                found_linkname="fty-common-mlm"
             ],
             [AC_MSG_ERROR([cannot link with -lfty-common-mlm, install libfty_common_mlm])])
     ])
@@ -834,12 +905,12 @@ AS_IF([test x"${search_libfty_common_mlm}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
     AS_CASE(["x${was_fty_common_mlm_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_libfty_common_mlm],["${found_pkgconfig}"])
                 CFLAGS="${fty_common_mlm_CFLAGS} ${CFLAGS}"
                 LIBS="${fty_common_mlm_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_libfty_common_mlm],[""])
                 CFLAGS="${fty_common_mlm_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${fty_common_mlm_synthetic_libs} ${LDFLAGS}"
                 LIBS="${fty_common_mlm_synthetic_libs} ${LIBS}"
@@ -848,7 +919,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
                 AC_SUBST([fty_common_mlm_LIBS],[${fty_common_mlm_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libfty_common_mlm],[libfty_common_mlm])
+                AC_SUBST([pkgconfig_name_libfty_common_mlm],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_mlm 0.0.0 or higher])
     ])
 ])
@@ -885,7 +956,6 @@ AS_IF([test x"${search_libfty_proto}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 1.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $fty_proto_LIBS"
@@ -915,7 +985,6 @@ AS_IF([test x"${search_libfty_proto}" = xyes], [
             [
                 was_fty_proto_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty_proto"
-                found_linkname="fty_proto"
             ],
             [AC_MSG_ERROR([cannot link with -lfty_proto, install libfty_proto])])
     ])
@@ -923,12 +992,12 @@ AS_IF([test x"${search_libfty_proto}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_proto
     AS_CASE(["x${was_fty_proto_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_libfty_proto],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_libfty_proto],["${found_pkgconfig} >= 1.0.0"])
                 CFLAGS="${fty_proto_CFLAGS} ${CFLAGS}"
                 LIBS="${fty_proto_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_libfty_proto],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_libfty_proto],[""])
                 CFLAGS="${fty_proto_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${fty_proto_synthetic_libs} ${LDFLAGS}"
                 LIBS="${fty_proto_synthetic_libs} ${LIBS}"
@@ -937,7 +1006,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_proto
                 AC_SUBST([fty_proto_LIBS],[${fty_proto_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_libfty_proto],[libfty_proto])
+                AC_SUBST([pkgconfig_name_libfty_proto],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_proto 1.0.0 or higher])
     ])
 ])
@@ -974,7 +1043,6 @@ AS_IF([test x"${search_cidr}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $cidr_LIBS"
@@ -1004,7 +1072,6 @@ AS_IF([test x"${search_cidr}" = xyes], [
             [
                 was_cidr_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcidr"
-                found_linkname="cidr"
             ],
             [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
     ])
@@ -1012,12 +1079,12 @@ AS_IF([test x"${search_cidr}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
     AS_CASE(["x${was_cidr_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_cidr],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_cidr],["${found_pkgconfig}"])
                 CFLAGS="${cidr_CFLAGS} ${CFLAGS}"
                 LIBS="${cidr_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_cidr],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_cidr],[""])
                 CFLAGS="${cidr_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${cidr_synthetic_libs} ${LDFLAGS}"
                 LIBS="${cidr_synthetic_libs} ${LIBS}"
@@ -1026,7 +1093,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
                 AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_cidr],[cidr])
+                AC_SUBST([pkgconfig_name_cidr],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for cidr 0.0.0 or higher])
     ])
 ])
@@ -1063,7 +1130,6 @@ AS_IF([test x"${search_openssl}" = xyes], [
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    found_linkname=""
     PKG_CHECK_MODULES([openssl], [openssl >= 0.0.0],
     [
         PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE $openssl_LIBS"
@@ -1077,12 +1143,12 @@ AS_IF([test x"${search_openssl}" = xyes], [
 dnl END of PKG_CHECK_MODULES and/or direct tests for openssl
     AS_CASE(["x${was_openssl_check_lib_detected}"],
         [xpkgcfg], [
-                AC_SUBST([pkgconfig_name_openssl],[${found_pkgconfig}])
+                AC_SUBST([pkgconfig_name_openssl],["${found_pkgconfig}"])
                 CFLAGS="${openssl_CFLAGS} ${CFLAGS}"
                 LIBS="${openssl_LIBS} ${LIBS}"
             ],
         [xyes], [
-                AC_SUBST([pkgconfig_name_openssl],[${found_linkname}])
+                AC_SUBST([pkgconfig_name_openssl],[""])
                 CFLAGS="${openssl_synthetic_cflags} ${CFLAGS}"
                 LDFLAGS="${openssl_synthetic_libs} ${LDFLAGS}"
                 LIBS="${openssl_synthetic_libs} ${LIBS}"
@@ -1091,7 +1157,7 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for openssl
                 AC_SUBST([openssl_LIBS],[${openssl_synthetic_libs}])
             ],
         [xno], [
-                AC_SUBST([pkgconfig_name_openssl],[openssl])
+                AC_SUBST([pkgconfig_name_openssl],[""])
             AC_MSG_ERROR([Cannot find pkg-config metadata for openssl 0.0.0 or higher])
     ])
 ])
