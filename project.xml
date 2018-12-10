@@ -64,7 +64,7 @@
     <use project = "fty-common-mlm" libname = "libfty_common_mlm" header = "fty_common_mlm.h"
         repository = "https://github.com/42ity/fty-common-mlm.git"
         release = "master"
-        test = "fty_commmon_mlm_selftest" >
+        test = "fty_common_mlm_selftest" >
 
         <use project = "czmq"
             repository = "https://github.com/42ity/czmq.git"
@@ -96,7 +96,7 @@
 
         <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
             repository = "https://github.com/42ity/fty-common.git"
-            test = "fty_commmon_selftest" >
+            test = "fty_common_selftest" >
 
             <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
             repository = "https://github.com/42ity/fty-common-logging.git"
