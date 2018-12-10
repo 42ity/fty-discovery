@@ -112,6 +112,7 @@
 
         <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
             repository = "https://github.com/42ity/fty-common.git"
+            release = "master"
             test = "fty_common_selftest" >
 
             <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
