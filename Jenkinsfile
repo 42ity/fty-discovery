@@ -132,11 +132,26 @@ pipeline {
     triggers {
         pollSCM 'H/2 * * * *'
     }
+
+    // Jenkins tends to reschedule jobs that have not yet completed if they took
+    // too long, maybe this happens in combination with polling. Either way, if
+    // the server gets into this situation, the snowball of same builds grows as
+    // the build system lags more and more. Let the devs avoid it in a few ways.
+    options {
+        disableConcurrentBuilds()
+        // Jenkins community suggested that instead of a default checkout, we can do
+        // an explicit step for that. It is expected that either way Jenkins "should"
+        // record that a particular commit is being processed, but the explicit ways
+        // might work better. In either case it honors SCM settings like refrepo if
+        // set up in the Pipeline or MultiBranchPipeline job.
+        skipDefaultCheckout()
+    }
 // Note: your Jenkins setup may benefit from similar setup on side of agents:
 //        PATH="/usr/lib64/ccache:/usr/lib/ccache:/usr/bin:/bin:${PATH}"
     stages {
         stage ('pre-clean') {
                     steps {
+                        milestone ordinal: 20, label: "${env.JOB_NAME}@${env.BRANCH_NAME}"
                         dir("tmp") {
                             sh 'if [ -s Makefile ]; then make -k distclean || true ; fi'
                             sh 'chmod -R u+w .'
@@ -145,10 +160,19 @@ pipeline {
                         sh 'rm -f ccache.log cppcheck.xml'
                     }
         }
+        stage ('git') {
+                    steps {
+                        retry(3) {
+                            checkout scm
+                        }
+                        milestone ordinal: 30, label: "${env.JOB_NAME}@${env.BRANCH_NAME}"
+                    }
+        }
         stage ('prepare') {
                     steps {
                         sh './autogen.sh'
                         stash (name: 'prepped', includes: '**/*', excludes: '**/cppcheck.xml')
+                        milestone ordinal: 40, label: "${env.JOB_NAME}@${env.BRANCH_NAME}"
                     }
         }
         stage ('compile') {
@@ -530,7 +554,13 @@ pipeline {
                             def GIT_URL = sh(returnStdout: true, script: """git remote -v | egrep '^origin' | awk '{print \$2}' | head -1""").trim()
                             def GIT_COMMIT = sh(returnStdout: true, script: 'git rev-parse --verify HEAD').trim()
                             def DIST_ARCHIVE = ""
-                            if ( params.DO_DIST_DOCS ) { DIST_ARCHIVE = env.BUILD_URL + "artifact/__dist.tar.gz" }
+                            def msg = "Would deploy ${GIT_URL} ${GIT_COMMIT} because tested branch '${env.BRANCH_NAME}' matches filter '${myDEPLOY_BRANCH_PATTERN}'"
+                            if ( params.DO_DIST_DOCS ) {
+                                DIST_ARCHIVE = env.BUILD_URL + "artifact/__dist.tar.gz"
+                                msg += ", using dist archive '${DIST_ARCHIVE}' to speed up deployment"
+                            }
+                            echo msg
+                            milestone ordinal: 100, label: "${env.JOB_NAME}@${env.BRANCH_NAME}"
                             build job: "${myDEPLOY_JOB_NAME}", parameters: [
                                 string(name: 'DEPLOY_GIT_URL', value: "${GIT_URL}"),
                                 string(name: 'DEPLOY_GIT_BRANCH', value: env.BRANCH_NAME),
