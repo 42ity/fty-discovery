@@ -58,6 +58,7 @@ BuildRequires:  malamute-devel
 BuildRequires:  log4cplus-devel
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  cxxtools-devel
+BuildRequires:  fty-common-devel
 BuildRequires:  fty-common-mlm-devel
 BuildRequires:  fty-proto-devel
 BuildRequires:  libcidr-devel
@@ -92,6 +93,7 @@ Requires:       malamute-devel
 Requires:       log4cplus-devel
 Requires:       fty-common-logging-devel
 Requires:       cxxtools-devel
+Requires:       fty-common-devel
 Requires:       fty-common-mlm-devel
 Requires:       fty-proto-devel
 Requires:       libcidr-devel
