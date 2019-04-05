@@ -33,7 +33,7 @@
 #include <czmq.h>
 #include <malamute.h>
 #include <fty_log.h>
-#include <fty_common_mlm.h>
+#include <fty_common_nut.h>
 #include <ftyproto.h>
 #include <libcidr.h>
 #include <openssl/sha.h>

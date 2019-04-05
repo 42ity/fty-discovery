@@ -917,6 +917,90 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
 dnl END of enabled attempts to search for libfty_common_mlm
 
 
+was_fty_common_nut_check_lib_detected=no
+
+search_libfty_common_nut="yes"
+
+AC_ARG_WITH([libfty_common_nut],
+    [
+        AS_HELP_STRING([--with-libfty_common_nut],
+        [yes or no. Optionally specify libfty_common_nut prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_common_nut="yes"
+    ],
+    [
+        search_libfty_common_nut="yes"
+    ])
+AS_CASE([x"${with_libfty_common_nut}"],
+    [xyes], [search_libfty_common_nut="yes"],
+    [xno],  [search_libfty_common_nut="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_common_nut}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_common_nut was explicitly disabled during configuration by '--with-libfty_common_nut=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_common_nut}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_common_nut], [libfty_common_nut >= 0.0.0],
+    [
+        was_fty_common_nut_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_common_nut"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_common_nut not found; falling back to defined compilability tests])
+
+        fty_common_nut_synthetic_cflags=""
+        fty_common_nut_synthetic_libs="-lfty-common-nut"
+
+        if test -n "${with_libfty_common_nut}" && test x"${with_libfty_common_nut}" != xyes && test x"${with_libfty_common_nut}" != xno; then
+            if test -r "${with_libfty_common_nut}/include/fty_common_nut.h"; then
+                fty_common_nut_synthetic_cflags="-I${with_libfty_common_nut}/include"
+                fty_common_nut_synthetic_libs="-L${with_libfty_common_nut}/lib -lfty-common-nut"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_common_nut}/include/fty_common_nut.h was not found. Please check libfty_common_nut prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_common_nut.h], [],
+            AC_MSG_ERROR([Header file fty_common_nut.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-common-nut], [fty_common_nut_selftest],
+            [
+                was_fty_common_nut_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-common-nut"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-common-nut, install libfty_common_nut])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_nut
+    AS_CASE(["x${was_fty_common_nut_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_common_nut_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_common_nut_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_common_nut_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_common_nut_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_common_nut_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_common_nut_CFLAGS],[${fty_common_nut_synthetic_cflags}])
+                AC_SUBST([fty_common_nut_LIBS],[${fty_common_nut_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_common_nut 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_common_nut
+
+
 was_fty_proto_check_lib_detected=no
 
 search_libfty_proto="yes"

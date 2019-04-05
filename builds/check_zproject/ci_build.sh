@@ -18,6 +18,7 @@ git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-loggin
 git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common.git fty-common
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-mlm.git fty-common-mlm
+git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-nut.git fty-common-nut
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-proto.git fty-proto
 git clone --quiet --depth 1 -b 1.2.3-FTY-master https://github.com/42ity/libcidr.git cidr
 cd -

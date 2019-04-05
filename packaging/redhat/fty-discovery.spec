@@ -60,6 +60,7 @@ BuildRequires:  fty-common-logging-devel
 BuildRequires:  cxxtools-devel
 BuildRequires:  fty-common-devel
 BuildRequires:  fty-common-mlm-devel
+BuildRequires:  fty-common-nut-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  libcidr-devel
 BuildRequires:  openssl-devel
@@ -95,6 +96,7 @@ Requires:       fty-common-logging-devel
 Requires:       cxxtools-devel
 Requires:       fty-common-devel
 Requires:       fty-common-mlm-devel
+Requires:       fty-common-nut-devel
 Requires:       fty-proto-devel >= 1.0.0
 Requires:       libcidr-devel
 Requires:       openssl-devel

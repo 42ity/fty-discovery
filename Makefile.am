@@ -21,13 +21,14 @@ AM_CPPFLAGS = \
     ${cxxtools_CFLAGS} \
     ${fty_common_CFLAGS} \
     ${fty_common_mlm_CFLAGS} \
+    ${fty_common_nut_CFLAGS} \
     ${fty_proto_CFLAGS} \
     ${cidr_CFLAGS} \
     ${openssl_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${openssl_LIBS}
+project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${fty_common_nut_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${openssl_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -57,6 +58,7 @@ EXTRA_DIST += \
     Findcxxtools.cmake \
     Findfty_common.cmake \
     Findfty_common_mlm.cmake \
+    Findfty_common_nut.cmake \
     Findfty_proto.cmake \
     Findcidr.cmake \
     Findopenssl.cmake \
