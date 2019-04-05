@@ -32,8 +32,6 @@
 //  External API
 #include "../include/fty_discovery.h"
 
-//  Extra headers
-
 //  Opaque class structures to allow forward references
 #ifndef CIDR_T_DEFINED
 typedef struct _cidr_t cidr_t;
@@ -67,6 +65,8 @@ typedef struct _scan_nut_t scan_nut_t;
 typedef struct _assets_t assets_t;
 #define ASSETS_T_DEFINED
 #endif
+
+//  Extra headers
 
 //  Internal API
 
