@@ -45,8 +45,6 @@ all_tests [] = {
 // Tests for stable/draft private classes:
 // Now built only with --enable-drafts, so even stable builds are hidden behind the flag
     { "cidr", NULL, true, false, "cidr_test" },
-    { "nutscan", NULL, true, false, "nutscan_test" },
-    { "nutdumpdata", NULL, true, false, "nutdumpdata_test" },
     { "range_scan", NULL, true, false, "range_scan_test" },
     { "device_scan", NULL, true, false, "device_scan_test" },
     { "scan_dns", NULL, true, false, "scan_dns_test" },

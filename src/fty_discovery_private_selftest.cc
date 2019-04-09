@@ -40,10 +40,6 @@ fty_discovery_private_selftest (bool verbose, const char *subtest)
 // Tests for stable private classes:
     if (streq (subtest, "$ALL") || streq (subtest, "cidr_test"))
         cidr_test (verbose);
-    if (streq (subtest, "$ALL") || streq (subtest, "nutscan_test"))
-        nutscan_test (verbose);
-    if (streq (subtest, "$ALL") || streq (subtest, "nutdumpdata_test"))
-        nutdumpdata_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "range_scan_test"))
         range_scan_test (verbose);
     if (streq (subtest, "$ALL") || streq (subtest, "device_scan_test"))
