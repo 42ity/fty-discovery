@@ -45,6 +45,7 @@ extern "C" {
 #define DEFAULT_MAX_SCANPOOL_NUMBER     "4"
 #define DEFAULT_NUTSCAN_TIMEOUT         "20"
 #define DEFAULT_DUMPDATA_LOOPTIME       "30"
+#define DEFAULT_DUMPDATA_LOOP           "2"
 
 #define TYPE_LOCALSCAN 1
 #define TYPE_MULTISCAN 2

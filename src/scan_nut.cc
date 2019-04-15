@@ -32,6 +32,30 @@
 #include <cxxtools/regex.h>
 #include <algorithm>
 
+enum DeviceCredentialsProtocols {
+    DCP_NETXML,
+    DCP_SNMPV1,
+    DCP_SNMPV3
+};
+
+struct CredentialProtocolScanResult {
+    CredentialProtocolScanResult() :
+        protoCredsType(DCP_NETXML),
+        protoCredsPtr(nullptr) {}
+
+    CredentialProtocolScanResult(const nutcommon::CredentialsSNMPv1& creds) :
+        protoCredsType(DCP_SNMPV1),
+        protoCredsPtr(&creds) {}
+
+    CredentialProtocolScanResult(const nutcommon::CredentialsSNMPv3& creds) :
+        protoCredsType(DCP_SNMPV3),
+        protoCredsPtr(&creds) {}
+
+    DeviceCredentialsProtocols protoCredsType;
+    const void* protoCredsPtr;
+    nutcommon::DeviceConfigurations deviceConfigs;
+};
+
 bool ip_present(discovered_devices_t *device_discovered, std::string ip);
 
 // parse nut config line (key = "value")
@@ -50,54 +74,50 @@ std::pair<std::string, std::string> s_nut_key_and_value (std::string &line)
     return std::make_pair (name, value);
 }
 
-void s_nut_output_to_fty_messages (std::vector <fty_proto_t *> *assets, std::vector<std::string> output, discovered_devices_t *devices)
+void s_nut_output_to_fty_messages(std::vector <fty_proto_t *>& assets, const nutcommon::DeviceConfigurations& output, discovered_devices_t *devices)
 {
-    bool found = false;
-    for (auto it: output) {
-        std::vector<std::string> lines;
+    for (const auto& device: output) {
+        bool found = false;
         fty_proto_t *asset = fty_proto_new(FTY_PROTO_ASSET);
 
-        cxxtools::split("\n", it, std::back_inserter(lines));
-        for (auto l: lines) {
-            auto parsed = s_nut_key_and_value (l);
-            if (parsed.first == "desc") {
-                fty_proto_ext_insert (asset, "description", "%s", parsed.second.c_str());
-            }
-            else if (parsed.first == "port") {
-                std::string ip;
-                size_t pos = parsed.second.find("://");
-                if(pos != std::string::npos)
-                    ip = parsed.second.substr(pos+3);
-                else
-                    ip = parsed.second;
-                if(ip_present(devices, ip)) {
-                    found = false;
-                    break;
-                } else {
-                    fty_proto_ext_insert (asset, "ip.1", "%s", ip.c_str());
-                    fty_proto_aux_insert (asset, "type", "%s", "device");
-                    //temporarily save real "port" here to keep trace of protocol (http, https,...)
-                    fty_proto_ext_insert (asset, "name", "%s", parsed.second.c_str());
-                    found = true;
-                }
+        const auto itDesc = device.find("desc");
+        const auto itPort = device.find("port");
+        if (itDesc != device.end()) {
+            fty_proto_ext_insert(asset, "description", "%s", itDesc->second.c_str());
+        }
+        if (itPort != device.end()) {
+            std::string ip;
+            size_t pos = itPort->second.find("://");
+            if(pos != std::string::npos)
+                ip = itPort->second.substr(pos+3);
+            else
+                ip = itPort->second;
+            if(ip_present(devices, ip)) {
+                found = false;
+                break;
+            } else {
+                fty_proto_ext_insert (asset, "ip.1", "%s", ip.c_str());
+                fty_proto_aux_insert (asset, "type", "%s", "device");
+                //temporarily save real "port" here to keep trace of protocol (http, https,...)
+                fty_proto_ext_insert (asset, "name", "%s", itPort->second.c_str());
+                found = true;
             }
         }
 
         if(!found) {
             fty_proto_destroy(&asset);
         } else {
-            assets->push_back(asset);
+            assets.push_back(asset);
         }
-        found = false;
     }
 }
 
 void
-s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::string> &dump)
+s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, const nutcommon::DeviceConfiguration& dump)
 {
     if (! fmsg) return;
 
-    static std::map <std::string, std::string> mapping = {
+    static nutcommon::DeviceConfiguration mapping = {
         {"device.model", "model"},
         {"ups.model", "model"},
         {"device.mfr", "manufacturer"},
@@ -134,7 +154,7 @@ s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, std::map <std::string, std::st
     }
 }
 bool
-s_valid_dumpdata (std::map <std::string, std::string> &dump)
+s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
 {
   if(dump.find("device.type") == dump.end()) {
     log_error("No subtype for this device");
@@ -158,7 +178,7 @@ s_valid_dumpdata (std::map <std::string, std::string> &dump)
 
 
 void
-s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, std::map <std::string, std::string> &dump, zsock_t* pipe)
+s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, const nutcommon::DeviceConfiguration &dump, zsock_t* pipe)
 {
     if(! asset) return;
 
@@ -283,30 +303,37 @@ bool inform_and_wait(zsock_t* pipe) {
     return stop_now;
 }
 
+#define BIOS_NUT_DUMPDATA_ENV "BIOS_NUT_DUMPDATA"
+
 void
 dump_data_actor(zsock_t *pipe, void *args) {
     zsock_signal (pipe, 0);
     zlist_t *argv = (zlist_t *)args;
     bool valid = true;
     fty_proto_t *asset;
-    std::string type, community;
+    const CredentialProtocolScanResult *cpsr;
+
+    int loop_nb = -1;
+    if (::getenv(BIOS_NUT_DUMPDATA_ENV)) {
+        loop_nb = std::stoi(::getenv(BIOS_NUT_DUMPDATA_ENV));
+    }
+    if (loop_nb <= 0) {
+        loop_nb = std::stoi(DEFAULT_DUMPDATA_LOOP);
+    }
+
+    int loop_iter_time = std::stoi(DEFAULT_DUMPDATA_LOOPTIME);
+    zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
+    if (config) {
+        loop_iter_time = std::stoi(zconfig_get(config, CFG_PARAM_DUMPDATA_LOOPTIME, DEFAULT_DUMPDATA_LOOPTIME));
+        zconfig_destroy(&config);
+    }
+
     zmsg_t *reply;
-    if (!argv || zlist_size(argv) < 2) {
+    if (!argv || zlist_size(argv) != 2) {
         valid = false;
     } else {
-       asset = (fty_proto_t *) zlist_first(argv);
-       type = (char *) zlist_next(argv);
-       if(!asset || type.empty())
-           valid = false;
-
-       if(valid && (type != "snmp") && (type != "xml"))
-           valid = false;
-
-       if(valid && (type == "snmp") && (zlist_size(argv) != 3))
-           valid = false;
-
-       if(valid && (type == "snmp"))
-           community = (char *) zlist_next(argv);
+       asset = reinterpret_cast<fty_proto_t*>(zlist_first(argv));
+       cpsr = reinterpret_cast<const CredentialProtocolScanResult*>(zlist_next(argv));
     }
 
     if(!valid) {
@@ -315,8 +342,6 @@ dump_data_actor(zsock_t *pipe, void *args) {
         reply = zmsg_new();
         zmsg_pushstr(reply, "ERROR");
     } else {
-        std::string addr = fty_proto_ext_string(asset, "name", "");
-        map_string_t nutdata;
         //waiting message from caller
         //it avoid Assertion failed: pfd.revents & POLLIN (signaler.cpp:242) on zpoller_wait for
         // a pool of zactor who use Subprocess
@@ -324,52 +349,49 @@ dump_data_actor(zsock_t *pipe, void *args) {
             zlist_destroy(&argv);
             return;
         }
-        if (type == "snmp") {
-            if (nut_dumpdata_snmp_ups (addr, community,  nutdata) == 0) {
-                if(!s_valid_dumpdata(nutdata)) {
-                  fty_proto_destroy(&asset);
-                  log_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
-                  reply = zmsg_new();
-                  zmsg_pushstr(reply, "FAILED");
-                } else {
-                  s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
-                  reply = fty_proto_encode (&asset);
-                  zmsg_pushstr (reply, "FOUND");
-                  log_debug("dumpdata for %s on %s success.", addr.c_str(), community.c_str());
-                }
-            } else {
+
+        int r = -1;
+        const std::string addr = fty_proto_ext_string(asset, "name", "");
+        std::string deviceType = "unknown";
+        nutcommon::DeviceConfiguration nutdata;
+
+        switch (cpsr->protoCredsType) {
+        case DCP_SNMPV3:
+            deviceType = "SNMPv3 securityName='" + reinterpret_cast<const nutcommon::CredentialsSNMPv3*>(cpsr->protoCredsPtr)->secName + "'";
+            r = nutcommon::dumpDeviceSNMPv3(addr, *reinterpret_cast<const nutcommon::CredentialsSNMPv3*>(cpsr->protoCredsPtr), loop_nb, loop_iter_time, nutdata);
+            break;
+        case DCP_SNMPV1:
+            deviceType = "SNMPv1 community='" + reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr)->community + "'";
+            r = nutcommon::dumpDeviceSNMPv1(addr, *reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr), loop_nb, loop_iter_time, nutdata);
+            break;
+        case DCP_NETXML:
+            deviceType = "NetXML";
+            r = nutcommon::dumpDeviceNetXML(addr, loop_nb, loop_iter_time, nutdata);
+            break;
+        }
+
+        if (r == 0) {
+            if (s_valid_dumpdata(nutdata)) {
+                log_debug("Dump data for %s (%s) succeeded.", addr.c_str(), deviceType.c_str());
+
+                s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
+                reply = fty_proto_encode (&asset);
+                zmsg_pushstr (reply, "FOUND");
+            }
+            else {
+                log_debug("Dump data for %s (%s) failed: invalid data.", addr.c_str(), deviceType.c_str());
+
                 fty_proto_destroy(&asset);
-                log_debug("dumpdata for %s on %s failed.", addr.c_str(), community.c_str());
                 reply = zmsg_new();
                 zmsg_pushstr(reply, "FAILED");
             }
-            zlist_first(argv);
-            char * temp = (char *) zlist_next(argv);
-            zstr_free(&temp);
-            temp = (char *) zlist_next(argv);
-            zstr_free(&temp);
-        } else {
-            if (nut_dumpdata_netxml_ups (addr,  nutdata) == 0) {
-                if(!s_valid_dumpdata (nutdata)) {
-                  fty_proto_destroy(&asset);
-                  log_debug("dumpdata for %s failed.", addr.c_str());
-                  reply = zmsg_new();
-                  zmsg_pushstr(reply, "FAILED");
-                } else {
-                  s_nut_dumpdata_to_fty_message (asset, nutdata);
-                  reply = fty_proto_encode (&asset);
-                  zmsg_pushstr (reply, "FOUND");
-                  log_debug("dumpdata for %s success.", addr.c_str());
-                }
-            } else {
-                fty_proto_destroy(&asset);
-                log_debug("dumpdata for %s failed.", addr.c_str());
-                reply = zmsg_new();
-                zmsg_pushstr(reply, "FAILED");
-            }
-            zlist_first(argv);
-            char * temp = (char *) zlist_next(argv);
-            zstr_free(&temp);
+        }
+        else {
+            log_debug("Dump data for %s (%s) failed: failed to dump data.", addr.c_str(), deviceType.c_str());
+
+            fty_proto_destroy(&asset);
+            reply = zmsg_new();
+            zmsg_pushstr(reply, "FAILED");
         }
     }
 
@@ -391,7 +413,8 @@ dump_data_actor(zsock_t *pipe, void *args) {
 }
 
 bool
-create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devices, zsock_t *pipe, std::string community, std::string type) {
+create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devices_t *devices, zsock_t *pipe)
+{
     bool stop_now =false;
     std::vector<fty_proto_t *> listDiscovered;
     std::vector<zactor_t *> listActor;
@@ -406,7 +429,7 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
     char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_DUMPPOOL_NUMBER, DEFAULT_MAX_DUMPPOOL_NUMBER);
     const size_t number_max_pool = std::stoi(strNbPool);
 
-    s_nut_output_to_fty_messages(&listDiscovered , output, devices);
+    s_nut_output_to_fty_messages(listDiscovered, result.deviceConfigs, devices);
     size_t number_asset_view = 0;
     while(number_asset_view < listDiscovered.size()) {
         if(ask_actor_term(pipe)) stop_now = true;
@@ -418,9 +441,7 @@ create_pool_dumpdata(std::vector<std::string> output, discovered_devices_t *devi
             number_asset_view++;
             zlist_t *listarg = zlist_new();
             zlist_append(listarg, asset);
-            zlist_append(listarg, strdup(type.c_str()));
-            if(type == "snmp")
-                zlist_append(listarg, strdup(community.c_str()));
+            zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(&result)));
             zactor_t *actor = zactor_new (dump_data_actor, listarg);
 
             zmsg_t *msg_ready = zmsg_recv(actor);
@@ -558,48 +579,58 @@ scan_nut_actor(zsock_t *pipe, void *args)
         return;
     }
 
-    // read community names from cfg
-    zconfig_t *config_com = zconfig_load(FTY_DEFAULT_CFG_FILE);
-    if (!config_com) {
-        log_error("failed to load config file %s", FTY_DEFAULT_CFG_FILE);
-        config_com = zconfig_new("root", NULL);
+    std::vector<CredentialProtocolScanResult> results;
+    const auto credentialsV3 = nutcommon::getCredentialsSNMPv3();
+    const auto credentialsV1 = nutcommon::getCredentialsSNMPv1();
+
+    // Grab timeout.
+    int timeout;
+    {
+        std::string strTimeout = DEFAULT_NUTSCAN_TIMEOUT;
+        zconfig_t *config = zconfig_load(getDiscoveryConfigFile().c_str());
+        if (config) {
+            strTimeout = zconfig_get(config, CFG_PARAM_NUTSCAN_TIMEOUT, DEFAULT_NUTSCAN_TIMEOUT);
+            zconfig_destroy(&config);
+        }
+        timeout = std::stoi(strTimeout);
     }
-    std::vector <std::string> communities;
-    zconfig_t *section = zconfig_locate (config_com, "/snmp/community");
-    if (section) {
-        zconfig_t *item = zconfig_child (section);
-        while (item) {
-            std::string temp = zconfig_value(item);
-            if(!temp.empty())
-                communities.push_back (zconfig_value (item));
-            item = zconfig_next (item);
+
+    const nutcommon::ScanRangeOptions scanRangeOptions(
+        listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
+        listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
+        timeout
+    );
+
+    /**
+     * Scan the network and store credential/protocol pairs which returned data.
+     */
+    // SNMPv3 scan.
+    {
+        for (const auto& credential : credentialsV3) {
+            CredentialProtocolScanResult result(credential);
+            nutcommon::scanDeviceRangeSNMPv3(scanRangeOptions, credential, false, result.deviceConfigs);
+            if (!result.deviceConfigs.empty()) {
+                results.emplace_back(result);
+            }
         }
     }
-    zconfig_destroy(&config_com);
-
-    //take care of have always public community
-    if (std::find(communities.begin(), communities.end(), "public") == communities.end()) {
-        communities.push_back("public");
-    }
-
-    stop_now = inform_and_wait(pipe);
-
-    std::vector<std::pair<std::vector<std::string>, std::string>> outputs;
-    if(!stop_now) {
-        for(auto it:communities) {
-            std::vector<std::string> output;
-            nut_scan_multi_snmp ("device", listAddr->firstAddress(), listAddr->lastAddress(), it, false, output);
-            outputs.push_back(std::make_pair(output, it));
-
-            if(ask_actor_term(pipe)) stop_now = true;
-            if(zsys_interrupted || stop_now)
-                break;
+    // SNMPv1 scan.
+    {
+        for (const auto& credential : credentialsV1) {
+            CredentialProtocolScanResult result(credential);
+            nutcommon::scanDeviceRangeSNMPv1(scanRangeOptions, credential, false, result.deviceConfigs);
+            if (!result.deviceConfigs.empty()) {
+                results.emplace_back(result);
+            }
         }
     }
-
-    std::vector<std::string> outputXml;
-    if(!zsys_interrupted && !stop_now) {
-        nut_scan_multi_xml_http ("device", listAddr->firstAddress(), listAddr->lastAddress(), outputXml);
+    // NetXML scan.
+    {
+        CredentialProtocolScanResult result;
+        nutcommon::scanDeviceRangeNetXML(scanRangeOptions, result.deviceConfigs);
+        if (!result.deviceConfigs.empty()) {
+            results.emplace_back(result);
+        }
     }
 
     if(ask_actor_term(pipe)) stop_now = true;
@@ -624,20 +655,14 @@ scan_nut_actor(zsock_t *pipe, void *args)
         return;
     }
 
-    for(auto outputP:outputs) {
-        if (! outputP.first.empty()) {
-            stop_now = create_pool_dumpdata(outputP.first, devices, pipe, outputP.second, "snmp");
+    for (const auto &result : results) {
+        stop_now = create_pool_dumpdata(result, devices, pipe);
 
-            if(ask_actor_term(pipe)) stop_now = true;
-            if(zsys_interrupted || stop_now)
-                break;
+        if(ask_actor_term(pipe)) {
+            stop_now = true;
         }
-    }
-
-    if(ask_actor_term(pipe)) stop_now = true;
-    if(!zsys_interrupted && !stop_now){
-        if (! outputXml.empty ()) {
-            stop_now = create_pool_dumpdata(outputXml, devices, pipe, "", "xml");
+        if(zsys_interrupted || stop_now) {
+            break;
         }
     }
 
