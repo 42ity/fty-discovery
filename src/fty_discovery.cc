@@ -82,6 +82,7 @@ int main (int argc, char *argv [])
         }
         else
             log_error ("configuration not loaded %s", logConfigFile.c_str());
+        zconfig_destroy(&zconf);
     }
 
     if (verbose)

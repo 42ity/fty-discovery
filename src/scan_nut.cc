@@ -74,17 +74,18 @@ std::pair<std::string, std::string> s_nut_key_and_value (std::string &line)
     return std::make_pair (name, value);
 }
 
-void s_nut_output_to_fty_messages(std::vector <fty_proto_t *>& assets, const nutcommon::DeviceConfigurations& output, discovered_devices_t *devices)
+struct NutOutput {
+    std::string port;
+    std::string ip;
+};
+
+void s_nut_output_to_messages(std::vector<NutOutput>& assets, const nutcommon::DeviceConfigurations& output, discovered_devices_t *devices)
 {
     for (const auto& device: output) {
         bool found = false;
-        fty_proto_t *asset = fty_proto_new(FTY_PROTO_ASSET);
+        NutOutput asset;
 
-        const auto itDesc = device.find("desc");
         const auto itPort = device.find("port");
-        if (itDesc != device.end()) {
-            fty_proto_ext_insert(asset, "description", "%s", itDesc->second.c_str());
-        }
         if (itPort != device.end()) {
             std::string ip;
             size_t pos = itPort->second.find("://");
@@ -96,17 +97,13 @@ void s_nut_output_to_fty_messages(std::vector <fty_proto_t *>& assets, const nut
                 found = false;
                 break;
             } else {
-                fty_proto_ext_insert (asset, "ip.1", "%s", ip.c_str());
-                fty_proto_aux_insert (asset, "type", "%s", "device");
-                //temporarily save real "port" here to keep trace of protocol (http, https,...)
-                fty_proto_ext_insert (asset, "name", "%s", itPort->second.c_str());
+                asset.ip = ip.c_str();
+                asset.port = itPort->second.c_str();
                 found = true;
             }
         }
 
-        if(!found) {
-            fty_proto_destroy(&asset);
-        } else {
+        if (found) {
             assets.push_back(asset);
         }
     }
@@ -257,7 +254,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
     zsock_signal (pipe, 0);
     zlist_t *argv = (zlist_t *)args;
     bool valid = true;
-    fty_proto_t *initialAsset;
+    NutOutput *initialAsset;
     const CredentialProtocolScanResult *cpsr;
     const nutcommon::KeyValues *mappings;
 
@@ -280,7 +277,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
     if (!argv || zlist_size(argv) != 3) {
         valid = false;
     } else {
-       initialAsset = reinterpret_cast<fty_proto_t*>(zlist_first(argv));
+       initialAsset = reinterpret_cast<NutOutput*>(zlist_first(argv));
        cpsr = reinterpret_cast<const CredentialProtocolScanResult*>(zlist_next(argv));
        mappings = reinterpret_cast<const nutcommon::KeyValues*>(zlist_next(argv));
     }
@@ -300,9 +297,9 @@ dump_data_actor(zsock_t *pipe, void *args) {
         }
 
         int r = -1;
-        const std::string addr = fty_proto_ext_string(initialAsset, "name", "");
-        const std::string ip = fty_proto_ext_string(initialAsset, "ip.1", "");
-        const std::string type = fty_proto_aux_string(initialAsset, "type", "");
+        const std::string addr = initialAsset->port;
+        const std::string ip = initialAsset->ip;
+        const std::string type = "device";
         std::string deviceType = "unknown";
         nutcommon::DeviceConfiguration nutdata;
 
@@ -320,9 +317,6 @@ dump_data_actor(zsock_t *pipe, void *args) {
             r = nutcommon::dumpDeviceNetXML(addr, loop_nb, loop_iter_time, nutdata);
             break;
         }
-
-        // We're done with the initial fty_proto_t.
-        fty_proto_destroy(&initialAsset);
 
         if (r == 0) {
             if (s_valid_dumpdata(nutdata)) {
@@ -375,7 +369,7 @@ bool
 create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings)
 {
     bool stop_now =false;
-    std::vector<fty_proto_t *> listDiscovered;
+    std::vector<NutOutput> listDiscovered;
     std::vector<zactor_t *> listActor;
     zpoller_t *poller = zpoller_new(pipe, NULL);
 
@@ -388,7 +382,7 @@ create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devi
     char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_DUMPPOOL_NUMBER, DEFAULT_MAX_DUMPPOOL_NUMBER);
     const size_t number_max_pool = std::stoi(strNbPool);
 
-    s_nut_output_to_fty_messages(listDiscovered, result.deviceConfigs, devices);
+    s_nut_output_to_messages(listDiscovered, result.deviceConfigs, devices);
     size_t number_asset_view = 0;
     while(number_asset_view < listDiscovered.size()) {
         if(ask_actor_term(pipe)) stop_now = true;
@@ -396,10 +390,10 @@ create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devi
             break;
         size_t number_pool = 0;
         while(number_pool < number_max_pool && number_asset_view < listDiscovered.size()) {
-            fty_proto_t *asset = listDiscovered.at(number_asset_view);
+            auto& asset = listDiscovered.at(number_asset_view);
             number_asset_view++;
             zlist_t *listarg = zlist_new();
-            zlist_append(listarg, asset);
+            zlist_append(listarg, &asset);
             zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(&result)));
             zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(mappings)));
             zactor_t *actor = zactor_new (dump_data_actor, listarg);
@@ -489,13 +483,6 @@ create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devi
         listActor.clear();
     }
 
-    while(number_asset_view < listDiscovered.size()) {
-        fty_proto_t *asset = listDiscovered.at(number_asset_view);
-        fty_proto_destroy(&asset);
-        number_asset_view++;
-    }
-
-    listDiscovered.clear();
     zpoller_destroy(&poller);
     zconfig_destroy(&config);
     return stop_now;
