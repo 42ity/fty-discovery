@@ -112,47 +112,6 @@ void s_nut_output_to_fty_messages(std::vector <fty_proto_t *>& assets, const nut
     }
 }
 
-void
-s_nut_dumpdata_to_fty_message (fty_proto_t *fmsg, const nutcommon::DeviceConfiguration& dump)
-{
-    if (! fmsg) return;
-
-    static nutcommon::DeviceConfiguration mapping = {
-        {"device.model", "model"},
-        {"ups.model", "model"},
-        {"device.mfr", "manufacturer"},
-        {"ups.mfr", "manufacturer"},
-        {"device.serial", "serial_no"},
-        {"device.description", "device.description"},
-        {"device.contact", "device.contact"},
-        {"device.location", "device.location"},
-        {"device.part", "device.part"},
-        {"ups.serial", "serial_no"},
-        {"ups.firmware", "firmware"},
-        {"battery.type", "battery.type"},
-        {"input.phases", "phases.input"},
-        {"output.phases", "phases.output"},
-        {"outlet.count", "outlet.count"},
-    };
-
-    for (auto it: mapping) {
-        auto item = dump.find (it.first);
-        if (item != dump.end ()) {
-            // item found
-            fty_proto_ext_insert (fmsg, it.second.c_str (), "%s", item->second.c_str ());
-        }
-    }
-    {
-        // get type from dump is safer than parsing driver name
-        auto item = dump.find ("device.type");
-        if (item != dump.end ()) {
-            const char *device = item->second.c_str ();
-            if (streq (device, "pdu")) device = "epdu";
-            if (streq (device, "ats")) device = "sts";
-            fty_proto_aux_insert (fmsg, "subtype", "%s", device);
-        }
-    }
-}
 bool
 s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
 {
@@ -178,73 +137,61 @@ s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
 
 
 void
-s_nut_dumpdata_daisychain_to_fty_message (fty_proto_t *asset, const nutcommon::DeviceConfiguration &dump, zsock_t* pipe)
+s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon::DeviceConfiguration& dump, const nutcommon::KeyValues* mappings, const std::string &ip, const std::string &type)
 {
-    if(! asset) return;
-
-    auto item = dump.find ("device.count");
-    if(item == dump.end () || streq(item->second.c_str(), "1")) {
-        s_nut_dumpdata_to_fty_message(asset, dump);
-        return;
+    // Set up iteration limits according to daisy-chain configuration.
+    int startDevice = 0, endDevice = 0;
+    {
+        auto item = dump.find("device.count");
+        if(item != dump.end() && !streq(item->second.c_str(), "1")) {
+            startDevice = 1;
+            endDevice = std::stoi(item->second);
+        }
     }
-    int nbDevice = std::stoi(item->second);
 
-    for(int i= 1; i <= nbDevice; i++) {
-        std::string first_part = "device." + std::to_string(i);
-        std::map <std::string, std::string> mapping = {
-            {first_part + ".model", "model"},
-            {first_part + ".ups.model", "model"},
-            {first_part + ".mfr", "manufacturer"},
-            {first_part + ".ups.mfr", "manufacturer"},
-            {first_part + ".serial", "serial_no"},
-            {first_part + ".description", "device.description"},
-            {"device.contact", "device.contact"},
-            {"device.location", "device.location"},
-            {first_part + ".part", "device.part"},
-            {first_part + ".ups.serial", "serial_no"},
-            {first_part + ".ups.firmware", "firmware"},
-            {first_part + ".input.phases", "phases.input"},
-            {first_part + ".outlet.count", "outlet.count"}
-        };
+    for(int i = startDevice; i <= endDevice; i++) {
+        fty_proto_t *fmsg = fty_proto_new(FTY_PROTO_ASSET);
 
-        if(dump.find(first_part+".mfr") == dump.end() && dump.find(first_part+".ups.mfr") == dump.end() &&
-          dump.find(first_part+".model") == dump.end() && dump.find(first_part+".ups.model") == dump.end()) {
-          log_error("No manufacturer or model for the  %i th device ", i);
-          break;
-        }
+        // Map inventory data.
+        for (const auto& property : dump) {
+            const auto key = nutcommon::extractDaisyChainedKey(property.first, i);
+            const auto& value = property.second;
 
-        fty_proto_t *fmsg;
-        if(i != 1) {
-            fmsg = fty_proto_new(FTY_PROTO_ASSET);
-
-            fty_proto_ext_insert (fmsg, "ip.1", "%s", fty_proto_ext_string(asset,"ip.1", ""));
-            fty_proto_aux_insert (fmsg, "type", "%s", fty_proto_aux_string(asset,"type", ""));
-        } else
-            fmsg = asset;
-        for (auto it: mapping) {
-            auto item = dump.find (it.first);
-            if (item != dump.end ()) {
-                // item found
-                fty_proto_ext_insert (fmsg, it.second.c_str (), "%s", item->second.c_str ());
+            const auto translatedKey = mappings->find(key);
+            if (translatedKey != mappings->end()) {
+                fty_proto_ext_insert(fmsg, translatedKey->second.c_str(), "%s", value.c_str());
             }
         }
+
+        // Some special cases.
+        fty_proto_ext_insert(fmsg, "ip.1", "%s", ip.c_str());
+        fty_proto_aux_insert(fmsg, "type", "%s", type.c_str());
+        if (i != 0) {
+            fty_proto_ext_insert(fmsg, "daisy_chain", "%" PRIi32, i);
+        }
+
+        if (!fty_proto_ext_string(fmsg, "manufacturer", nullptr) || !fty_proto_ext_string(fmsg, "model", nullptr)) {
+            log_error("No manufacturer or model for device number %s", i);
+            fty_proto_destroy(&fmsg);
+            continue;
+        }
+
         {
-            // get type from dump is safer than parsing driver name
+            // Getting type from dump is safer than parsing driver name.
             auto item = dump.find ("device.type");
-            if (item != dump.end ()) {
-                const char *device = item->second.c_str ();
-                if (streq (device, "pdu")) device = "epdu";
-                if (streq (device, "ats")) device = "sts";
-                fty_proto_aux_insert (fmsg, "subtype", "%s", device);
+            if (item != dump.end()) {
+                const char *device = item->second.c_str();
+                if (streq(device, "pdu")) {
+                    device = "epdu";
+                }
+                else if (streq(device, "ats")) {
+                    device = "sts";
+                }
+                fty_proto_aux_insert(fmsg, "subtype", "%s", device);
             }
         }
-        fty_proto_ext_insert(fmsg, "daisy_chain", "%" PRIi32, i);
 
-        if(i != 1) {
-            zmsg_t *reply = fty_proto_encode (&fmsg);
-            zmsg_pushstr (reply, "FOUND_DC");
-            zmsg_send (&reply, pipe);
-        }
+        assets.emplace_back(fmsg);
     }
 }
 
@@ -310,8 +257,9 @@ dump_data_actor(zsock_t *pipe, void *args) {
     zsock_signal (pipe, 0);
     zlist_t *argv = (zlist_t *)args;
     bool valid = true;
-    fty_proto_t *asset;
+    fty_proto_t *initialAsset;
     const CredentialProtocolScanResult *cpsr;
+    const nutcommon::KeyValues *mappings;
 
     int loop_nb = -1;
     if (::getenv(BIOS_NUT_DUMPDATA_ENV)) {
@@ -329,11 +277,12 @@ dump_data_actor(zsock_t *pipe, void *args) {
     }
 
     zmsg_t *reply;
-    if (!argv || zlist_size(argv) != 2) {
+    if (!argv || zlist_size(argv) != 3) {
         valid = false;
     } else {
-       asset = reinterpret_cast<fty_proto_t*>(zlist_first(argv));
+       initialAsset = reinterpret_cast<fty_proto_t*>(zlist_first(argv));
        cpsr = reinterpret_cast<const CredentialProtocolScanResult*>(zlist_next(argv));
+       mappings = reinterpret_cast<const nutcommon::KeyValues*>(zlist_next(argv));
     }
 
     if(!valid) {
@@ -351,7 +300,9 @@ dump_data_actor(zsock_t *pipe, void *args) {
         }
 
         int r = -1;
-        const std::string addr = fty_proto_ext_string(asset, "name", "");
+        const std::string addr = fty_proto_ext_string(initialAsset, "name", "");
+        const std::string ip = fty_proto_ext_string(initialAsset, "ip.1", "");
+        const std::string type = fty_proto_aux_string(initialAsset, "type", "");
         std::string deviceType = "unknown";
         nutcommon::DeviceConfiguration nutdata;
 
@@ -370,18 +321,25 @@ dump_data_actor(zsock_t *pipe, void *args) {
             break;
         }
 
+        // We're done with the initial fty_proto_t.
+        fty_proto_destroy(&initialAsset);
+
         if (r == 0) {
             if (s_valid_dumpdata(nutdata)) {
                 log_debug("Dump data for %s (%s) succeeded.", addr.c_str(), deviceType.c_str());
 
-                s_nut_dumpdata_daisychain_to_fty_message (asset, nutdata, pipe);
-                reply = fty_proto_encode (&asset);
-                zmsg_pushstr (reply, "FOUND");
+                std::vector<fty_proto_t*> assets;
+                s_nut_dumpdata_to_fty_message(assets, nutdata, mappings, ip, type);
+                for (auto i = assets.cbegin(); i != assets.cend(); i++) {
+                    fty_proto_t *asset = *i;
+                    reply = fty_proto_encode(&asset);
+                    zmsg_pushstr(reply, i == assets.cbegin() ? "FOUND" : "FOUND_DC");
+                    zmsg_send(&reply, pipe);
+                }
             }
             else {
                 log_debug("Dump data for %s (%s) failed: invalid data.", addr.c_str(), deviceType.c_str());
 
-                fty_proto_destroy(&asset);
                 reply = zmsg_new();
                 zmsg_pushstr(reply, "FAILED");
             }
@@ -389,13 +347,14 @@ dump_data_actor(zsock_t *pipe, void *args) {
         else {
             log_debug("Dump data for %s (%s) failed: failed to dump data.", addr.c_str(), deviceType.c_str());
 
-            fty_proto_destroy(&asset);
             reply = zmsg_new();
             zmsg_pushstr(reply, "FAILED");
         }
     }
 
-    zmsg_send (&reply, pipe);
+    if (reply) {
+        zmsg_send (&reply, pipe);
+    }
 
     bool stop  = false;
     while(!stop && !zsys_interrupted) {
@@ -413,7 +372,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
 }
 
 bool
-create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devices_t *devices, zsock_t *pipe)
+create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings)
 {
     bool stop_now =false;
     std::vector<fty_proto_t *> listDiscovered;
@@ -442,6 +401,7 @@ create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devi
             zlist_t *listarg = zlist_new();
             zlist_append(listarg, asset);
             zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(&result)));
+            zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(mappings)));
             zactor_t *actor = zactor_new (dump_data_actor, listarg);
 
             zmsg_t *msg_ready = zmsg_recv(actor);
@@ -557,7 +517,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     zlist_t *argv = (zlist_t *)args;
-    if (!argv || zlist_size(argv) != 2) {
+    if (!argv || zlist_size(argv) != 3) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
@@ -567,8 +527,9 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     CIDRList *listAddr = (CIDRList *) zlist_first(argv);
-    discovered_devices_t *devices = (discovered_devices_t*) zlist_tail(argv);
-    if (!listAddr || !devices) {
+    discovered_devices_t *devices = (discovered_devices_t*) zlist_next(argv);
+    const nutcommon::KeyValues *mappings = (const nutcommon::KeyValues*) zlist_next(argv);
+    if (!listAddr || !devices || !mappings) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
@@ -656,7 +617,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     for (const auto &result : results) {
-        stop_now = create_pool_dumpdata(result, devices, pipe);
+        stop_now = create_pool_dumpdata(result, devices, pipe, mappings);
 
         if(ask_actor_term(pipe)) {
             stop_now = true;
