@@ -1087,7 +1087,7 @@ fty_discovery_server_new() {
     self->configuration_scan.scan_size = 0;
     self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
-    self->nut_mapping_inventory = nutcommon::loadMapping("/usr/share/fty/fty-common-nut/mapping.conf", "inventoryMapping");
+    self->nut_mapping_inventory = nutcommon::loadMapping("/usr/share/fty-common-nut/mapping.conf", "inventoryMapping");
     return self;
 }
 
