@@ -14,6 +14,7 @@ discovery
     ips
 
 parameters
+    mappingFile = "/usr/share/fty-common-nut/mapping.conf"
     maxDumpPoolNumber = 15
     maxScanPoolNumber = 4
     nutScannerTimeOut = 20

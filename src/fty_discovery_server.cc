@@ -639,6 +639,22 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
             }
         }
 
+        const char *mappingPath = zconfig_get(config, CFG_PARAM_MAPPING_FILE, "none");
+        if (streq(mappingPath, "none")) {
+            log_error("No mapping file declared under config key '%s'", CFG_PARAM_MAPPING_FILE);
+            valid = false;
+        }
+        else {
+            try {
+                self->nut_mapping_inventory = nutcommon::loadMapping(mappingPath, "inventoryMapping");
+                log_info("Mapping file '%s' loaded, %d inventory mappings", mappingPath, self->nut_mapping_inventory.size());
+            }
+            catch (std::exception &e) {
+                log_error("Couldn't load mapping file '%s': %s", mappingPath, e.what());
+                valid = false;
+            }
+        }
+
         if (valid)
             log_debug("config file %s applied successfully",
                 self->range_scan_config.config);
@@ -1087,7 +1103,7 @@ fty_discovery_server_new() {
     self->configuration_scan.scan_size = 0;
     self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
-    self->nut_mapping_inventory = nutcommon::loadMapping("/usr/share/fty-common-nut/mapping.conf", "inventoryMapping");
+    self->nut_mapping_inventory = nutcommon::KeyValues();
     return self;
 }
 
