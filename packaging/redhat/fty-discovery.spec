@@ -51,19 +51,20 @@ BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
 BuildRequires:  gcc-c++
+BuildRequires:  openssl-devel
+BuildRequires:  libcidr-devel
 BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel >= 3.0.2
 BuildRequires:  malamute-devel >= 1.0.0
 BuildRequires:  log4cplus-devel
 BuildRequires:  fty-common-logging-devel
+BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  cxxtools-devel
 BuildRequires:  fty-common-devel
 BuildRequires:  fty-common-mlm-devel
+BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
-BuildRequires:  fty-proto-devel >= 1.0.0
-BuildRequires:  libcidr-devel
-BuildRequires:  openssl-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -87,19 +88,20 @@ This package contains shared library for fty-discovery: 42ity service for discov
 Summary:        42ity service for discovering devices
 Group:          System/Libraries
 Requires:       libfty_discovery0 = %{version}
+Requires:       openssl-devel
+Requires:       libcidr-devel
 Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel >= 3.0.2
 Requires:       malamute-devel >= 1.0.0
 Requires:       log4cplus-devel
 Requires:       fty-common-logging-devel
+Requires:       fty-proto-devel >= 1.0.0
 Requires:       cxxtools-devel
 Requires:       fty-common-devel
 Requires:       fty-common-mlm-devel
+Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
-Requires:       fty-proto-devel >= 1.0.0
-Requires:       libcidr-devel
-Requires:       openssl-devel
 
 %description devel
 42ity service for discovering devices development tools

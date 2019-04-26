@@ -161,6 +161,151 @@ PREVIOUS_CFLAGS="${CFLAGS}"
 PREVIOUS_LIBS="${LIBS}"
 
 
+was_openssl_check_lib_detected=no
+
+search_openssl="yes"
+
+AC_ARG_WITH([openssl],
+    [
+        AS_HELP_STRING([--with-openssl],
+        [yes or no. Optionally specify openssl prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_openssl="yes"
+    ],
+    [
+        search_openssl="yes"
+    ])
+AS_CASE([x"${with_openssl}"],
+    [xyes], [search_openssl="yes"],
+    [xno],  [search_openssl="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_openssl}" = xno],
+    [AC_MSG_WARN([Required dependency on openssl was explicitly disabled during configuration by '--with-openssl=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_openssl}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([openssl], [openssl >= 0.0.0],
+    [
+        was_openssl_check_lib_detected=pkgcfg
+        found_pkgconfig="openssl"
+    ],
+    [
+        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'openssl' - please ensure it is set])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for openssl
+    AS_CASE(["x${was_openssl_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${openssl_CFLAGS} ${CFLAGS}"
+                LIBS="${openssl_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${openssl_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${openssl_synthetic_libs} ${LDFLAGS}"
+                LIBS="${openssl_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([openssl_CFLAGS],[${openssl_synthetic_cflags}])
+                AC_SUBST([openssl_LIBS],[${openssl_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for openssl 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for openssl
+
+
+was_cidr_check_lib_detected=no
+
+search_cidr="yes"
+
+AC_ARG_WITH([cidr],
+    [
+        AS_HELP_STRING([--with-cidr],
+        [yes or no. Optionally specify cidr prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_cidr="yes"
+    ],
+    [
+        search_cidr="yes"
+    ])
+AS_CASE([x"${with_cidr}"],
+    [xyes], [search_cidr="yes"],
+    [xno],  [search_cidr="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_cidr}" = xno],
+    [AC_MSG_WARN([Required dependency on cidr was explicitly disabled during configuration by '--with-cidr=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_cidr}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
+    [
+        was_cidr_check_lib_detected=pkgcfg
+        found_pkgconfig="cidr"
+    ],
+    [
+        AC_MSG_NOTICE([Package cidr not found; falling back to defined compilability tests])
+
+        cidr_synthetic_cflags=""
+        cidr_synthetic_libs="-lcidr"
+
+        if test -n "${with_cidr}" && test x"${with_cidr}" != xyes && test x"${with_cidr}" != xno; then
+            if test -r "${with_cidr}/include/libcidr.h"; then
+                cidr_synthetic_cflags="-I${with_cidr}/include"
+                cidr_synthetic_libs="-L${with_cidr}/lib -lcidr"
+            else
+            AC_MSG_ERROR([Header file ${with_cidr}/include/libcidr.h was not found. Please check cidr prefix])
+            fi
+        else
+            AC_CHECK_HEADER([libcidr.h], [],
+            AC_MSG_ERROR([Header file libcidr.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([cidr], [cidr_alloc],
+            [
+                was_cidr_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcidr"
+            ],
+            [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
+    AS_CASE(["x${was_cidr_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${cidr_CFLAGS} ${CFLAGS}"
+                LIBS="${cidr_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${cidr_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${cidr_synthetic_libs} ${LDFLAGS}"
+                LIBS="${cidr_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([cidr_CFLAGS],[${cidr_synthetic_cflags}])
+                AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for cidr 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for cidr
+
+
 was_libsodium_check_lib_detected=no
 
 search_libsodium="yes"
@@ -665,6 +810,90 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_logging
 dnl END of enabled attempts to search for libfty_common_logging
 
 
+was_fty_proto_check_lib_detected=no
+
+search_libfty_proto="yes"
+
+AC_ARG_WITH([libfty_proto],
+    [
+        AS_HELP_STRING([--with-libfty_proto],
+        [yes or no. Optionally specify libfty_proto prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_proto="yes"
+    ],
+    [
+        search_libfty_proto="yes"
+    ])
+AS_CASE([x"${with_libfty_proto}"],
+    [xyes], [search_libfty_proto="yes"],
+    [xno],  [search_libfty_proto="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_proto}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_proto was explicitly disabled during configuration by '--with-libfty_proto=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_proto}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 1.0.0],
+    [
+        was_fty_proto_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_proto"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_proto not found with needed constraints; falling back to defined compilability tests])
+
+        fty_proto_synthetic_cflags=""
+        fty_proto_synthetic_libs="-lfty_proto"
+
+        if test -n "${with_libfty_proto}" && test x"${with_libfty_proto}" != xyes && test x"${with_libfty_proto}" != xno; then
+            if test -r "${with_libfty_proto}/include/ftyproto.h"; then
+                fty_proto_synthetic_cflags="-I${with_libfty_proto}/include"
+                fty_proto_synthetic_libs="-L${with_libfty_proto}/lib -lfty_proto"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_proto}/include/ftyproto.h was not found. Please check libfty_proto prefix])
+            fi
+        else
+            AC_CHECK_HEADER([ftyproto.h], [],
+            AC_MSG_ERROR([Header file ftyproto.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty_proto], [fty_proto_test],
+            [
+                was_fty_proto_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty_proto"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty_proto, install libfty_proto])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_proto
+    AS_CASE(["x${was_fty_proto_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig} >= 1.0.0"
+                CFLAGS="${fty_proto_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_proto_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_proto_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_proto_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_proto_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_proto_CFLAGS],[${fty_proto_synthetic_cflags}])
+                AC_SUBST([fty_proto_LIBS],[${fty_proto_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_proto 1.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_proto
+
+
 was_cxxtools_check_lib_detected=no
 
 search_cxxtools="yes"
@@ -917,6 +1146,90 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_mlm
 dnl END of enabled attempts to search for libfty_common_mlm
 
 
+was_fty_security_wallet_check_lib_detected=no
+
+search_libfty_security_wallet="yes"
+
+AC_ARG_WITH([libfty_security_wallet],
+    [
+        AS_HELP_STRING([--with-libfty_security_wallet],
+        [yes or no. Optionally specify libfty_security_wallet prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_security_wallet="yes"
+    ],
+    [
+        search_libfty_security_wallet="yes"
+    ])
+AS_CASE([x"${with_libfty_security_wallet}"],
+    [xyes], [search_libfty_security_wallet="yes"],
+    [xno],  [search_libfty_security_wallet="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_security_wallet}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_security_wallet was explicitly disabled during configuration by '--with-libfty_security_wallet=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_security_wallet}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_security_wallet], [libfty_security_wallet >= 0.0.0],
+    [
+        was_fty_security_wallet_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty_security_wallet"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty_security_wallet not found; falling back to defined compilability tests])
+
+        fty_security_wallet_synthetic_cflags=""
+        fty_security_wallet_synthetic_libs="-lfty-security-wallet"
+
+        if test -n "${with_libfty_security_wallet}" && test x"${with_libfty_security_wallet}" != xyes && test x"${with_libfty_security_wallet}" != xno; then
+            if test -r "${with_libfty_security_wallet}/include/fty_security_wallet.h"; then
+                fty_security_wallet_synthetic_cflags="-I${with_libfty_security_wallet}/include"
+                fty_security_wallet_synthetic_libs="-L${with_libfty_security_wallet}/lib -lfty-security-wallet"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty_security_wallet}/include/fty_security_wallet.h was not found. Please check libfty_security_wallet prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_security_wallet.h], [],
+            AC_MSG_ERROR([Header file fty_security_wallet.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-security-wallet], [fty_security_wallet_test],
+            [
+                was_fty_security_wallet_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-security-wallet"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-security-wallet, install libfty_security_wallet])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_security_wallet
+    AS_CASE(["x${was_fty_security_wallet_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_security_wallet_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_security_wallet_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_security_wallet_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_security_wallet_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_security_wallet_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_security_wallet_CFLAGS],[${fty_security_wallet_synthetic_cflags}])
+                AC_SUBST([fty_security_wallet_LIBS],[${fty_security_wallet_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_security_wallet 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_security_wallet
+
+
 was_fty_common_nut_check_lib_detected=no
 
 search_libfty_common_nut="yes"
@@ -999,235 +1312,6 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_nut
     ])
 ])
 dnl END of enabled attempts to search for libfty_common_nut
-
-
-was_fty_proto_check_lib_detected=no
-
-search_libfty_proto="yes"
-
-AC_ARG_WITH([libfty_proto],
-    [
-        AS_HELP_STRING([--with-libfty_proto],
-        [yes or no. Optionally specify libfty_proto prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_libfty_proto="yes"
-    ],
-    [
-        search_libfty_proto="yes"
-    ])
-AS_CASE([x"${with_libfty_proto}"],
-    [xyes], [search_libfty_proto="yes"],
-    [xno],  [search_libfty_proto="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_libfty_proto}" = xno],
-    [AC_MSG_WARN([Required dependency on fty_proto was explicitly disabled during configuration by '--with-libfty_proto=no'; subsequent full build of fty-discovery may fail])])
-
-AS_IF([test x"${search_libfty_proto}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([fty_proto], [libfty_proto >= 1.0.0],
-    [
-        was_fty_proto_check_lib_detected=pkgcfg
-        found_pkgconfig="libfty_proto"
-    ],
-    [
-        AC_MSG_NOTICE([Package libfty_proto not found with needed constraints; falling back to defined compilability tests])
-
-        fty_proto_synthetic_cflags=""
-        fty_proto_synthetic_libs="-lfty_proto"
-
-        if test -n "${with_libfty_proto}" && test x"${with_libfty_proto}" != xyes && test x"${with_libfty_proto}" != xno; then
-            if test -r "${with_libfty_proto}/include/ftyproto.h"; then
-                fty_proto_synthetic_cflags="-I${with_libfty_proto}/include"
-                fty_proto_synthetic_libs="-L${with_libfty_proto}/lib -lfty_proto"
-            else
-            AC_MSG_ERROR([Header file ${with_libfty_proto}/include/ftyproto.h was not found. Please check libfty_proto prefix])
-            fi
-        else
-            AC_CHECK_HEADER([ftyproto.h], [],
-            AC_MSG_ERROR([Header file ftyproto.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([fty_proto], [fty_proto_test],
-            [
-                was_fty_proto_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty_proto"
-            ],
-            [AC_MSG_ERROR([cannot link with -lfty_proto, install libfty_proto])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_proto
-    AS_CASE(["x${was_fty_proto_check_lib_detected}"],
-        [xpkgcfg], [
-                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig} >= 1.0.0"
-                CFLAGS="${fty_proto_CFLAGS} ${CFLAGS}"
-                LIBS="${fty_proto_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                CFLAGS="${fty_proto_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${fty_proto_synthetic_libs} ${LDFLAGS}"
-                LIBS="${fty_proto_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([fty_proto_CFLAGS],[${fty_proto_synthetic_cflags}])
-                AC_SUBST([fty_proto_LIBS],[${fty_proto_synthetic_libs}])
-            ],
-        [xno], [
-            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty_proto 1.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for libfty_proto
-
-
-was_cidr_check_lib_detected=no
-
-search_cidr="yes"
-
-AC_ARG_WITH([cidr],
-    [
-        AS_HELP_STRING([--with-cidr],
-        [yes or no. Optionally specify cidr prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_cidr="yes"
-    ],
-    [
-        search_cidr="yes"
-    ])
-AS_CASE([x"${with_cidr}"],
-    [xyes], [search_cidr="yes"],
-    [xno],  [search_cidr="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_cidr}" = xno],
-    [AC_MSG_WARN([Required dependency on cidr was explicitly disabled during configuration by '--with-cidr=no'; subsequent full build of fty-discovery may fail])])
-
-AS_IF([test x"${search_cidr}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
-    [
-        was_cidr_check_lib_detected=pkgcfg
-        found_pkgconfig="cidr"
-    ],
-    [
-        AC_MSG_NOTICE([Package cidr not found; falling back to defined compilability tests])
-
-        cidr_synthetic_cflags=""
-        cidr_synthetic_libs="-lcidr"
-
-        if test -n "${with_cidr}" && test x"${with_cidr}" != xyes && test x"${with_cidr}" != xno; then
-            if test -r "${with_cidr}/include/libcidr.h"; then
-                cidr_synthetic_cflags="-I${with_cidr}/include"
-                cidr_synthetic_libs="-L${with_cidr}/lib -lcidr"
-            else
-            AC_MSG_ERROR([Header file ${with_cidr}/include/libcidr.h was not found. Please check cidr prefix])
-            fi
-        else
-            AC_CHECK_HEADER([libcidr.h], [],
-            AC_MSG_ERROR([Header file libcidr.h was not found in default search paths])
-                )
-        fi
-
-        AC_CHECK_LIB([cidr], [cidr_alloc],
-            [
-                was_cidr_check_lib_detected=yes
-                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcidr"
-            ],
-            [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
-    AS_CASE(["x${was_cidr_check_lib_detected}"],
-        [xpkgcfg], [
-                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
-                CFLAGS="${cidr_CFLAGS} ${CFLAGS}"
-                LIBS="${cidr_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                CFLAGS="${cidr_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${cidr_synthetic_libs} ${LDFLAGS}"
-                LIBS="${cidr_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([cidr_CFLAGS],[${cidr_synthetic_cflags}])
-                AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
-            ],
-        [xno], [
-            AC_MSG_ERROR([Cannot find pkg-config metadata for cidr 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for cidr
-
-
-was_openssl_check_lib_detected=no
-
-search_openssl="yes"
-
-AC_ARG_WITH([openssl],
-    [
-        AS_HELP_STRING([--with-openssl],
-        [yes or no. Optionally specify openssl prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
-    ],
-    [
-        search_openssl="yes"
-    ],
-    [
-        search_openssl="yes"
-    ])
-AS_CASE([x"${with_openssl}"],
-    [xyes], [search_openssl="yes"],
-    [xno],  [search_openssl="no"])
-
-dnl We do not abort right now, because the maintainer/developer may have
-dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_openssl}" = xno],
-    [AC_MSG_WARN([Required dependency on openssl was explicitly disabled during configuration by '--with-openssl=no'; subsequent full build of fty-discovery may fail])])
-
-AS_IF([test x"${search_openssl}" = xyes], [
-    # Archive previously detected and supplied flags
-    PRE_SEARCH_CFLAGS="${CFLAGS}"
-    PRE_SEARCH_LIBS="${LIBS}"
-
-    found_pkgconfig=""
-    PKG_CHECK_MODULES([openssl], [openssl >= 0.0.0],
-    [
-        was_openssl_check_lib_detected=pkgcfg
-        found_pkgconfig="openssl"
-    ],
-    [
-        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'openssl' - please ensure it is set])
-    ])
-
-dnl END of PKG_CHECK_MODULES and/or direct tests for openssl
-    AS_CASE(["x${was_openssl_check_lib_detected}"],
-        [xpkgcfg], [
-                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
-                CFLAGS="${openssl_CFLAGS} ${CFLAGS}"
-                LIBS="${openssl_LIBS} ${LIBS}"
-            ],
-        [xyes], [
-                CFLAGS="${openssl_synthetic_cflags} ${CFLAGS}"
-                LDFLAGS="${openssl_synthetic_libs} ${LDFLAGS}"
-                LIBS="${openssl_synthetic_libs} ${LIBS}"
-
-                AC_SUBST([openssl_CFLAGS],[${openssl_synthetic_cflags}])
-                AC_SUBST([openssl_LIBS],[${openssl_synthetic_libs}])
-            ],
-        [xno], [
-            AC_MSG_ERROR([Cannot find pkg-config metadata for openssl 0.0.0 or higher])
-    ])
-])
-dnl END of enabled attempts to search for openssl
 
 
 CFLAGS="${PREVIOUS_CFLAGS}"

@@ -30,13 +30,13 @@
 //  Set up environment for the application
 
 //  External dependencies
+#include <openssl/sha.h>
+#include <libcidr.h>
 #include <czmq.h>
 #include <malamute.h>
 #include <fty_log.h>
-#include <fty_common_nut.h>
 #include <ftyproto.h>
-#include <libcidr.h>
-#include <openssl/sha.h>
+#include <fty_common_nut.h>
 
 //  FTY_DISCOVERY version macros for compile-time API detection
 #define FTY_DISCOVERY_VERSION_MAJOR 1
