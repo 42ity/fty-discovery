@@ -133,7 +133,7 @@ s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
 }
 
 
-void
+bool
 s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon::DeviceConfiguration& dump, const nutcommon::KeyValues* mappings, const std::string &ip, const std::string &type)
 {
     // Set up iteration limits according to daisy-chain configuration.
@@ -150,14 +150,9 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
         fty_proto_t *fmsg = fty_proto_new(FTY_PROTO_ASSET);
 
         // Map inventory data.
-        for (const auto& property : dump) {
-            const auto key = nutcommon::extractDaisyChainedKey(property.first, i);
-            const auto& value = property.second;
-
-            const auto translatedKey = mappings->find(key);
-            if (translatedKey != mappings->end()) {
-                fty_proto_ext_insert(fmsg, translatedKey->second.c_str(), "%s", value.c_str());
-            }
+        auto mappedDump = nutcommon::performMapping(*mappings, dump, i);
+        for (auto property : mappedDump) {
+            fty_proto_ext_insert(fmsg, property.first.c_str(), "%s", property.second.c_str());
         }
 
         // Some special cases.
@@ -168,7 +163,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
         }
 
         if (!fty_proto_ext_string(fmsg, "manufacturer", nullptr) || !fty_proto_ext_string(fmsg, "model", nullptr)) {
-            log_error("No manufacturer or model for device number %s", i);
+            log_error("No manufacturer or model for device number %i", i);
             fty_proto_destroy(&fmsg);
             continue;
         }
@@ -190,6 +185,8 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
 
         assets.emplace_back(fmsg);
     }
+
+    return !assets.empty();
 }
 
 //
@@ -319,15 +316,14 @@ dump_data_actor(zsock_t *pipe, void *args) {
         }
 
         if (r == 0) {
-            if (s_valid_dumpdata(nutdata)) {
+            std::vector<fty_proto_t*> assets;
+            if (s_valid_dumpdata(nutdata) && s_nut_dumpdata_to_fty_message(assets, nutdata, mappings, ip, type)) {
                 log_debug("Dump data for %s (%s) succeeded.", addr.c_str(), deviceType.c_str());
 
-                std::vector<fty_proto_t*> assets;
-                s_nut_dumpdata_to_fty_message(assets, nutdata, mappings, ip, type);
                 for (auto i = assets.cbegin(); i != assets.cend(); i++) {
                     fty_proto_t *asset = *i;
                     reply = fty_proto_encode(&asset);
-                    zmsg_pushstr(reply, i == assets.cbegin() ? "FOUND" : "FOUND_DC");
+                    zmsg_pushstr(reply, i == (assets.cend()-1) ? "FOUND" : "FOUND_DC");
                     zmsg_send(&reply, pipe);
                 }
             }
