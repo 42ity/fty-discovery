@@ -12,22 +12,24 @@ AM_CXXFLAGS = \
     -std=c++11
 
 AM_CPPFLAGS = \
+    ${openssl_CFLAGS} \
+    ${cidr_CFLAGS} \
     ${libsodium_CFLAGS} \
     ${libzmq_CFLAGS} \
     ${czmq_CFLAGS} \
     ${malamute_CFLAGS} \
     ${log4cplus_CFLAGS} \
     ${fty_common_logging_CFLAGS} \
+    ${fty_proto_CFLAGS} \
     ${cxxtools_CFLAGS} \
     ${fty_common_CFLAGS} \
     ${fty_common_mlm_CFLAGS} \
-    ${fty_proto_CFLAGS} \
-    ${cidr_CFLAGS} \
-    ${openssl_CFLAGS} \
+    ${fty_security_wallet_CFLAGS} \
+    ${fty_common_nut_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${fty_proto_LIBS} ${cidr_LIBS} ${openssl_LIBS}
+project_libs = ${openssl_LIBS} ${cidr_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${fty_security_wallet_LIBS} ${fty_common_nut_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -48,18 +50,20 @@ DISTCLEANFILES =
 
 if ENABLE_DIST_CMAKEFILES
 EXTRA_DIST += \
+    Findopenssl.cmake \
+    Findcidr.cmake \
     Findlibsodium.cmake \
     Findlibzmq.cmake \
     Findczmq.cmake \
     Findmalamute.cmake \
     Findlog4cplus.cmake \
     Findfty_common_logging.cmake \
+    Findfty_proto.cmake \
     Findcxxtools.cmake \
     Findfty_common.cmake \
     Findfty_common_mlm.cmake \
-    Findfty_proto.cmake \
-    Findcidr.cmake \
-    Findopenssl.cmake \
+    Findfty_security_wallet.cmake \
+    Findfty_common_nut.cmake \
     builds/cmake/Modules/ClangFormat.cmake \
     builds/cmake/clang-format-check.sh.in \
     builds/cmake/Config.cmake.in \
@@ -68,8 +72,6 @@ endif
 
 EXTRA_DIST += \
     src/cidr.h \
-    src/nutscan.h \
-    src/nutdumpdata.h \
     src/range_scan.h \
     src/device_scan.h \
     src/scan_dns.h \

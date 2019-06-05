@@ -32,20 +32,10 @@
 //  External API
 #include "../include/fty_discovery.h"
 
-//  Extra headers
-
 //  Opaque class structures to allow forward references
 #ifndef CIDR_T_DEFINED
 typedef struct _cidr_t cidr_t;
 #define CIDR_T_DEFINED
-#endif
-#ifndef NUTSCAN_T_DEFINED
-typedef struct _nutscan_t nutscan_t;
-#define NUTSCAN_T_DEFINED
-#endif
-#ifndef NUTDUMPDATA_T_DEFINED
-typedef struct _nutdumpdata_t nutdumpdata_t;
-#define NUTDUMPDATA_T_DEFINED
 #endif
 #ifndef RANGE_SCAN_T_DEFINED
 typedef struct _range_scan_t range_scan_t;
@@ -68,11 +58,11 @@ typedef struct _assets_t assets_t;
 #define ASSETS_T_DEFINED
 #endif
 
+//  Extra headers
+
 //  Internal API
 
 #include "cidr.h"
-#include "nutscan.h"
-#include "nutdumpdata.h"
 #include "range_scan.h"
 #include "device_scan.h"
 #include "scan_dns.h"
@@ -86,16 +76,6 @@ typedef struct _assets_t assets_t;
 //  Self test of this class.
 FTY_DISCOVERY_PRIVATE void
     cidr_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_DISCOVERY_PRIVATE void
-    nutscan_test (bool verbose);
-
-//  *** Draft method, defined for internal use only ***
-//  Self test of this class.
-FTY_DISCOVERY_PRIVATE void
-    nutdumpdata_test (bool verbose);
 
 //  *** Draft method, defined for internal use only ***
 //  Self test of this class.

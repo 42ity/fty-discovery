@@ -36,6 +36,7 @@ extern "C" {
 #define CFG_DISCOVERY_IPS_NUM    CFG_DISCOVERY_IPS"/ipNumber" 
 
 #define CFG_PARAMETERS                  "/parameters"
+#define CFG_PARAM_MAPPING_FILE          CFG_PARAMETERS"/mappingFile"
 #define CFG_PARAM_MAX_DUMPPOOL_NUMBER   CFG_PARAMETERS"/maxDumpPoolNumber"
 #define CFG_PARAM_MAX_SCANPOOL_NUMBER   CFG_PARAMETERS"/maxScanPoolNumber"
 #define CFG_PARAM_NUTSCAN_TIMEOUT       CFG_PARAMETERS"/nutScannerTimeOut"
@@ -45,6 +46,7 @@ extern "C" {
 #define DEFAULT_MAX_SCANPOOL_NUMBER     "4"
 #define DEFAULT_NUTSCAN_TIMEOUT         "20"
 #define DEFAULT_DUMPDATA_LOOPTIME       "30"
+#define DEFAULT_DUMPDATA_LOOP           "2"
 
 #define TYPE_LOCALSCAN 1
 #define TYPE_MULTISCAN 2

@@ -69,12 +69,14 @@ struct _fty_discovery_server_t {
     zactor_t *range_scanner;
     char *percent;
     discovered_devices_t devices_discovered;
+    nutcommon::KeyValues nut_mapping_inventory;
 };
 
 zactor_t* range_scanner_new(fty_discovery_server_t *self) {
     zlist_t *args = zlist_new();
     zlist_append(args, &self->range_scan_config);
     zlist_append(args, &self->devices_discovered);
+    zlist_append(args, &self->nut_mapping_inventory);
     return zactor_new(range_scan_actor, args);
 }
 
@@ -637,6 +639,22 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
             }
         }
 
+        const char *mappingPath = zconfig_get(config, CFG_PARAM_MAPPING_FILE, "none");
+        if (streq(mappingPath, "none")) {
+            log_error("No mapping file declared under config key '%s'", CFG_PARAM_MAPPING_FILE);
+            valid = false;
+        }
+        else {
+            try {
+                self->nut_mapping_inventory = nutcommon::loadMapping(mappingPath, "inventoryMapping");
+                log_info("Mapping file '%s' loaded, %d inventory mappings", mappingPath, self->nut_mapping_inventory.size());
+            }
+            catch (std::exception &e) {
+                log_error("Couldn't load mapping file '%s': %s", mappingPath, e.what());
+                valid = false;
+            }
+        }
+
         if (valid)
             log_debug("config file %s applied successfully",
                 self->range_scan_config.config);
@@ -1085,6 +1103,7 @@ fty_discovery_server_new() {
     self->configuration_scan.scan_size = 0;
     self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
+    self->nut_mapping_inventory = nutcommon::KeyValues();
     return self;
 }
 
@@ -1114,10 +1133,10 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
             zactor_destroy(&self->range_scanner);
         if (self->devices_discovered.device_list)
             zhash_destroy(&self->devices_discovered.device_list);
-        self->configuration_scan.scan_list.clear();
-        self->configuration_scan.scan_list.shrink_to_fit();
-        self->localscan_subscan.clear();
-        self->localscan_subscan.shrink_to_fit();
+        // FIXME: I, feel something so wrong / Doing the right thing...
+        self->configuration_scan.scan_list.~vector();
+        self->localscan_subscan.~vector();
+        self->nut_mapping_inventory.~map();
         //  Free object itself
         free(self);
         *self_p = NULL;

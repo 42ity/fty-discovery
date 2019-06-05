@@ -14,8 +14,6 @@ pkgconfig_DATA = src/libfty_discovery.pc
 
 src_libfty_discovery_la_SOURCES = \
     src/cidr.cc \
-    src/nutscan.cc \
-    src/nutdumpdata.cc \
     src/range_scan.cc \
     src/device_scan.cc \
     src/scan_dns.cc \
@@ -217,6 +215,16 @@ else
 coverage: src/fty_discovery_selftest
 	@echo "call make clean && configure --with-gcov to enable code coverage"
 	@exit 1
+endif
+
+bindings: python-bindings
+
+python-bindings:
+if ENABLE_BINDINGS_PYTHON
+	-( cd bindings/python && python setup.py install )
+else
+	@echo "Python Bindings not enabled or missing setup.py... skipping"
+
 endif
 
 # A series of tests that the codebase and recipes are pretty, easy

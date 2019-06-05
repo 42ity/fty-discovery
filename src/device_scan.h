@@ -30,7 +30,7 @@ extern "C" {
 
 //  Create a new device_scan
 FTY_DISCOVERY_PRIVATE zactor_t *
-    device_scan_new (zlist_t *arg0, discovered_devices_t *arg1);
+    device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const nutcommon::KeyValues *mappings);
 
 //  One device scan actor
 FTY_DISCOVERY_PRIVATE void
