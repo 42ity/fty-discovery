@@ -50,7 +50,11 @@ BuildRequires:  systemd-devel
 BuildRequires:  systemd
 %{?systemd_requires}
 BuildRequires:  xmlto
-BuildRequires:  gcc-c++
+# Note that with current implementation of zproject use-cxx-gcc-4-9 option,
+# this effectively hardcodes the use of specifically 4.9, not allowing for
+# "4.9 or newer".
+BuildRequires:  devtoolset-3-gcc devtoolset-3-gcc-c++
+BuildRequires:  gcc-c++ >= 4.9.0
 BuildRequires:  openssl-devel
 BuildRequires:  libcidr-devel
 BuildRequires:  libsodium-devel

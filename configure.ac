@@ -1606,23 +1606,72 @@ AS_IF([test "x$enable_Werror" = "xyes" || test "x$enable_Werror" = "xauto"],
     [AS_IF([test -n "$CC"],[AS_IF([$CC --version 2>&1 | grep 'Free Software Foundation' > /dev/null && test "x$GCC" = "xyes"],
         [AC_MSG_NOTICE([Enabling pedantic errors for GNU C])
          CFLAGS="$CFLAGS -pedantic -Wall -Werror -Werror=format-security"],
-        [AC_MSG_NOTICE([Not enabling pedantic errors: compiler not supported by this recipe (not GNU C)])
-         AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for C: $CC])])
-        ])])
+        [AS_IF([$CC --version 2>&1 | grep 'clang version' > /dev/null],
+            [AC_MSG_NOTICE([Enabling pedantic errors for clang C])
+             CFLAGS="$CFLAGS -pedantic -Wall -Werror -Werror=format-security"],
+            [AC_MSG_NOTICE([Not enabling pedantic errors: compiler not supported by this recipe (not GNU or clang C)])
+             AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for C: $CC])])
+        ])])])
      AS_IF([test -n "$CXX"],[AS_IF([$CXX --version 2>&1 | grep 'Free Software Foundation' > /dev/null && test "x$GCC" = "xyes"],
         [AC_MSG_NOTICE([Enabling pedantic errors for GNU C++])
          CXXFLAGS="$CXXFLAGS -pedantic -Wall -Werror -Werror=format-security"],
-        [AC_MSG_NOTICE([Not enabling pedantic errors: compiler not supported by this recipe (not GNU C++)])
-         AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for C++: $CXX])])
-        ])])
+        [AS_IF([$CXX --version 2>&1 | grep 'clang version' > /dev/null],
+            [AC_MSG_NOTICE([Enabling pedantic errors for clang C++])
+             CXXFLAGS="$CXXFLAGS -pedantic -Wall -Werror -Werror=format-security"],
+            [AC_MSG_NOTICE([Not enabling pedantic errors: compiler not supported by this recipe (not GNU or clang C++)])
+             AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for C++: $CXX])])
+        ])])])
      AS_IF([test -n "$CPP"],[AS_IF([$CPP --version 2>&1 | grep 'Free Software Foundation' > /dev/null && test "x$GCC" = "xyes"],
         [AC_MSG_NOTICE([Enabling pedantic errors for GNU CPP preprocessor])
          CPPFLAGS="$CPPFLAGS -pedantic -Werror -Wall"
         ],
-        [AC_MSG_NOTICE([Not enabling pedantic errors: preprocessor not supported by this recipe (not GNU CPP)])
-         AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for CPP: $CPP])])
-        ])])
+        [AS_IF([$CXX --version 2>&1 | grep 'clang version' > /dev/null],
+            [AC_MSG_NOTICE([Enabling pedantic errors for clang CPP preprocessor])
+             CPPFLAGS="$CPPFLAGS -pedantic -Werror -Wall"
+            ],
+            [AC_MSG_NOTICE([Not enabling pedantic errors: preprocessor not supported by this recipe (not GNU or clang CPP)])
+             AS_IF([test "x$enable_Werror" = "xyes"], [AC_MSG_ERROR([--enable-Werror=yes was requested and can not be satisfied for CPP: $CPP])])
+        ])])])
 ])
+
+# One of big missing features in gcc-4.8 was std::regex support fixed in 4.9
+# Testing code from https://stackoverflow.com/a/41186162/4715872
+# caveats apply (use of unguaranteed private macros)
+AS_IF([test -n "$CXX"],[AS_IF([$CXX --version 2>&1 | grep 'Free Software Foundation' > /dev/null && test "x$GCC" = "xyes"],
+    [AC_MSG_CHECKING([for GNU C++11 support level expected by gcc-4.9 release or newer])
+     CXXFLAGS="$CXXFLAGS --std=c++11"
+     AC_LANG_PUSH([C++])
+     AC_TRY_RUN([/* Note: private macros in use, test can break over time */
+#include <regex>
+
+#if __cplusplus >= 201103L &&                             \
+    (!defined(__GLIBCXX__) || (__cplusplus >= 201402L) || \
+        (defined(_GLIBCXX_REGEX_DFS_QUANTIFIERS_LIMIT) || \
+         defined(_GLIBCXX_REGEX_STATE_LIMIT)           || \
+             (defined(_GLIBCXX_RELEASE)                && \
+             _GLIBCXX_RELEASE > 4)))
+#define HAVE_WORKING_REGEX 1
+#else
+#define HAVE_WORKING_REGEX 0
+#endif
+
+#include <iostream>
+
+int main() {
+  const std::regex regex(".*");
+  const std::string string = "This should match!";
+  const auto result = std::regex_search(string, regex);
+#if HAVE_WORKING_REGEX
+  std::cerr << "<regex> works, look: " << std::boolalpha << result << std::endl;
+#else
+  std::cerr << "<regex> doesn't work, look: " << std::boolalpha << result << std::endl;
+#endif
+  return result ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+], AC_MSG_RESULT([ok]), AC_MSG_ERROR([test for std::regex failed]) )
+     AC_LANG_POP([C++])
+    ]
+)])
 
 # Specify output files
 AC_CONFIG_FILES([Makefile

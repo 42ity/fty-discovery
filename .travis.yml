@@ -11,8 +11,12 @@ cache:
 os:
 - linux
 
-#dist:
-#- xenial
+# The default distro for env:/matrix:/* and unspecified-dist matrix:/* tests;
+# for the latter see also addons/apt/sources with the package repos in use.
+# See https://docs.travis-ci.com/user/reference/overview/ for up-to-date
+# allowed values of "dist" supported by the Travis CI service.
+dist:
+- trusty
 
 #services:
 #- docker
@@ -55,15 +59,19 @@ pkg_deps_prereqs_distro: &pkg_deps_prereqs_distro
 # Prerequisite packages that may be built from source or used from
 # prebuilt packages of that source (usually not from an OS distro)
 pkg_deps_prereqs_source: &pkg_deps_prereqs_source
+    - libcidr0-dev
     - libsodium-dev
     - libzmq3-dev
     - libczmq-dev
     - libmlm-dev
-    - cxxtools-dev
     - log4cplus-dev
     - libfty-common-logging-dev
+    - libfty-proto-dev
+    - cxxtools-dev
     - libfty-common-dev
     - libfty-common-mlm-dev
+    - libfty-security-wallet-dev
+    - libfty-common-nut-dev
 
 # NOTE: Our forks are checked out and built without pkg dependencies in use
 pkg_deps_prereqs: &pkg_deps_prereqs
@@ -77,25 +85,36 @@ pkg_deps_doctools: &pkg_deps_doctools
 pkg_deps_devtools: &pkg_deps_devtools
     - git
 
+# NOTE: Unlike earlier zproject versions, the pkg_src* objects below do not
+# start with a dash, due to peculiarities of YAML alias dereferencing in Travis
+
+# dist==trusty means ubuntu14
 pkg_src_zeromq_ubuntu14: &pkg_src_zeromq_ubuntu14
-- sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/ ./'
+  sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/ ./'
   key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_14.04/Release.key'
 
+# dist==xenial means ubuntu16
 pkg_src_zeromq_ubuntu16: &pkg_src_zeromq_ubuntu16
-- sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./'
+  sourceline: 'deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/ ./'
   key_url: 'http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_16.04/Release.key'
 
-# Note: refer to ubuntu16 if you use dist==xenial
+pkg_deps_common: &pkg_deps_common
+- *pkg_deps_devtools
+- *pkg_deps_prereqs
+
 # Also note that as of early 2017, either dist==trusty or services==docker
-# is needed for C++11 support; docker envs are usually faster to start up
+# is needed for some C++11 support; docker envs are usually faster to start up
+# A newer dist==xenial completes the C++11 support with gcc-5+
+# Note that with current implementation of zproject use-cxx-gcc-4-9 option,
+# this effectively hardcodes the use of specifically 4.9, not allowing for
+# "4.9 or newer".
 addons:
   apt:
-    sources: 
-    - *pkg_src_zeromq_ubuntu16
+    sources:
+    - *pkg_src_zeromq_ubuntu14
     - ubuntu-toolchain-r-test
-    packages: &pkg_deps_common
-    - *pkg_deps_devtools
-    - *pkg_deps_prereqs
+    packages:
+    - *pkg_deps_common
     - gcc-4.9
     - g++-4.9
 
@@ -103,10 +122,11 @@ matrix:
   include:
   - env: BUILD_TYPE=default-with-docs
     os: linux
+    dist: trusty
     addons:
       apt:
         sources:
-        - *pkg_src_zeromq_ubuntu16
+        - *pkg_src_zeromq_ubuntu14
         - ubuntu-toolchain-r-test
         packages:
         - *pkg_deps_common
@@ -115,11 +135,11 @@ matrix:
         - g++-4.9
   - env: BUILD_TYPE=valgrind
     os: linux
-    dist: xenial
+    dist: trusty
     addons:
       apt:
         sources:
-        - *pkg_src_zeromq_ubuntu16
+        - *pkg_src_zeromq_ubuntu14
         - ubuntu-toolchain-r-test
         packages:
         - valgrind
@@ -128,17 +148,53 @@ matrix:
         - g++-4.9
   - env: BUILD_TYPE=default ADDRESS_SANITIZER=enabled
     os: linux
-    dist: xenial
+    dist: trusty
     addons:
       apt:
         sources:
-        - *pkg_src_zeromq_ubuntu16
+        - *pkg_src_zeromq_ubuntu14
         - ubuntu-toolchain-r-test
         packages:
         - *pkg_deps_common
         - gcc-4.9
         - g++-4.9
-
+# Shadow-compilation setups below inspired by https://docs.travis-ci.com/user/languages/cpp/
+  - env: BUILD_TYPE=default-Werror MATRIX_EVAL="CC=gcc-5 && CXX=g++-5 && export CC CXX"
+    os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        - *pkg_src_zeromq_ubuntu14
+        packages:
+        - *pkg_deps_common
+        - g++-5
+        - gcc-5
+  - env: BUILD_TYPE=default-Werror MATRIX_EVAL="CC=gcc-6 && CXX=g++-6 && export CC CXX"
+    os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        - *pkg_src_zeromq_ubuntu14
+        packages:
+        - *pkg_deps_common
+        - g++-6
+        - gcc-6
+  - env: BUILD_TYPE=default-Werror MATRIX_EVAL="CC=gcc-7 && CXX=g++-7 && export CC CXX"
+    os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        - *pkg_src_zeromq_ubuntu14
+        packages:
+        - *pkg_deps_common
+        - g++-7
+        - gcc-7
 ### Note: we don't use CMake
 #  - env: BUILD_TYPE=cmake DO_CLANG_FORMAT_CHECK=1 CLANG_FORMAT=clang-format-5.0
 # For non-cmake users, there is an autotools solution with a bit more overhead
@@ -158,6 +214,9 @@ matrix:
         - *pkg_deps_prereqs
 # Note: "env" lines below must exactly describe a matrix option defined above
   allow_failures:
+  - env: BUILD_TYPE=default-Werror MATRIX_EVAL="CC=gcc-5 && CXX=g++-5 && export CC CXX"
+  - env: BUILD_TYPE=default-Werror MATRIX_EVAL="CC=gcc-6 && CXX=g++-6 && export CC CXX"
+  - env: BUILD_TYPE=default-Werror MATRIX_EVAL="CC=gcc-7 && CXX=g++-7 && export CC CXX"
 #  - env: BUILD_TYPE=cmake DO_CLANG_FORMAT_CHECK=1 CLANG_FORMAT=clang-format-5.0
   - env: BUILD_TYPE=clang-format-check CLANG_FORMAT=clang-format-5.0
 
@@ -165,6 +224,7 @@ before_install:
 - if [ "$TRAVIS_OS_NAME" == "osx" -a "$BUILD_TYPE" == "android" ] ; then brew install binutils ; fi
 - if [ "$TRAVIS_OS_NAME" == "osx" -a "$BUILD_TYPE" == "valgrind" ] ; then brew install valgrind ; fi
 - if [ "$CXX" == "g++" ] ; then export CXX="g++-4.9" CC="gcc-4.9" ; fi
+- if [ -n "${MATRIX_EVAL}" ] ; then eval ${MATRIX_EVAL} ; fi
 
 # Hand off to generated script for each BUILD_TYPE
 script: ./ci_build.sh
