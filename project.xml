@@ -11,6 +11,8 @@
     <target name = "debian" />
     <target name = "redhat" />
     <target name = "travis" >
+        <option name = "dist" value = "trusty" />
+        <option name = "shadow_gcc" value = "2" />
         <!-- option name = "clangformat_implem" value = "autotools" / -->
         <option name = "use_cmake" value = "0" />
         <!-- option name = "clangformat_require_good" value = "1" / -->
@@ -33,6 +35,7 @@
         <option name = "use_checkout_explicit" value = "1" />
     </target>
 
+    <classfilename use-cxx-gcc-4-9 = "true" />
     <include filename = "license.xml" />
     <version major = "1" minor = "0" patch = "0" />
 
