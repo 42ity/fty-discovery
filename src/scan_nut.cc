@@ -1,7 +1,9 @@
 /*  =========================================================================
     scan_nut - collect information from DNS
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C)
+        2014 - 2017 Eaton
+        2019        Arnaud Quette <arnaud.quette@free.fr>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,7 +37,8 @@
 enum DeviceCredentialsProtocols {
     DCP_NETXML,
     DCP_SNMPV1,
-    DCP_SNMPV3
+    DCP_SNMPV3,
+    DCP_MODBUS
 };
 
 struct CredentialProtocolScanResult {
@@ -50,6 +53,10 @@ struct CredentialProtocolScanResult {
     CredentialProtocolScanResult(const nutcommon::CredentialsSNMPv3& creds) :
         protoCredsType(DCP_SNMPV3),
         protoCredsPtr(&creds) {}
+
+    CredentialProtocolScanResult() :
+        protoCredsType(DCP_MODBUS),
+        protoCredsPtr(nullptr) {}
 
     DeviceCredentialsProtocols protoCredsType;
     const void* protoCredsPtr;
@@ -313,6 +320,10 @@ dump_data_actor(zsock_t *pipe, void *args) {
             deviceType = "NetXML";
             r = nutcommon::dumpDeviceNetXML(addr, loop_nb, loop_iter_time, nutdata);
             break;
+        case DCP_MODBUS:
+            deviceType = "Modbus";
+            r = nutcommon::dumpDeviceModbus(addr, loop_nb, loop_iter_time, nutdata);
+            break;
         }
 
         if (r == 0) {
@@ -572,6 +583,16 @@ scan_nut_actor(zsock_t *pipe, void *args)
     {
         CredentialProtocolScanResult result;
         nutcommon::scanDeviceRangeNetXML(scanRangeOptions, result.deviceConfigs);
+        if (!result.deviceConfigs.empty()) {
+            results.emplace_back(result);
+        }
+    }
+
+    // Modbus TCP scan.
+    // FIXME: need to check if security exists here!
+    {
+        CredentialProtocolScanResult result;
+        nutcommon::scanDeviceRangeModbusTCP(scanRangeOptions, result.deviceConfigs);
         if (!result.deviceConfigs.empty()) {
             results.emplace_back(result);
         }

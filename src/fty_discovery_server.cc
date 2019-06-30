@@ -1,7 +1,9 @@
 /*  =========================================================================
     fty_discovery_server - Manages discovery requests, provides feedback
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C)
+        2014 - 2017 Eaton
+        2019        Arnaud Quette <arnaud.quette@free.fr>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -61,6 +63,7 @@ struct _fty_discovery_server_t {
     int64_t nb_ups_discovered;
     int64_t nb_epdu_discovered;
     int64_t nb_sts_discovered;
+    int64_t nb_power_meter_discovered;
     int32_t status_scan;
     bool ongoing_stop;
     std::vector<std::string> localscan_subscan;
@@ -85,6 +88,7 @@ void reset_nb_discovered(fty_discovery_server_t *self) {
     self->nb_epdu_discovered = 0;
     self->nb_sts_discovered = 0;
     self->nb_ups_discovered = 0;
+    self->nb_power_meter_discovered = 0;
 }
 
 bool compute_ip_list(std::vector<std::string>* listIp) {
@@ -516,6 +520,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         if (streq(name, "ups")) self->nb_ups_discovered++;
         else if (streq(name, "epdu")) self->nb_epdu_discovered++;
         else if (streq(name, "sts")) self->nb_sts_discovered++;
+        else if (streq(name, "power-meter")) self->nb_power_meter_discovered++;
         if(!streq(name, "error"))
           self->nb_discovered++;
     }
@@ -892,6 +897,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_ups_discovered);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_epdu_discovered);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_sts_discovered);
+                zmsg_addstrf(reply, "%" PRIi64, self->nb_power_meter_discovered);
             } else {
                 zmsg_addstr(reply, RESP_OK);
                 zmsg_addstrf(reply, "%" PRIi32, -1);
@@ -1095,6 +1101,7 @@ fty_discovery_server_new() {
     self->nb_epdu_discovered = 0;
     self->nb_sts_discovered = 0;
     self->nb_ups_discovered = 0;
+    self->nb_power_meter_discovered = 0;
     self->scan_size = 0;
     self->ongoing_stop = false;
     self->status_scan = -1;
