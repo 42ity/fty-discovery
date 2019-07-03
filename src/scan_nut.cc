@@ -180,11 +180,15 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
             auto item = dump.find ("device.type");
             if (item != dump.end()) {
                 const char *device = item->second.c_str();
+                // FIXME some NUT Vs 42ITy device types nuances
                 if (streq(device, "pdu")) {
                     device = "epdu";
                 }
                 else if (streq(device, "ats")) {
                     device = "sts";
+                }
+                else if (streq(device, "power-meter")) {
+                    device = "powermeter";
                 }
                 fty_proto_aux_insert(fmsg, "subtype", "%s", device);
             }
