@@ -54,9 +54,10 @@ struct CredentialProtocolScanResult {
         protoCredsType(DCP_SNMPV3),
         protoCredsPtr(&creds) {}
 
-    CredentialProtocolScanResult() :
+    // FIXME: to satisfy compiler
+    CredentialProtocolScanResult(const nutcommon::CredentialsModbus& creds) :
         protoCredsType(DCP_MODBUS),
-        protoCredsPtr(nullptr) {}
+        protoCredsPtr(& creds) {}
 
     DeviceCredentialsProtocols protoCredsType;
     const void* protoCredsPtr;
@@ -326,7 +327,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
             break;
         case DCP_MODBUS:
             deviceType = "Modbus";
-            r = nutcommon::dumpDeviceModbus(addr, loop_nb, loop_iter_time, nutdata);
+            r = nutcommon::dumpDeviceModbus(addr, *reinterpret_cast<const nutcommon::CredentialsModbus*>(cpsr->protoCredsPtr), loop_nb, loop_iter_time, nutdata);
             break;
         }
 
