@@ -35,13 +35,18 @@
 #include <algorithm>
 
 enum DeviceCredentialsProtocols {
+    DCP_MODBUS,
     DCP_NETXML,
     DCP_SNMPV1,
-    DCP_SNMPV3,
-    DCP_MODBUS
+    DCP_SNMPV3
 };
 
 struct CredentialProtocolScanResult {
+    // FIXME: to satisfy compiler
+    CredentialProtocolScanResult() :
+        protoCredsType(DCP_MODBUS),
+        protoCredsPtr(nullptr) {}
+
     CredentialProtocolScanResult() :
         protoCredsType(DCP_NETXML),
         protoCredsPtr(nullptr) {}
@@ -53,11 +58,6 @@ struct CredentialProtocolScanResult {
     CredentialProtocolScanResult(const nutcommon::CredentialsSNMPv3& creds) :
         protoCredsType(DCP_SNMPV3),
         protoCredsPtr(&creds) {}
-
-    // FIXME: to satisfy compiler
-    CredentialProtocolScanResult(const int dummy) :
-        protoCredsType(DCP_MODBUS),
-        protoCredsPtr(nullptr) {}
 
     DeviceCredentialsProtocols protoCredsType;
     const void* protoCredsPtr;
@@ -321,13 +321,13 @@ dump_data_actor(zsock_t *pipe, void *args) {
             deviceType = "SNMPv1 community='" + reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr)->community + "'";
             r = nutcommon::dumpDeviceSNMPv1(addr, *reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr), loop_nb, loop_iter_time, nutdata);
             break;
-        case DCP_NETXML:
-            deviceType = "NetXML";
-            r = nutcommon::dumpDeviceNetXML(addr, loop_nb, loop_iter_time, nutdata);
-            break;
         case DCP_MODBUS:
             deviceType = "Modbus";
             r = nutcommon::dumpDeviceModbus(addr, loop_nb, loop_iter_time, nutdata);
+            break;
+        case DCP_NETXML:
+            deviceType = "NetXML";
+            r = nutcommon::dumpDeviceNetXML(addr, loop_nb, loop_iter_time, nutdata);
             break;
         }
 
