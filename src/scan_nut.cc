@@ -47,9 +47,9 @@ struct CredentialProtocolScanResult {
         protoCredsType(DCP_MODBUS),
         protoCredsPtr(nullptr) {}
 
-    CredentialProtocolScanResult() :
+    /* CredentialProtocolScanResult() :
         protoCredsType(DCP_NETXML),
-        protoCredsPtr(nullptr) {}
+        protoCredsPtr(nullptr) {}*/
 
     CredentialProtocolScanResult(const nutcommon::CredentialsSNMPv1& creds) :
         protoCredsType(DCP_SNMPV1),
