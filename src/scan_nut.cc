@@ -500,7 +500,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     zlist_t *argv = (zlist_t *)args;
-    if (!argv || zlist_size(argv) != 3) {
+    if (!argv || zlist_size(argv) != 4) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
@@ -512,7 +512,8 @@ scan_nut_actor(zsock_t *pipe, void *args)
     CIDRList *listAddr = (CIDRList *) zlist_first(argv);
     discovered_devices_t *devices = (discovered_devices_t*) zlist_next(argv);
     const nutcommon::KeyValues *mappings = (const nutcommon::KeyValues*) zlist_next(argv);
-    if (!listAddr || !devices || !mappings) {
+    const std::set<std::string> *documentNames = (const std::set<std::string>*) zlist_next(argv);
+    if (!listAddr || !devices || !mappings || !documentNames) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
@@ -524,8 +525,8 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     std::vector<CredentialProtocolScanResult> results;
-    const auto credentialsV3 = nutcommon::getCredentialsSNMPv3();
-    const auto credentialsV1 = nutcommon::getCredentialsSNMPv1();
+    const auto credentialsV3 = documentNames->empty() ? nutcommon::getCredentialsSNMPv3() : nutcommon::getCredentialsSNMPv3(*documentNames);
+    const auto credentialsV1 = documentNames->empty() ? nutcommon::getCredentialsSNMPv1() : nutcommon::getCredentialsSNMPv1(*documentNames);
 
     // Grab timeout.
     int timeout;
