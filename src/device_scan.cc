@@ -28,7 +28,7 @@
 
 #include "fty_discovery_classes.h"
 #include <algorithm>
-bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings)
+bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings, const std::set<std::string> &documentIds)
 {
     CIDRList *listAddr = (CIDRList *) zlist_first(listScans);
     zpoller_t *poller = zpoller_new(pipe, NULL);
@@ -39,6 +39,7 @@ bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_
         zlist_append(args, listAddr);
         zlist_append(args, devices);
         zlist_append(args, const_cast<void*>(static_cast<const void*>(mappings)));
+        zlist_append(args, const_cast<void*>(static_cast<const void*>(&documentIds)));
         zactor_t *scan_nut = zactor_new (scan_nut_actor, args);
         zpoller_add(poller, scan_nut);
         listActor.push_back(scan_nut);
@@ -181,6 +182,18 @@ device_scan_actor (zsock_t *pipe, void *args)
                 }
                 char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_SCANPOOL_NUMBER, DEFAULT_MAX_SCANPOOL_NUMBER);
                 const size_t number_max_pool = std::stoi(strNbPool);
+                std::set<std::string> documentIds;
+                {
+                    zconfig_t *documents = zconfig_locate(config, CFG_DISCOVERY_DOCUMENTS);
+                    if (documents) {
+                        for (zconfig_t *document = zconfig_child(documents); document; document = zconfig_next(document)) {
+                            const char *documentName = zconfig_value(document);
+                            if (documentName && documentName[0] != '\0') {
+                                documentIds.emplace(documentName);
+                            }
+                        }
+                    }
+                }
                 zconfig_destroy(&config);
                 bool stopped = false;
                 while(!stopped && zlist_size(listScans) > 0) {
@@ -190,7 +203,7 @@ device_scan_actor (zsock_t *pipe, void *args)
                         zlist_append(scanPool, zlist_pop(listScans));
                         number_of_scans++;
                     }
-                    stopped = device_scan_scan(scanPool, devices, pipe, mappings);
+                    stopped = device_scan_scan(scanPool, devices, pipe, mappings, documentIds);
                 }
                 zlist_destroy(&listScans);
 
