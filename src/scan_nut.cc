@@ -525,8 +525,8 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     std::vector<CredentialProtocolScanResult> results;
-    const auto credentialsV3 = documentNames->empty() ? nutcommon::getCredentialsSNMPv3() : nutcommon::getCredentialsSNMPv3(*documentNames);
-    const auto credentialsV1 = documentNames->empty() ? nutcommon::getCredentialsSNMPv1() : nutcommon::getCredentialsSNMPv1(*documentNames);
+    const auto credentialsV3 = nutcommon::getCredentialsSNMPv3(*documentNames);
+    const auto credentialsV1 = nutcommon::getCredentialsSNMPv1(*documentNames);
 
     // Grab timeout.
     int timeout;
