@@ -12,6 +12,7 @@ discovery
     type = "localscan"
     scans
     ips
+    documents
 
 parameters
     mappingFile = "/usr/share/fty-common-nut/mapping.conf"
