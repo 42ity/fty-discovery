@@ -1,7 +1,7 @@
 /*  =========================================================================
     scan_dns - collect information from DNS
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2019 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,12 +47,18 @@ scan_dns (fty_proto_t *msg, const char *address, zconfig_t *config)
 
     if (! getnameinfo(sa, len, dns_name, sizeof(dns_name), NULL, 0, NI_NAMEREQD)) {
         fty_proto_ext_insert (msg, "dns.1", "%s", dns_name);
+        log_debug("Retrieved DNS information");
+        log_debug("FQDN = '%s'", dns_name);
         char *p = strchr (dns_name, '.');
         if (p) {
             *p = 0;
         }
         fty_proto_ext_insert (msg, "hostname", "%s", dns_name);
+        log_debug("Hostname = '%s'", dns_name);
         return true;
+    }
+    else {
+        log_debug("No host information retrieved from DNS");
     }
     return false;
 }
