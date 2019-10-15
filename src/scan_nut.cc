@@ -155,6 +155,9 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
             fty_proto_ext_insert(fmsg, property.first.c_str(), "%s", property.second.c_str());
         }
 
+        // Try to obtain DNS name ("hostname" + "dns.1" attributes)
+        scan_dns (fmsg, ip.c_str(), NULL);
+
         // Some special cases.
         fty_proto_ext_insert(fmsg, "ip.1", "%s", ip.c_str());
         fty_proto_aux_insert(fmsg, "type", "%s", type.c_str());
