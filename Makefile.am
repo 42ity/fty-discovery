@@ -24,12 +24,13 @@ AM_CPPFLAGS = \
     ${cxxtools_CFLAGS} \
     ${fty_common_CFLAGS} \
     ${fty_common_mlm_CFLAGS} \
+    ${fty_common_socket_CFLAGS} \
     ${fty_security_wallet_CFLAGS} \
     ${fty_common_nut_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${openssl_LIBS} ${cidr_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${fty_security_wallet_LIBS} ${fty_common_nut_LIBS}
+project_libs = ${openssl_LIBS} ${cidr_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${log4cplus_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${cxxtools_LIBS} ${fty_common_LIBS} ${fty_common_mlm_LIBS} ${fty_common_socket_LIBS} ${fty_security_wallet_LIBS} ${fty_common_nut_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -62,6 +63,7 @@ EXTRA_DIST += \
     Findcxxtools.cmake \
     Findfty_common.cmake \
     Findfty_common_mlm.cmake \
+    Findfty_common_socket.cmake \
     Findfty_security_wallet.cmake \
     Findfty_common_nut.cmake \
     builds/cmake/Modules/ClangFormat.cmake \

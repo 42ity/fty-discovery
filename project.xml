@@ -195,6 +195,36 @@
             </use>
         </use>
 
+        <use project = "fty-common-socket" libname = "libfty_common_socket" header = "fty_common_socket.h"
+            repository = "https://github.com/42ity/fty-common-socket.git"
+            release = "master"
+            test = "fty_common_socket_selftest" >
+
+            <use project = "cxxtools" test = "cxxtools::Utf8Codec::Utf8Codec" header = "cxxtools/allocator.h"
+                repository = "https://github.com/42ity/cxxtools.git"
+                release = "2.2-FTY-master"
+                />
+
+            <use project = "openssl" header = "openssl/sha.h" debian_name = "libssl-dev"/>
+
+            <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
+                repository = "https://github.com/42ity/fty-common.git"
+                release = "master"
+                test = "fty_common_selftest" >
+
+                <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
+                    repository = "https://github.com/42ity/fty-common-logging.git"
+                    release = "master"
+                    test = "fty_common_logging_selftest" >
+
+                    <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
+                        repository = "https://github.com/42ity/log4cplus.git"
+                        release = "1.1.2-FTY-master"
+                        />
+                </use>
+            </use>
+        </use>
+
         <use project = "fty-security-wallet" libname = "libfty_security_wallet" header = "fty_security_wallet.h"
             repository = "https://github.com/42ity/fty-security-wallet.git"
             release = "master"

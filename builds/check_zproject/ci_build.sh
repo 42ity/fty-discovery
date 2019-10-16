@@ -20,6 +20,7 @@ git clone --quiet --depth 1 -b master https://github.com/42ity/fty-proto.git fty
 git clone --quiet --depth 1 -b 2.2-FTY-master https://github.com/42ity/cxxtools.git cxxtools
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common.git fty-common
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-mlm.git fty-common-mlm
+git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-socket.git fty-common-socket
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-security-wallet.git fty-security-wallet
 git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-nut.git fty-common-nut
 cd -
