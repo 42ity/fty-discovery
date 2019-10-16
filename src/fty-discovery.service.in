@@ -7,7 +7,7 @@ PartOf=bios.target
 
 [Service]
 Type=simple
-User=bios
+User=discovery-monitoring-daemon
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut:"
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
