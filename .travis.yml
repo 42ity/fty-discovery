@@ -70,6 +70,7 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - cxxtools-dev
     - libfty-common-dev
     - libfty-common-mlm-dev
+    - libfty-common-socket-dev
     - libfty-security-wallet-dev
     - libfty-common-nut-dev
 
