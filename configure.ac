@@ -224,51 +224,51 @@ dnl END of enabled attempts to search for openssl
 
 was_cidr_check_lib_detected=no
 
-search_cidr="yes"
+search_libcidr="yes"
 
-AC_ARG_WITH([cidr],
+AC_ARG_WITH([libcidr],
     [
-        AS_HELP_STRING([--with-cidr],
-        [yes or no. Optionally specify cidr prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+        AS_HELP_STRING([--with-libcidr],
+        [yes or no. Optionally specify libcidr prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
     ],
     [
-        search_cidr="yes"
+        search_libcidr="yes"
     ],
     [
-        search_cidr="yes"
+        search_libcidr="yes"
     ])
-AS_CASE([x"${with_cidr}"],
-    [xyes], [search_cidr="yes"],
-    [xno],  [search_cidr="no"])
+AS_CASE([x"${with_libcidr}"],
+    [xyes], [search_libcidr="yes"],
+    [xno],  [search_libcidr="no"])
 
 dnl We do not abort right now, because the maintainer/developer may have
 dnl something particular in mind, e.g. to build just parts of a project.
-AS_IF([test x"${search_cidr}" = xno],
-    [AC_MSG_WARN([Required dependency on cidr was explicitly disabled during configuration by '--with-cidr=no'; subsequent full build of fty-discovery may fail])])
+AS_IF([test x"${search_libcidr}" = xno],
+    [AC_MSG_WARN([Required dependency on cidr was explicitly disabled during configuration by '--with-libcidr=no'; subsequent full build of fty-discovery may fail])])
 
-AS_IF([test x"${search_cidr}" = xyes], [
+AS_IF([test x"${search_libcidr}" = xyes], [
     # Archive previously detected and supplied flags
     PRE_SEARCH_CFLAGS="${CFLAGS}"
     PRE_SEARCH_LIBS="${LIBS}"
 
     found_pkgconfig=""
-    PKG_CHECK_MODULES([cidr], [cidr >= 0.0.0],
+    PKG_CHECK_MODULES([cidr], [libcidr >= 0.0.0],
     [
         was_cidr_check_lib_detected=pkgcfg
-        found_pkgconfig="cidr"
+        found_pkgconfig="libcidr"
     ],
     [
-        AC_MSG_NOTICE([Package cidr not found; falling back to defined compilability tests])
+        AC_MSG_NOTICE([Package libcidr not found; falling back to defined compilability tests])
 
         cidr_synthetic_cflags=""
         cidr_synthetic_libs="-lcidr"
 
-        if test -n "${with_cidr}" && test x"${with_cidr}" != xyes && test x"${with_cidr}" != xno; then
-            if test -r "${with_cidr}/include/libcidr.h"; then
-                cidr_synthetic_cflags="-I${with_cidr}/include"
-                cidr_synthetic_libs="-L${with_cidr}/lib -lcidr"
+        if test -n "${with_libcidr}" && test x"${with_libcidr}" != xyes && test x"${with_libcidr}" != xno; then
+            if test -r "${with_libcidr}/include/libcidr.h"; then
+                cidr_synthetic_cflags="-I${with_libcidr}/include"
+                cidr_synthetic_libs="-L${with_libcidr}/lib -lcidr"
             else
-            AC_MSG_ERROR([Header file ${with_cidr}/include/libcidr.h was not found. Please check cidr prefix])
+            AC_MSG_ERROR([Header file ${with_libcidr}/include/libcidr.h was not found. Please check libcidr prefix])
             fi
         else
             AC_CHECK_HEADER([libcidr.h], [],
@@ -281,10 +281,10 @@ AS_IF([test x"${search_cidr}" = xyes], [
                 was_cidr_check_lib_detected=yes
                 PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lcidr"
             ],
-            [AC_MSG_ERROR([cannot link with -lcidr, install cidr])])
+            [AC_MSG_ERROR([cannot link with -lcidr, install libcidr])])
     ])
 
-dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
+dnl END of PKG_CHECK_MODULES and/or direct tests for libcidr
     AS_CASE(["x${was_cidr_check_lib_detected}"],
         [xpkgcfg], [
                 PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
@@ -300,10 +300,10 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for cidr
                 AC_SUBST([cidr_LIBS],[${cidr_synthetic_libs}])
             ],
         [xno], [
-            AC_MSG_ERROR([Cannot find pkg-config metadata for cidr 0.0.0 or higher])
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libcidr 0.0.0 or higher])
     ])
 ])
-dnl END of enabled attempts to search for cidr
+dnl END of enabled attempts to search for libcidr
 
 
 was_libsodium_check_lib_detected=no
