@@ -125,7 +125,7 @@ s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
 
   if(dump.find("device.mfr") == dump.end() && dump.find("ups.mfr") == dump.end() &&
           dump.find("device.1.mfr") == dump.end() && dump.find("device.1.ups.mfr") == dump.end()) {
-    log_error("No subtype for this device");
+    log_error("No manufacturer for this device");
     return false;
   }
 
@@ -134,7 +134,7 @@ s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
 
 
 bool
-s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon::DeviceConfiguration& dump, const nutcommon::KeyValues* mappings, const std::string &ip, const std::string &type)
+s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon::DeviceConfiguration& dump, const nutcommon::KeyValues* mappings, const nutcommon::KeyValues* sensorMappings, const std::string &ip, const std::string &type)
 {
     // Set up iteration limits according to daisy-chain configuration.
     int startDevice = 0, endDevice = 0;
@@ -154,6 +154,9 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
         for (auto property : mappedDump) {
             fty_proto_ext_insert(fmsg, property.first.c_str(), "%s", property.second.c_str());
         }
+
+        // Try to obtain DNS name ("hostname" + "dns.1" attributes)
+        scan_dns (fmsg, ip.c_str(), NULL);
 
         // Some special cases.
         fty_proto_ext_insert(fmsg, "ip.1", "%s", ip.c_str());
@@ -183,6 +186,70 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
             }
         }
 
+        // Ambient sensor(s)
+        // Set up iteration limits according to daisy-chain configuration.
+        // FIXME: check if indexed sensors collection is present, to discard
+        // legacy sensor (ambient.{temperature,humidity})
+        int startSensor = 0, endSensor = 0;
+        {
+            // First, check for new style and daisychained sensors
+            auto item = dump.find("ambient.count");
+            if(item != dump.end() && !streq(item->second.c_str(), "1")) {
+                startSensor = 1;
+                endSensor = std::stoi(item->second);
+            }
+            else {
+                // Otherwise, fallback to checking for legacy sensors
+                // First, use "ambient.present" if available
+                item = dump.find("ambient.present");
+                if(item != dump.end() && !streq(item->second.c_str(), "no")) {
+                    startSensor = endSensor = 1;
+                }
+                else {
+                    // Otherwise, fallback to checking "ambient.temperature" presence
+                    item = dump.find("ambient.temperature");
+                    if(item != dump.end()) {
+                        startSensor = endSensor = 1;
+                    }
+                }                
+            }
+            log_debug("Discovered %i sensor(s)", endSensor);
+        }
+
+        for(int i = startSensor; i <= endSensor; i++) {
+            fty_proto_t *fsmsg = fty_proto_new(FTY_PROTO_ASSET);
+
+            // Map inventory data.
+            // FIXME: limit to ambient.*
+            // FIXME: use a dedicated mapping?
+            auto ambientMappedDump = nutcommon::performMapping(*sensorMappings, dump, i);
+            for (auto property : ambientMappedDump) {
+                fty_proto_ext_insert(fsmsg, property.first.c_str(), "%s", property.second.c_str());
+            }
+
+            // FIXME: id_parent == current device!
+            // FIXME: => location = parent ename
+
+            // FIXME: parent == "<type> (<ip.1>)"
+            // Some special cases.
+            fty_proto_ext_insert(fsmsg, "parent_name.1", "%s (%s)", type.c_str(), ip.c_str());
+            fty_proto_aux_insert(fsmsg, "type", "sensor");
+            //fty_proto_aux_insert(fsmsg, "subtype", "sensor");
+            if (i != 0) {
+                fty_proto_ext_insert(fsmsg, "port", "%" PRIi32, i);
+            }
+
+            if (!fty_proto_ext_string(fsmsg, "manufacturer", nullptr) || !fty_proto_ext_string(fsmsg, "model", nullptr)) {
+                log_error("No manufacturer or model for sensor number %i", i);
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
+
+            //fty_proto_print(fsmsg); // FIXME: debug
+            // FIXME: also dry contacts?
+            // FIXME: needed?
+            assets.emplace_back(fsmsg);
+        }
         assets.emplace_back(fmsg);
     }
 
@@ -254,6 +321,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
     NutOutput *initialAsset;
     const CredentialProtocolScanResult *cpsr;
     const nutcommon::KeyValues *mappings;
+    const nutcommon::KeyValues *sensorMappings;
 
     int loop_nb = -1;
     if (::getenv(BIOS_NUT_DUMPDATA_ENV)) {
@@ -271,12 +339,13 @@ dump_data_actor(zsock_t *pipe, void *args) {
     }
 
     zmsg_t *reply;
-    if (!argv || zlist_size(argv) != 3) {
+    if (!argv || zlist_size(argv) != 4) {
         valid = false;
     } else {
        initialAsset = reinterpret_cast<NutOutput*>(zlist_first(argv));
        cpsr = reinterpret_cast<const CredentialProtocolScanResult*>(zlist_next(argv));
        mappings = reinterpret_cast<const nutcommon::KeyValues*>(zlist_next(argv));
+       sensorMappings = reinterpret_cast<const nutcommon::KeyValues*>(zlist_next(argv));
     }
 
     if(!valid) {
@@ -307,6 +376,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
             break;
         case DCP_SNMPV1:
             deviceType = "SNMPv1 community='" + reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr)->community + "'";
+            log_debug("Using credential SNMP v1 '%s'", (reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr)->community).c_str());
             r = nutcommon::dumpDeviceSNMPv1(addr, *reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr), loop_nb, loop_iter_time, nutdata);
             break;
         case DCP_NETXML:
@@ -317,7 +387,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
 
         if (r == 0) {
             std::vector<fty_proto_t*> assets;
-            if (s_valid_dumpdata(nutdata) && s_nut_dumpdata_to_fty_message(assets, nutdata, mappings, ip, type)) {
+            if (s_valid_dumpdata(nutdata) && s_nut_dumpdata_to_fty_message(assets, nutdata, mappings, sensorMappings, ip, type)) {
                 log_debug("Dump data for %s (%s) succeeded.", addr.c_str(), deviceType.c_str());
 
                 for (auto i = assets.cbegin(); i != assets.cend(); i++) {
@@ -362,7 +432,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
 }
 
 bool
-create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings)
+create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings, const nutcommon::KeyValues *sensorMappings)
 {
     bool stop_now =false;
     std::vector<NutOutput> listDiscovered;
@@ -392,6 +462,7 @@ create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devi
             zlist_append(listarg, &asset);
             zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(&result)));
             zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(mappings)));
+            zlist_append(listarg, const_cast<void*>(reinterpret_cast<const void*>(sensorMappings)));
             zactor_t *actor = zactor_new (dump_data_actor, listarg);
 
             zmsg_t *msg_ready = zmsg_recv(actor);
@@ -500,7 +571,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     zlist_t *argv = (zlist_t *)args;
-    if (!argv || zlist_size(argv) != 4) {
+    if (!argv || zlist_size(argv) != 5) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
@@ -512,8 +583,9 @@ scan_nut_actor(zsock_t *pipe, void *args)
     CIDRList *listAddr = (CIDRList *) zlist_first(argv);
     discovered_devices_t *devices = (discovered_devices_t*) zlist_next(argv);
     const nutcommon::KeyValues *mappings = (const nutcommon::KeyValues*) zlist_next(argv);
+    const nutcommon::KeyValues *sensorMappings = (const nutcommon::KeyValues*) zlist_next(argv);
     const std::set<std::string> *documentNames = (const std::set<std::string>*) zlist_next(argv);
-    if (!listAddr || !devices || !mappings || !documentNames) {
+    if (!listAddr || !devices || !mappings || !sensorMappings || !documentNames) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
         zmsg_t *reply = zmsg_new();
@@ -601,7 +673,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
     }
 
     for (const auto &result : results) {
-        stop_now = create_pool_dumpdata(result, devices, pipe, mappings);
+        stop_now = create_pool_dumpdata(result, devices, pipe, mappings, sensorMappings);
 
         if(ask_actor_term(pipe)) {
             stop_now = true;
