@@ -74,11 +74,6 @@ DartConfiguration.tcl
 install_manifest.txt
 Testing/
 
-# CMake in general
-builds/cmake/
-CMake*
-*.cmake
-
 # Repositories downloaded by CI integration scripts
 tmp-deps/
 
@@ -136,3 +131,7 @@ nbproject/
 
 # editor backups
 *~
+# CMake in general
+builds/cmake/
+CMake*
+*.cmake
