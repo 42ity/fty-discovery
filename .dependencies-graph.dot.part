@@ -6,3 +6,4 @@
    fty-discovery -> fty-common-logging;
    fty-discovery -> fty-proto;
    fty-discovery -> fty-common-nut;
+   fty-discovery -> cxxtools;

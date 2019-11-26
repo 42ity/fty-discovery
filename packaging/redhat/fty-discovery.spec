@@ -64,6 +64,7 @@ BuildRequires:  malamute-devel >= 1.0.0
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  fty-common-nut-devel
+BuildRequires:  cxxtools-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -96,6 +97,7 @@ Requires:       malamute-devel >= 1.0.0
 Requires:       fty-common-logging-devel
 Requires:       fty-proto-devel >= 1.0.0
 Requires:       fty-common-nut-devel
+Requires:       cxxtools-devel
 
 %description devel
 42ity service for discovering devices development tools

@@ -82,6 +82,11 @@
             repository = "https://github.com/42ity/fty-common-nut.git"
             test = "fty_common_nut_selftest" />
 
+    <use project = "cxxtools"
+        test = "cxxtools::Utf8Codec::Utf8Codec"
+        header = "cxxtools/allocator.h"
+        repository = "https://github.com/42ity/cxxtools.git"/>
+
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "range_scan"   private = "1">Perform one range scan</class>
     <class name = "device_scan"  private = "1">Perform one IP address scan</class>

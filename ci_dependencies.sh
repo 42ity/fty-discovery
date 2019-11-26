@@ -557,3 +557,69 @@ fi
 fi
 
 
+# Start of recipe for dependency: cxxtools
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions cxxtools >/dev/null 2>&1) || \
+       ([ -e "cxxtools" ]) \
+; then
+ FOLDER_NAME="cxxtools"
+
+ if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+ else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
+    if [ "x$REQUESTED_BRANCH" = "x" ]; then
+        echo "git clone https://github.com/42ity/cxxtools.git $FOLDER_NAME"
+        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git $FOLDER_NAME
+    else
+        if git ls-remote --heads https://github.com/42ity/cxxtools.git | grep -q "$REQUESTED_BRANCH"; then
+            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/cxxtools.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/cxxtools.git $FOLDER_NAME
+        else
+            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/cxxtools.git"
+            echo "git clone https://github.com/42ity/cxxtools.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git $FOLDER_NAME
+        fi
+    fi
+    cd "./$FOLDER_NAME"
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    cd "${BASE_PWD}"
+fi
+fi
+
+
