@@ -11,6 +11,7 @@
     <target name = "debian" />
     <target name = "redhat" />
     <target name = "travis" >
+        <option name = "recursive_dependencies" value = "true"/>
         <option name = "dist" value = "trusty" />
         <option name = "shadow_gcc" value = "2" />
         <!-- option name = "clangformat_implem" value = "autotools" / -->
@@ -47,287 +48,44 @@
         header = "libcidr.h"
         debian_name = "libcidr0-dev"
         redhat_name = "libcidr-devel"
-        repository = "https://github.com/42ity/libcidr.git"
-        release = "1.2.3-FTY-master"
-        />
+        repository = "https://github.com/42ity/libcidr.git" />
 
     <use project = "czmq"
         repository = "https://github.com/42ity/czmq.git"
-        release = "v3.0.2-FTY-master"
         min_major = "3" min_minor = "0" min_patch = "2" >
 
         <use project = "libzmq"
-            repository = "https://github.com/42ity/libzmq.git"
-            release = "4.2.0-FTY-master" >
+            repository = "https://github.com/42ity/libzmq.git" >
 
             <use project = "libsodium" prefix = "sodium"
                 repository = "https://github.com/42ity/libsodium.git"
-                release = "1.0.5-FTY-master"
                 test = "sodium_init"
                 />
         </use>
     </use>
 
     <use project = "malamute" min_major = "1" test = "mlm_server_test"
-        repository = "https://github.com/42ity/malamute.git"
-        release = "1.0-FTY-master"
-        />
+        repository = "https://github.com/42ity/malamute.git" />
 
     <!-- Note: pure C projects should use fty-log/fty_logger.h, C++ use fty_log.h -->
     <use project = "fty-common-logging" libname = "libfty_common_logging"
         header = "fty_log.h"
         repository = "https://github.com/42ity/fty-common-logging.git"
-        release = "master"
-        test = "fty_common_logging_selftest" >
-
-        <!-- Note: pure C projects should use clogger.h, C++ use logger.h -->
-        <use project = "log4cplus"
-            header = "log4cplus/logger.h"
-            test = "appender_test"
-            repository = "https://github.com/42ity/log4cplus.git"
-            release = "1.1.2-FTY-master"
-            />
-    </use>
+        test = "fty_common_logging_selftest" />
 
     <use project = "fty-proto" libname = "libfty_proto" header = "ftyproto.h" prefix = "fty_proto"
         min_major = "1" min_minor = "0" min_patch = "0"
         repository = "https://github.com/42ity/fty-proto.git"
-        release = "master"
-        test = "fty_proto_test" >
-
-        <use project = "czmq"
-            repository = "https://github.com/42ity/czmq.git"
-            release = "v3.0.2-FTY-master"
-            min_major = "3" min_minor = "0" min_patch = "2" >
-
-            <use project = "libzmq"
-                repository = "https://github.com/42ity/libzmq.git"
-                release = "4.2.0-FTY-master" >
-
-                <use project = "libsodium" prefix = "sodium"
-                    repository = "https://github.com/42ity/libsodium.git"
-                    release = "1.0.5-FTY-master"
-                    test = "sodium_init"
-                    />
-            </use>
-        </use>
-
-        <use project = "malamute" min_major = "1" test = "mlm_server_test"
-            repository = "https://github.com/42ity/malamute.git"
-            release = "1.0-FTY-master"
-            />
-
-        <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
-            repository = "https://github.com/42ity/fty-common-logging.git"
-            release = "master"
-            test = "fty_common_logging_selftest" >
-
-            <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-                repository = "https://github.com/42ity/log4cplus.git"
-                release = "1.1.2-FTY-master"
-                />
-        </use>
-    </use>
+        test = "fty_proto_test" />
 
     <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
             repository = "https://github.com/42ity/fty-common-nut.git"
-            release = "master"
-            test = "fty_common_nut_selftest" >
+            test = "fty_common_nut_selftest" />
 
-        <use project = "fty-common-mlm" libname = "libfty_common_mlm" header = "fty_common_mlm.h"
-            repository = "https://github.com/42ity/fty-common-mlm.git"
-            release = "master"
-            test = "fty_common_mlm_selftest" >
-
-            <use project = "czmq"
-                repository = "https://github.com/42ity/czmq.git"
-                release = "v3.0.2-FTY-master"
-                min_major = "3" min_minor = "0" min_patch = "2" >
-
-                <use project = "libzmq"
-                    repository = "https://github.com/42ity/libzmq.git"
-                    release = "4.2.0-FTY-master" >
-
-                    <use project = "libsodium" prefix = "sodium"
-                        repository = "https://github.com/42ity/libsodium.git"
-                        release = "1.0.5-FTY-master"
-                        test = "sodium_init"
-                        />
-                </use>
-            </use>
-
-            <use project = "cxxtools"
-                test = "cxxtools::Utf8Codec::Utf8Codec"
-                header = "cxxtools/allocator.h"
-                repository = "https://github.com/42ity/cxxtools.git"
-                release = "2.2-FTY-master"
-                />
-
-            <use project = "malamute" min_major = "1" test = "mlm_server_test"
-                repository = "https://github.com/42ity/malamute.git"
-                release = "1.0-FTY-master"
-                />
-
-            <use project = "openssl" header = "openssl/sha.h" debian_name = "libssl-dev"/>
-
-            <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
-                repository = "https://github.com/42ity/fty-common.git"
-                release = "master"
-                test = "fty_common_selftest" >
-
-                <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
-                    repository = "https://github.com/42ity/fty-common-logging.git"
-                    release = "master"
-                    test = "fty_common_logging_selftest" >
-
-                    <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-                        repository = "https://github.com/42ity/log4cplus.git"
-                        release = "1.1.2-FTY-master"
-                        />
-                </use>
-            </use>
-
-            <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
-                repository = "https://github.com/42ity/fty-common-logging.git"
-                release = "master"
-                test = "fty_common_logging_selftest" >
-
-                <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-                    repository = "https://github.com/42ity/log4cplus.git"
-                    release = "1.1.2-FTY-master"
-                    />
-            </use>
-        </use>
-
-        <use project = "fty-common-socket" libname = "libfty_common_socket" header = "fty_common_socket.h"
-            repository = "https://github.com/42ity/fty-common-socket.git"
-            release = "master"
-            test = "fty_common_socket_selftest" >
-
-            <use project = "cxxtools" test = "cxxtools::Utf8Codec::Utf8Codec" header = "cxxtools/allocator.h"
-                repository = "https://github.com/42ity/cxxtools.git"
-                release = "2.2-FTY-master"
-                />
-
-            <use project = "openssl" header = "openssl/sha.h" debian_name = "libssl-dev"/>
-
-            <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
-                repository = "https://github.com/42ity/fty-common.git"
-                release = "master"
-                test = "fty_common_selftest" >
-
-                <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
-                    repository = "https://github.com/42ity/fty-common-logging.git"
-                    release = "master"
-                    test = "fty_common_logging_selftest" >
-
-                    <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-                        repository = "https://github.com/42ity/log4cplus.git"
-                        release = "1.1.2-FTY-master"
-                        />
-                </use>
-            </use>
-        </use>
-
-        <use project = "fty-security-wallet" libname = "libfty_security_wallet" header = "fty_security_wallet.h"
-            repository = "https://github.com/42ity/fty-security-wallet.git"
-            release = "master"
-            test = "fty_security_wallet_test">
-
-		    <use project = "fty-common-socket" libname = "libfty_common_socket" header = "fty_common_socket.h"
-		        repository = "https://github.com/42ity/fty-common-socket.git"
-		        release = "master"
-		        test = "fty_common_socket_selftest" >
-
-		        <use project = "cxxtools" test = "cxxtools::Utf8Codec::Utf8Codec" header = "cxxtools/allocator.h"
-		            repository = "https://github.com/42ity/cxxtools.git"
-		            release = "2.2-FTY-master"
-		            />
-
-		        <use project = "openssl" header = "openssl/sha.h" debian_name = "libssl-dev"/>
-
-		        <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
-		            repository = "https://github.com/42ity/fty-common.git"
-		            release = "master"
-		            test = "fty_common_selftest" >
-
-		            <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
-		                repository = "https://github.com/42ity/fty-common-logging.git"
-		                release = "master"
-		                test = "fty_common_logging_selftest" >
-
-		                <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-		                    repository = "https://github.com/42ity/log4cplus.git"
-		                    release = "1.1.2-FTY-master"
-		                    />
-		            </use>
-		        </use>
-		    </use>
-
-		    <use project = "fty-common-mlm" libname = "libfty_common_mlm" header = "fty_common_mlm.h"
-		        repository = "https://github.com/42ity/fty-common-mlm.git"
-		        release = "master"
-		        test = "fty_common_mlm_selftest" >
-
-		        <use project = "czmq"
-		            repository = "https://github.com/42ity/czmq.git"
-		            release = "v3.0.2-FTY-master"
-		            min_major = "3" min_minor = "0" min_patch = "2" >
-
-		            <use project = "libzmq"
-		                repository = "https://github.com/42ity/libzmq.git"
-		                release = "4.2.0-FTY-master" >
-
-		                <use project = "libsodium" prefix = "sodium"
-		                    repository = "https://github.com/42ity/libsodium.git"
-		                    release = "1.0.5-FTY-master"
-		                    test = "sodium_init"
-		                    />
-		            </use>
-		        </use>
-
-		        <use project = "cxxtools" test = "cxxtools::Utf8Codec::Utf8Codec" header = "cxxtools/allocator.h"
-		            repository = "https://github.com/42ity/cxxtools.git"
-		            release = "2.2-FTY-master"
-		            />
-
-		        <use project = "malamute" min_major = "1" test = "mlm_server_test"
-		            repository = "https://github.com/42ity/malamute.git"
-		            release = "1.0-FTY-master"
-		            />
-
-		        <use project = "openssl" header = "openssl/sha.h" debian_name = "libssl-dev"/>
-
-		        <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
-		            repository = "https://github.com/42ity/fty-common.git"
-		            release = "master"
-		            test = "fty_common_selftest" >
-
-		            <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
-		                repository = "https://github.com/42ity/fty-common-logging.git"
-		                release = "master"
-		                test = "fty_common_logging_selftest" >
-
-		                <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-		                    repository = "https://github.com/42ity/log4cplus.git"
-		                    release = "1.1.2-FTY-master"
-		                    />
-		            </use>
-		        </use>
-
-		        <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
-		            repository = "https://github.com/42ity/fty-common-logging.git"
-		            release = "master"
-		            test = "fty_common_logging_selftest" >
-
-		            <use project = "log4cplus" header = "log4cplus/logger.h" test = "appender_test"
-		                repository = "https://github.com/42ity/log4cplus.git"
-		                release = "1.1.2-FTY-master"
-		                />
-		        </use>
-		    </use>
-		</use>
-    </use>
+    <use project = "cxxtools"
+        test = "cxxtools::Utf8Codec::Utf8Codec"
+        header = "cxxtools/allocator.h"
+        repository = "https://github.com/42ity/cxxtools.git"/>
 
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "range_scan"   private = "1">Perform one range scan</class>
