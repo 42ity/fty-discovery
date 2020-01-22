@@ -70,6 +70,9 @@ struct _fty_discovery_server_t {
     char *percent;
     discovered_devices_t devices_discovered;
     nutcommon::KeyValues nut_mapping_inventory;
+    std::map<std::string, std::string> default_values_aux;
+    std::map<std::string, std::string> default_values_ext;
+    std::vector<link_t> default_values_links;
 };
 
 zactor_t* range_scanner_new(fty_discovery_server_t *self) {
@@ -346,6 +349,33 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             item = zconfig_next(item);
         }
     }
+    section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_AUX);
+    if (section) {
+        for (zconfig_t *item = zconfig_child(section); item; item = zconfig_next(item)) {
+            self->default_values_aux[zconfig_name(item)] = zconfig_value(item);
+        }
+    }
+    section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_EXT);
+    if (section) {
+        for (zconfig_t *item = zconfig_child(section); item; item = zconfig_next(item)) {
+            self->default_values_ext[zconfig_name(item)] = zconfig_value(item);
+        }
+    }
+    section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_LINKS);
+    if (section) {
+        for (zconfig_t *link = zconfig_child(section); link; link = zconfig_next(link)) {
+            link_t l;
+            l.src = std::stoul(zconfig_get(link, "src", "0"));
+            l.dest = 0;
+            l.src_out = nullptr;
+            l.dest_in = nullptr;
+            l.type = std::stoul(zconfig_get(link, "type", "1"));
+
+            if (l.src > 0) {
+                self->default_values_links.emplace_back(l);
+            }
+        }
+    }
     if (list_scans.empty() && streq(strType, DISCOVERY_TYPE_MULTI)) {
         valid = false;
         log_error("error in config file %s : can't have rangescan without range",
@@ -418,8 +448,6 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         return;
     }
 
-    fty_proto_aux_insert(asset, "status", "%s", "nonactive");
-
     // set name
     const char *name = fty_proto_ext_string(asset, "hostname", NULL);
     if (name) {
@@ -450,8 +478,6 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
         fty_proto_ext_insert(asset, "create_ts", "%s", mbstr);
     }
-    fty_proto_ext_insert(asset, "create_user", CREATE_USER);
-    fty_proto_ext_insert(asset, "create_mode", CREATE_MODE);
 
     self->devices_discovered.mtx_list.lock();
     if(!daisy_chain) {
@@ -467,6 +493,13 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
             fty_proto_destroy(&asset);
             return;
         }
+    }
+
+    for (const auto& property : self->default_values_aux) {
+        fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+    }
+    for (const auto& property : self->default_values_ext) {
+        fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
     }
 
     fty_proto_print(asset);
@@ -507,6 +540,13 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
             fty_proto_destroy(&asset);
             return;
         }
+
+        // create asset links
+        for (auto& link : self->default_values_links) {
+            link.dest = std::stoul(strchr(str_resp, '-')+1);
+        }
+        auto conn = tntdb::connectCached(DBConn::url);
+        DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
 
         zhash_update(self->devices_discovered.device_list, str_resp, strdup(ip));
         zhash_freefn(self->devices_discovered.device_list, str_resp, free);
@@ -1104,6 +1144,9 @@ fty_discovery_server_new() {
     self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
     self->nut_mapping_inventory = nutcommon::KeyValues();
+    self->default_values_aux = std::map<std::string, std::string>();
+    self->default_values_ext = std::map<std::string, std::string>();
+    self->default_values_links = std::vector<link_t>();
     return self;
 }
 
@@ -1137,6 +1180,9 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
         self->configuration_scan.scan_list.~vector();
         self->localscan_subscan.~vector();
         self->nut_mapping_inventory.~map();
+        self->default_values_aux.~map();
+        self->default_values_ext.~map();
+        self->default_values_links.~vector();
         //  Free object itself
         free(self);
         *self_p = NULL;

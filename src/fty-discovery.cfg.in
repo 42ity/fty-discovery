@@ -13,6 +13,17 @@ discovery
     scans
     ips
     documents
+    defaultValues
+        aux
+            create_mode = "3"
+            create_user = "system"
+            parent = "0"
+            priority = "5"
+            status = "nonactive"
+        links
+            1
+                src = "0"
+                type = "1"
 
 parameters
     mappingFile = "/usr/share/fty-common-nut/mapping.conf"

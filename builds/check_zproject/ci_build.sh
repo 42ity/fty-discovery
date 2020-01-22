@@ -10,13 +10,15 @@ set -ex
 # such checkouts are directly in the same parent directory as "this" project.
 cd "$REPO_DIR/.."
 git clone --quiet --depth 1 https://github.com/42ity/libcidr.git cidr
-git clone --quiet --depth 1 https://github.com/42ity/libsodium.git libsodium
+git clone --quiet --depth 1 -b stable https://github.com/42ity/libsodium.git libsodium
 git clone --quiet --depth 1 https://github.com/42ity/libzmq.git libzmq
 git clone --quiet --depth 1 https://github.com/42ity/czmq.git czmq
 git clone --quiet --depth 1 https://github.com/42ity/malamute.git malamute
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-logging.git fty-common-logging
 git clone --quiet --depth 1 https://github.com/42ity/fty-proto.git fty-proto
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-nut.git fty-common-nut
+git clone --quiet --depth 1 -b 1.3-FTY-master https://github.com/42ity/tntdb.git tntdb
+git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-db.git fty-common-db
 git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git cxxtools
 cd -
 
