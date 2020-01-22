@@ -33,6 +33,8 @@ Build-Depends: debhelper (>= 9),
     libfty-common-logging-dev,
     libfty-proto-dev (>= 1.0.0),
     libfty-common-nut-dev,
+    libtntdb-dev,
+    libfty-common-db-dev,
     libcxxtools-dev,
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
@@ -61,6 +63,8 @@ Depends:
     libfty-common-logging-dev,
     libfty-proto-dev (>= 1.0.0),
     libfty-common-nut-dev,
+    libtntdb-dev,
+    libfty-common-db-dev,
     libcxxtools-dev,
     libfty-discovery0 (= ${binary:Version})
 Description: fty-discovery development tools

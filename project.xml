@@ -82,6 +82,17 @@
             repository = "https://github.com/42ity/fty-common-nut.git"
             test = "fty_common_nut_selftest" />
 
+    <use project = "tntdb"
+            test = "tntdb::Date::gmtime"
+            repository = "https://github.com/42ity/tntdb.git"
+            release = "1.3-FTY-master"
+            builddir = "tntdb"/>
+
+    <use project = "fty-common-db" libname = "libfty_common_db" header = "fty_common_db.h"
+            repository = "https://github.com/42ity/fty-common-db.git"
+            release = "master"
+            test = "fty_common_db_selftest" />
+
     <use project = "cxxtools"
         test = "cxxtools::Utf8Codec::Utf8Codec"
         header = "cxxtools/allocator.h"

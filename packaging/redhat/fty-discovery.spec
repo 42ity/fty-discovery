@@ -64,6 +64,8 @@ BuildRequires:  malamute-devel >= 1.0.0
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  fty-common-nut-devel
+BuildRequires:  tntdb-devel
+BuildRequires:  fty-common-db-devel
 BuildRequires:  cxxtools-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
@@ -97,6 +99,8 @@ Requires:       malamute-devel >= 1.0.0
 Requires:       fty-common-logging-devel
 Requires:       fty-proto-devel >= 1.0.0
 Requires:       fty-common-nut-devel
+Requires:       tntdb-devel
+Requires:       fty-common-db-devel
 Requires:       cxxtools-devel
 
 %description devel

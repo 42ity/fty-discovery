@@ -89,6 +89,7 @@ int main (int argc, char *argv [])
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
     zsys_init ();
+    DBConn::dbpath();
     log_debug ("fty_discovery - range: %s, agent %i", range ? range : "none", agent);
 
     // configure actor

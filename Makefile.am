@@ -21,11 +21,13 @@ AM_CPPFLAGS = \
     ${fty_common_logging_CFLAGS} \
     ${fty_proto_CFLAGS} \
     ${fty_common_nut_CFLAGS} \
+    ${tntdb_CFLAGS} \
+    ${fty_common_db_CFLAGS} \
     ${cxxtools_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${openssl_LIBS} ${cidr_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${fty_common_nut_LIBS} ${cxxtools_LIBS}
+project_libs = ${openssl_LIBS} ${cidr_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${malamute_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${fty_common_nut_LIBS} ${tntdb_LIBS} ${fty_common_db_LIBS} ${cxxtools_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -55,6 +57,8 @@ EXTRA_DIST += \
     Findfty_common_logging.cmake \
     Findfty_proto.cmake \
     Findfty_common_nut.cmake \
+    Findtntdb.cmake \
+    Findfty_common_db.cmake \
     Findcxxtools.cmake \
     builds/cmake/Modules/ClangFormat.cmake \
     builds/cmake/clang-format-check.sh.in \

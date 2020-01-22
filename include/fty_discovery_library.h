@@ -37,6 +37,8 @@
 #include <fty_log.h>
 #include <ftyproto.h>
 #include <fty_common_nut.h>
+#include <tntdb.h>
+#include <fty_common_db.h>
 #include <cxxtools/allocator.h>
 
 //  FTY_DISCOVERY version macros for compile-time API detection
