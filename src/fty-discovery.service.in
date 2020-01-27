@@ -1,7 +1,7 @@
 [Unit]
 Description=fty-discovery service
-After=malamute.service network.target
-Requires=malamute.service network.target
+After=malamute.service network.target fty-db-init.service
+Requires=malamute.service network.target fty-db-init.service
 Before=fty-asset.service
 PartOf=bios.target
 
@@ -13,7 +13,7 @@ Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 Environment="NUT_ALTPIDPATH=\"\""
 Environment="NUT_STATEPATH=/tmp"
-EnvironmentFile=-@sysconfdir@/default/bios-db-rw
+EnvironmentFile=@sysconfdir@/default/bios-db-rw
 ExecStart=@prefix@/bin/fty-discovery --agent
 Restart=always
 
