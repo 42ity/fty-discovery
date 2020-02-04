@@ -34,11 +34,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libcidr0-dev >/
        (command -v brew >/dev/null 2>&1 && brew ls --versions cidr >/dev/null 2>&1) || \
        ([ -e "cidr" ]) \
 ; then
- FOLDER_NAME="cidr"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="cidr"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'cidr' from Git repository..." >&2
@@ -55,7 +56,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libcidr0-dev >/
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/libcidr.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -90,7 +92,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libcidr0-dev >/
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -100,11 +104,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libsodium-dev >
        (command -v brew >/dev/null 2>&1 && brew ls --versions libsodium >/dev/null 2>&1) || \
        ([ -e "libsodium" ]) \
 ; then
- FOLDER_NAME="libsodium"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="libsodium"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'libsodium' from Git repository..." >&2
@@ -121,7 +126,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libsodium-dev >
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/libsodium.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -156,7 +162,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libsodium-dev >
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -166,11 +174,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libzmq3-dev >/d
        (command -v brew >/dev/null 2>&1 && brew ls --versions libzmq >/dev/null 2>&1) || \
        ([ -e "libzmq" ]) \
 ; then
- FOLDER_NAME="libzmq"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="libzmq"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'libzmq' from Git repository..." >&2
@@ -187,7 +196,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libzmq3-dev >/d
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/libzmq.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -222,7 +232,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libzmq3-dev >/d
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -232,11 +244,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libczmq-dev >/d
        (command -v brew >/dev/null 2>&1 && brew ls --versions czmq >/dev/null 2>&1) || \
        ([ -e "czmq" ]) \
 ; then
- FOLDER_NAME="czmq"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="czmq"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'czmq' from Git repository..." >&2
@@ -253,7 +266,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libczmq-dev >/d
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/czmq.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -288,7 +302,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libczmq-dev >/d
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -298,11 +314,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libmlm-dev >/de
        (command -v brew >/dev/null 2>&1 && brew ls --versions malamute >/dev/null 2>&1) || \
        ([ -e "malamute" ]) \
 ; then
- FOLDER_NAME="malamute"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="malamute"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'malamute' from Git repository..." >&2
@@ -319,7 +336,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libmlm-dev >/de
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/malamute.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -354,7 +372,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libmlm-dev >/de
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -364,11 +384,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_l
        (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-logging >/dev/null 2>&1) || \
        ([ -e "fty-common-logging" ]) \
 ; then
- FOLDER_NAME="fty-common-logging"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="fty-common-logging"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-common-logging' from Git repository..." >&2
@@ -385,7 +406,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_l
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-common-logging.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -420,7 +442,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_l
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -430,11 +454,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_proto-de
        (command -v brew >/dev/null 2>&1 && brew ls --versions fty-proto >/dev/null 2>&1) || \
        ([ -e "fty-proto" ]) \
 ; then
- FOLDER_NAME="fty-proto"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="fty-proto"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-proto' from Git repository..." >&2
@@ -451,7 +476,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_proto-de
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-proto.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -486,7 +512,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_proto-de
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -496,11 +524,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_n
        (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-nut >/dev/null 2>&1) || \
        ([ -e "fty-common-nut" ]) \
 ; then
- FOLDER_NAME="fty-common-nut"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="fty-common-nut"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'fty-common-nut' from Git repository..." >&2
@@ -517,7 +546,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_n
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-common-nut.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -552,7 +582,128 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_n
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
+fi
+fi
+
+
+# Start of recipe for dependency: tntdb
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list tntdb-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions tntdb >/dev/null 2>&1) || \
+       ([ -e "tntdb" ]) \
+; then
+
+    FOLDER_NAME="tntdb-1.3-fty-master"
+
+if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'tntdb' from Git repository..." >&2
+    echo "git clone -b 1.3-FTY-master https://github.com/42ity/tntdb.git $FOLDER_NAME"
+    $CI_TIME git clone --quiet --depth 1 -b 1.3-FTY-master https://github.com/42ity/tntdb.git $FOLDER_NAME
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
+    cd ./tntdb
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    echo "Leaving from ${PWD}"
+    cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
+fi
+fi
+
+
+# Start of recipe for dependency: fty-common-db
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_db-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-db >/dev/null 2>&1) || \
+       ([ -e "fty-common-db" ]) \
+; then
+
+    FOLDER_NAME="fty-common-db-master"
+
+if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'fty-common-db' from Git repository..." >&2
+    echo "git clone -b master https://github.com/42ity/fty-common-db.git $FOLDER_NAME"
+    $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-db.git $FOLDER_NAME
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    echo "Leaving from ${PWD}"
+    cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 
@@ -562,11 +713,12 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/
        (command -v brew >/dev/null 2>&1 && brew ls --versions cxxtools >/dev/null 2>&1) || \
        ([ -e "cxxtools" ]) \
 ; then
- FOLDER_NAME="cxxtools"
 
- if [ -d "$FOLDER_NAME" ]; then
+    FOLDER_NAME="cxxtools"
+
+if [ -d "$FOLDER_NAME" ]; then
     echo "$FOLDER_NAME already exist. Skipped." >&2
- else
+else
     echo ""
     BASE_PWD=${PWD}
     echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
@@ -583,7 +735,8 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/
             $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git $FOLDER_NAME
         fi
     fi
-    cd "./$FOLDER_NAME"
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
     CCACHE_BASEDIR=${PWD}
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
@@ -618,7 +771,9 @@ if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/
     $CI_TIME ./configure "${CONFIG_OPTS[@]}"
     $CI_TIME make -j4
     $CI_TIME make install
+    echo "Leaving from ${PWD}"
     cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
 fi
 fi
 

@@ -70,6 +70,8 @@ pkg_deps_prereqs_source: &pkg_deps_prereqs_source
     - libfty-common-logging-dev
     - libfty-proto-dev
     - libfty-common-nut-dev
+    - tntdb-dev
+    - libfty-common-db-dev
     - cxxtools-dev
 
 # NOTE: Our forks are checked out and built without pkg dependencies in use
