@@ -35,9 +35,9 @@ extern "C" {
 #define CFG_DISCOVERY_SCANS_NUM  CFG_DISCOVERY_SCANS"/scanNumber"
 #define CFG_DISCOVERY_IPS_NUM    CFG_DISCOVERY_IPS"/ipNumber"
 #define CFG_DISCOVERY_DOCUMENTS  CFG_DISCOVERY"/documents"
-#define CFG_DISCOVERY_DEFAULT_VALUES_AUX    CFG_DISCOVERY"/defaultValuesAux"
-#define CFG_DISCOVERY_DEFAULT_VALUES_EXT    CFG_DISCOVERY"/defaultValuesExt"
-#define CFG_DISCOVERY_DEFAULT_VALUES_LINKS  CFG_DISCOVERY"/defaultValuesLinks"
+#define CFG_DISCOVERY_DEFAULT_VALUES_AUX    "/defaultValuesAux"
+#define CFG_DISCOVERY_DEFAULT_VALUES_EXT    "/defaultValuesExt"
+#define CFG_DISCOVERY_DEFAULT_VALUES_LINKS  "/defaultValuesLinks"
 
 #define CFG_PARAMETERS                  "/parameters"
 #define CFG_PARAM_MAPPING_FILE          CFG_PARAMETERS"/mappingFile"
