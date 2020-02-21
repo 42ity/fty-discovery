@@ -32,28 +32,16 @@
 #include <cxxtools/regex.h>
 #include <algorithm>
 
-enum DeviceCredentialsProtocols {
-    DCP_NETXML,
-    DCP_SNMPV1,
-    DCP_SNMPV3
-};
+static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
 
-struct CredentialProtocolScanResult {
-    CredentialProtocolScanResult() :
-        protoCredsType(DCP_NETXML),
-        protoCredsPtr(nullptr) {}
+struct ScanResult {
+    ScanResult(const std::string& driver, const std::vector<secw::DocumentPtr>& docs = {}) :
+        nutDriver(driver),
+        documents(docs) {}
 
-    CredentialProtocolScanResult(const nutcommon::CredentialsSNMPv1& creds) :
-        protoCredsType(DCP_SNMPV1),
-        protoCredsPtr(&creds) {}
-
-    CredentialProtocolScanResult(const nutcommon::CredentialsSNMPv3& creds) :
-        protoCredsType(DCP_SNMPV3),
-        protoCredsPtr(&creds) {}
-
-    DeviceCredentialsProtocols protoCredsType;
-    const void* protoCredsPtr;
-    nutcommon::DeviceConfigurations deviceConfigs;
+    std::string nutDriver;
+    std::vector<secw::DocumentPtr> documents;
+    fty::nut::DeviceConfigurations deviceConfigurations;
 };
 
 bool ip_present(discovered_devices_t *device_discovered, std::string ip);
@@ -79,7 +67,7 @@ struct NutOutput {
     std::string ip;
 };
 
-void s_nut_output_to_messages(std::vector<NutOutput>& assets, const nutcommon::DeviceConfigurations& output, discovered_devices_t *devices)
+void s_nut_output_to_messages(std::vector<NutOutput>& assets, const fty::nut::DeviceConfigurations& output, discovered_devices_t *devices)
 {
     for (const auto& device: output) {
         bool found = false;
@@ -110,7 +98,7 @@ void s_nut_output_to_messages(std::vector<NutOutput>& assets, const nutcommon::D
 }
 
 bool
-s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
+s_valid_dumpdata (const fty::nut::DeviceConfiguration &dump)
 {
   if(dump.find("device.type") == dump.end()) {
     log_error("No subtype for this device");
@@ -134,7 +122,7 @@ s_valid_dumpdata (const nutcommon::DeviceConfiguration &dump)
 
 
 bool
-s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon::DeviceConfiguration& dump, const nutcommon::KeyValues* mappings, const std::string &ip, const std::string &type)
+s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut::DeviceConfiguration& dump, const fty::nut::KeyValues* mappings, const std::string &ip, const std::string &type)
 {
     // Set up iteration limits according to daisy-chain configuration.
     int startDevice = 0, endDevice = 0;
@@ -150,7 +138,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const nutcommon
         fty_proto_t *fmsg = fty_proto_new(FTY_PROTO_ASSET);
 
         // Map inventory data.
-        auto mappedDump = nutcommon::performMapping(*mappings, dump, i);
+        auto mappedDump = fty::nut::performMapping(*mappings, dump, i);
         for (auto property : mappedDump) {
             fty_proto_ext_insert(fmsg, property.first.c_str(), "%s", property.second.c_str());
         }
@@ -255,8 +243,8 @@ dump_data_actor(zsock_t *pipe, void *args) {
     zlist_t *argv = (zlist_t *)args;
     bool valid = true;
     NutOutput *initialAsset;
-    const CredentialProtocolScanResult *cpsr;
-    const nutcommon::KeyValues *mappings;
+    const ScanResult *cpsr;
+    const fty::nut::KeyValues *mappings;
 
     int loop_nb = -1;
     if (::getenv(BIOS_NUT_DUMPDATA_ENV)) {
@@ -278,8 +266,8 @@ dump_data_actor(zsock_t *pipe, void *args) {
         valid = false;
     } else {
        initialAsset = reinterpret_cast<NutOutput*>(zlist_first(argv));
-       cpsr = reinterpret_cast<const CredentialProtocolScanResult*>(zlist_next(argv));
-       mappings = reinterpret_cast<const nutcommon::KeyValues*>(zlist_next(argv));
+       cpsr = reinterpret_cast<const ScanResult*>(zlist_next(argv));
+       mappings = reinterpret_cast<const fty::nut::KeyValues*>(zlist_next(argv));
     }
 
     if(!valid) {
@@ -296,32 +284,16 @@ dump_data_actor(zsock_t *pipe, void *args) {
             return;
         }
 
-        int r = -1;
         const std::string addr = initialAsset->port;
         const std::string ip = initialAsset->ip;
         const std::string type = "device";
-        std::string deviceType = "unknown";
-        nutcommon::DeviceConfiguration nutdata;
 
-        switch (cpsr->protoCredsType) {
-        case DCP_SNMPV3:
-            deviceType = "SNMPv3 securityName='" + reinterpret_cast<const nutcommon::CredentialsSNMPv3*>(cpsr->protoCredsPtr)->secName + "'";
-            r = nutcommon::dumpDeviceSNMPv3(addr, *reinterpret_cast<const nutcommon::CredentialsSNMPv3*>(cpsr->protoCredsPtr), loop_nb, loop_iter_time, nutdata);
-            break;
-        case DCP_SNMPV1:
-            deviceType = "SNMPv1 community='" + reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr)->community + "'";
-            r = nutcommon::dumpDeviceSNMPv1(addr, *reinterpret_cast<const nutcommon::CredentialsSNMPv1*>(cpsr->protoCredsPtr), loop_nb, loop_iter_time, nutdata);
-            break;
-        case DCP_NETXML:
-            deviceType = "NetXML";
-            r = nutcommon::dumpDeviceNetXML(addr, loop_nb, loop_iter_time, nutdata);
-            break;
-        }
-
-        if (r == 0) {
+        fty::nut::DeviceConfiguration nutdata = fty::nut::dumpDevice(cpsr->nutDriver, addr, loop_nb, loop_iter_time, cpsr->documents);
+ 
+        if (!nutdata.empty()) {
             std::vector<fty_proto_t*> assets;
             if (s_valid_dumpdata(nutdata) && s_nut_dumpdata_to_fty_message(assets, nutdata, mappings, ip, type)) {
-                log_debug("Dump data for %s (%s) succeeded.", addr.c_str(), deviceType.c_str());
+                log_debug("Dump data for %s (%s) succeeded.", addr.c_str(), cpsr->nutDriver.c_str());
 
                 for (auto i = assets.cbegin(); i != assets.cend(); i++) {
                     fty_proto_t *asset = *i;
@@ -331,14 +303,14 @@ dump_data_actor(zsock_t *pipe, void *args) {
                 }
             }
             else {
-                log_debug("Dump data for %s (%s) failed: invalid data.", addr.c_str(), deviceType.c_str());
+                log_debug("Dump data for %s (%s) failed: invalid data.", addr.c_str(), cpsr->nutDriver.c_str());
 
                 reply = zmsg_new();
                 zmsg_pushstr(reply, "FAILED");
             }
         }
         else {
-            log_debug("Dump data for %s (%s) failed: failed to dump data.", addr.c_str(), deviceType.c_str());
+            log_debug("Dump data for %s (%s) failed: failed to dump data.", addr.c_str(), cpsr->nutDriver.c_str());
 
             reply = zmsg_new();
             zmsg_pushstr(reply, "FAILED");
@@ -365,7 +337,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
 }
 
 bool
-create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings)
+create_pool_dumpdata(const ScanResult &result, discovered_devices_t *devices, zsock_t *pipe, const fty::nut::KeyValues *mappings)
 {
     bool stop_now =false;
     std::vector<NutOutput> listDiscovered;
@@ -381,7 +353,7 @@ create_pool_dumpdata(const CredentialProtocolScanResult &result, discovered_devi
     char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_DUMPPOOL_NUMBER, DEFAULT_MAX_DUMPPOOL_NUMBER);
     const size_t number_max_pool = std::stoi(strNbPool);
 
-    s_nut_output_to_messages(listDiscovered, result.deviceConfigs, devices);
+    s_nut_output_to_messages(listDiscovered, result.deviceConfigurations, devices);
     size_t number_asset_view = 0;
     while(number_asset_view < listDiscovered.size()) {
         if(ask_actor_term(pipe)) stop_now = true;
@@ -514,7 +486,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
 
     CIDRList *listAddr = (CIDRList *) zlist_first(argv);
     discovered_devices_t *devices = (discovered_devices_t*) zlist_next(argv);
-    const nutcommon::KeyValues *mappings = (const nutcommon::KeyValues*) zlist_next(argv);
+    const fty::nut::KeyValues *mappings = (const fty::nut::KeyValues*) zlist_next(argv);
     const std::set<std::string> *documentNames = (const std::set<std::string>*) zlist_next(argv);
     if (!listAddr || !devices || !mappings || !documentNames) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
@@ -527,9 +499,36 @@ scan_nut_actor(zsock_t *pipe, void *args)
         return;
     }
 
-    std::vector<CredentialProtocolScanResult> results;
-    const auto credentialsV3 = nutcommon::getCredentialsSNMPv3(*documentNames);
-    const auto credentialsV1 = nutcommon::getCredentialsSNMPv1(*documentNames);
+    std::vector<ScanResult> results;
+    std::vector<secw::DocumentPtr> credentialsV3;
+    std::vector<secw::DocumentPtr> credentialsV1;
+
+    // Grab security documents.
+    try {
+        fty::SocketSyncClient secwSyncClient(SECW_SOCKET_PATH);
+
+        auto client = secw::ConsumerAccessor(secwSyncClient);
+        auto secCreds = client.getListDocumentsWithPrivateData("default", "discovery_monitoring");
+
+        for (const auto &i : secCreds) {
+            if (!documentNames->count(i->getId())) {
+                continue;
+            }
+
+            auto credV3 = secw::Snmpv3::tryToCast(i);
+            auto credV1 = secw::Snmpv1::tryToCast(i);
+            if (credV3) {
+                credentialsV3.emplace_back(i);
+            }
+            else if (credV1) {
+                credentialsV1.emplace_back(i);
+            }
+        }
+        log_debug("Fetched %d SNMPv3 and %d SNMPv1 credentials from security wallet.", credentialsV3.size(), credentialsV1.size());
+    }
+    catch (std::exception &e) {
+        log_warning("Failed to fetch credentials from security wallet: %s", e.what());
+    }
 
     // Grab timeout.
     int timeout;
@@ -543,42 +542,53 @@ scan_nut_actor(zsock_t *pipe, void *args)
         timeout = std::stoi(strTimeout);
     }
 
-    const nutcommon::ScanRangeOptions scanRangeOptions(
-        listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
-        listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
-        timeout
-    );
-
     /**
      * Scan the network and store credential/protocol pairs which returned data.
      */
     // SNMPv3 scan.
     {
         for (const auto& credential : credentialsV3) {
-            CredentialProtocolScanResult result(credential);
-            nutcommon::scanDeviceRangeSNMPv3(scanRangeOptions, credential, false, result.deviceConfigs);
-            if (!result.deviceConfigs.empty()) {
-                results.emplace_back(result);
-            }
+            ScanResult result("snmp-ups", { credential });
+
+            result.deviceConfigurations = fty::nut::scanRangeDevices(
+                fty::nut::SCAN_PROTOCOL_SNMP,
+                listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
+                listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
+                timeout,
+                result.documents
+            );
+
+            results.emplace_back(result);
         }
     }
     // SNMPv1 scan.
     {
         for (const auto& credential : credentialsV1) {
-            CredentialProtocolScanResult result(credential);
-            nutcommon::scanDeviceRangeSNMPv1(scanRangeOptions, credential, false, result.deviceConfigs);
-            if (!result.deviceConfigs.empty()) {
-                results.emplace_back(result);
-            }
+            ScanResult result("snmp-ups", { credential });
+
+            result.deviceConfigurations = fty::nut::scanRangeDevices(
+                fty::nut::SCAN_PROTOCOL_SNMP,
+                listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
+                listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
+                timeout,
+                result.documents
+            );
+
+            results.emplace_back(result);
         }
     }
     // NetXML scan.
     {
-        CredentialProtocolScanResult result;
-        nutcommon::scanDeviceRangeNetXML(scanRangeOptions, result.deviceConfigs);
-        if (!result.deviceConfigs.empty()) {
-            results.emplace_back(result);
-        }
+        ScanResult result("netxml-ups");
+
+        result.deviceConfigurations = fty::nut::scanRangeDevices(
+            fty::nut::SCAN_PROTOCOL_NETXML,
+            listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
+            listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
+            timeout
+        );
+
+        results.emplace_back(result);
     }
 
     if(ask_actor_term(pipe)) stop_now = true;

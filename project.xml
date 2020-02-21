@@ -64,12 +64,23 @@
         </use>
     </use>
 
+    <use project = "cxxtools"
+        test = "cxxtools::Utf8Codec::Utf8Codec"
+        header = "cxxtools/allocator.h"
+        repository = "https://github.com/42ity/cxxtools.git"/>
+
     <use project = "malamute" min_major = "1" test = "mlm_server_test"
         repository = "https://github.com/42ity/malamute.git" />
 
+    <use project = "tntdb"
+        repository = "https://github.com/42ity/tntdb.git"
+        builddir = "tntdb" test = "tntdb::Date::gmtime" />
+
+    <use project = "fty-common" libname = "libfty_common" header = "fty_common.h"
+        repository = "https://github.com/42ity/fty-common.git" />
+
     <!-- Note: pure C projects should use fty-log/fty_logger.h, C++ use fty_log.h -->
-    <use project = "fty-common-logging" libname = "libfty_common_logging"
-        header = "fty_log.h"
+    <use project = "fty-common-logging" libname = "libfty_common_logging" header = "fty_log.h"
         repository = "https://github.com/42ity/fty-common-logging.git"
         test = "fty_common_logging_selftest" />
 
@@ -78,25 +89,17 @@
         repository = "https://github.com/42ity/fty-proto.git"
         test = "fty_proto_test" />
 
-    <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
-            repository = "https://github.com/42ity/fty-common-nut.git"
-            test = "fty_common_nut_selftest" />
-
-    <use project = "tntdb"
-            test = "tntdb::Date::gmtime"
-            repository = "https://github.com/42ity/tntdb.git"
-            release = "1.3-FTY-master"
-            builddir = "tntdb"/>
-
     <use project = "fty-common-db" libname = "libfty_common_db" header = "fty_common_db.h"
-            repository = "https://github.com/42ity/fty-common-db.git"
-            release = "master"
-            test = "fty_common_db_selftest" />
+        repository = "https://github.com/42ity/fty-common-db.git"
+        test = "fty_common_db_selftest" />
 
-    <use project = "cxxtools"
-        test = "cxxtools::Utf8Codec::Utf8Codec"
-        header = "cxxtools/allocator.h"
-        repository = "https://github.com/42ity/cxxtools.git"/>
+    <use project = "fty-security-wallet" libname = "libfty_security_wallet" header = "fty_security_wallet.h"
+        repository = "https://github.com/42ity/fty-security-wallet.git"
+        test = "fty_security_wallet_selftest" />
+
+    <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
+        repository = "https://github.com/42ity/fty-common-nut.git"
+        test = "fty_common_nut_selftest" />
 
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "range_scan"   private = "1">Perform one range scan</class>

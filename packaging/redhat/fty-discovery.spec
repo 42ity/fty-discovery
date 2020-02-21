@@ -60,13 +60,15 @@ BuildRequires:  libcidr-devel
 BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel >= 3.0.2
+BuildRequires:  cxxtools-devel
 BuildRequires:  malamute-devel >= 1.0.0
+BuildRequires:  tntdb-devel
+BuildRequires:  fty-common-devel
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
-BuildRequires:  fty-common-nut-devel
-BuildRequires:  tntdb-devel
 BuildRequires:  fty-common-db-devel
-BuildRequires:  cxxtools-devel
+BuildRequires:  fty-security-wallet-devel
+BuildRequires:  fty-common-nut-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -95,13 +97,15 @@ Requires:       libcidr-devel
 Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel >= 3.0.2
+Requires:       cxxtools-devel
 Requires:       malamute-devel >= 1.0.0
+Requires:       tntdb-devel
+Requires:       fty-common-devel
 Requires:       fty-common-logging-devel
 Requires:       fty-proto-devel >= 1.0.0
-Requires:       fty-common-nut-devel
-Requires:       tntdb-devel
 Requires:       fty-common-db-devel
-Requires:       cxxtools-devel
+Requires:       fty-security-wallet-devel
+Requires:       fty-common-nut-devel
 
 %description devel
 42ity service for discovering devices development tools
