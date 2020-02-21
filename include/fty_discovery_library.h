@@ -33,13 +33,15 @@
 #include <openssl/sha.h>
 #include <libcidr.h>
 #include <czmq.h>
+#include <cxxtools/allocator.h>
 #include <malamute.h>
+#include <tntdb.h>
+#include <fty_common.h>
 #include <fty_log.h>
 #include <ftyproto.h>
-#include <fty_common_nut.h>
-#include <tntdb.h>
 #include <fty_common_db.h>
-#include <cxxtools/allocator.h>
+#include <fty_security_wallet.h>
+#include <fty_common_nut.h>
 
 //  FTY_DISCOVERY version macros for compile-time API detection
 #define FTY_DISCOVERY_VERSION_MAJOR 1

@@ -69,7 +69,7 @@ struct _fty_discovery_server_t {
     zactor_t *range_scanner;
     char *percent;
     discovered_devices_t devices_discovered;
-    nutcommon::KeyValues nut_mapping_inventory;
+    fty::nut::KeyValues nut_mapping_inventory;
     std::map<std::string, std::string> default_values_aux;
     std::map<std::string, std::string> default_values_ext;
     std::vector<link_t> default_values_links;
@@ -686,7 +686,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         }
         else {
             try {
-                self->nut_mapping_inventory = nutcommon::loadMapping(mappingPath, "inventoryMapping");
+                self->nut_mapping_inventory = fty::nut::loadMapping(mappingPath, "inventoryMapping");
                 log_info("Mapping file '%s' loaded, %d inventory mappings", mappingPath, self->nut_mapping_inventory.size());
             }
             catch (std::exception &e) {
@@ -1143,7 +1143,7 @@ fty_discovery_server_new() {
     self->configuration_scan.scan_size = 0;
     self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
-    self->nut_mapping_inventory = nutcommon::KeyValues();
+    self->nut_mapping_inventory = fty::nut::KeyValues();
     self->default_values_aux = std::map<std::string, std::string>();
     self->default_values_ext = std::map<std::string, std::string>();
     self->default_values_links = std::vector<link_t>();

@@ -62,7 +62,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'cidr' using ci_dependencies.sh the default branch..." >&2
@@ -132,7 +132,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'libsodium' using ci_dependencies.sh the default branch..." >&2
@@ -202,7 +202,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'libzmq' using ci_dependencies.sh the default branch..." >&2
@@ -272,7 +272,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'czmq' using ci_dependencies.sh the default branch..." >&2
@@ -282,6 +282,76 @@ else
             ($CI_TIME source ./ci_dependencies.sh)
         else
             echo "`date`: INFO: Building prerequisites of 'czmq' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    echo "Leaving from ${PWD}"
+    cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
+fi
+fi
+
+
+# Start of recipe for dependency: cxxtools
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions cxxtools >/dev/null 2>&1) || \
+       ([ -e "cxxtools" ]) \
+; then
+
+    FOLDER_NAME="cxxtools"
+
+if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
+    if [ "x$REQUESTED_BRANCH" = "x" ]; then
+        echo "git clone https://github.com/42ity/cxxtools.git $FOLDER_NAME"
+        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git $FOLDER_NAME
+    else
+        if git ls-remote --heads https://github.com/42ity/cxxtools.git | grep -q "$REQUESTED_BRANCH"; then
+            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/cxxtools.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/cxxtools.git $FOLDER_NAME
+        else
+            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/cxxtools.git"
+            echo "git clone https://github.com/42ity/cxxtools.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git $FOLDER_NAME
+        fi
+    fi
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
             ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
         fi
     fi
@@ -342,7 +412,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'malamute' using ci_dependencies.sh the default branch..." >&2
@@ -352,6 +422,147 @@ else
             ($CI_TIME source ./ci_dependencies.sh)
         else
             echo "`date`: INFO: Building prerequisites of 'malamute' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    echo "Leaving from ${PWD}"
+    cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
+fi
+fi
+
+
+# Start of recipe for dependency: tntdb
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list tntdb-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions tntdb >/dev/null 2>&1) || \
+       ([ -e "tntdb" ]) \
+; then
+
+    FOLDER_NAME="tntdb"
+
+if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'tntdb' from Git repository..." >&2
+    if [ "x$REQUESTED_BRANCH" = "x" ]; then
+        echo "git clone https://github.com/42ity/tntdb.git $FOLDER_NAME"
+        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/tntdb.git $FOLDER_NAME
+    else
+        if git ls-remote --heads https://github.com/42ity/tntdb.git | grep -q "$REQUESTED_BRANCH"; then
+            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/tntdb.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/tntdb.git $FOLDER_NAME
+        else
+            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/tntdb.git"
+            echo "git clone https://github.com/42ity/tntdb.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/tntdb.git $FOLDER_NAME
+        fi
+    fi
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
+    cd ./tntdb
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    echo "Leaving from ${PWD}"
+    cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
+fi
+fi
+
+
+# Start of recipe for dependency: fty-common
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common >/dev/null 2>&1) || \
+       ([ -e "fty-common" ]) \
+; then
+
+    FOLDER_NAME="fty-common"
+
+if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'fty-common' from Git repository..." >&2
+    if [ "x$REQUESTED_BRANCH" = "x" ]; then
+        echo "git clone https://github.com/42ity/fty-common.git $FOLDER_NAME"
+        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-common.git $FOLDER_NAME
+    else
+        if git ls-remote --heads https://github.com/42ity/fty-common.git | grep -q "$REQUESTED_BRANCH"; then
+            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-common.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-common.git $FOLDER_NAME
+        else
+            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/fty-common.git"
+            echo "git clone https://github.com/42ity/fty-common.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-common.git $FOLDER_NAME
+        fi
+    fi
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-common' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-common' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'fty-common' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
             ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
         fi
     fi
@@ -412,7 +623,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'fty-common-logging' using ci_dependencies.sh the default branch..." >&2
@@ -482,7 +693,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'fty-proto' using ci_dependencies.sh the default branch..." >&2
@@ -492,6 +703,146 @@ else
             ($CI_TIME source ./ci_dependencies.sh)
         else
             echo "`date`: INFO: Building prerequisites of 'fty-proto' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    echo "Leaving from ${PWD}"
+    cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
+fi
+fi
+
+
+# Start of recipe for dependency: fty-common-db
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_db-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-db >/dev/null 2>&1) || \
+       ([ -e "fty-common-db" ]) \
+; then
+
+    FOLDER_NAME="fty-common-db"
+
+if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'fty-common-db' from Git repository..." >&2
+    if [ "x$REQUESTED_BRANCH" = "x" ]; then
+        echo "git clone https://github.com/42ity/fty-common-db.git $FOLDER_NAME"
+        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-common-db.git $FOLDER_NAME
+    else
+        if git ls-remote --heads https://github.com/42ity/fty-common-db.git | grep -q "$REQUESTED_BRANCH"; then
+            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-common-db.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-common-db.git $FOLDER_NAME
+        else
+            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/fty-common-db.git"
+            echo "git clone https://github.com/42ity/fty-common-db.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-common-db.git $FOLDER_NAME
+        fi
+    fi
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
+        fi
+    fi
+    if [ -e autogen.sh ]; then
+        $CI_TIME ./autogen.sh 2> /dev/null
+    fi
+    if [ -e buildconf ]; then
+        $CI_TIME ./buildconf 2> /dev/null
+    fi
+    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
+        $CI_TIME libtoolize --copy --force && \
+        $CI_TIME aclocal -I . && \
+        $CI_TIME autoheader && \
+        $CI_TIME automake --add-missing --copy && \
+        $CI_TIME autoconf || \
+        $CI_TIME autoreconf -fiv
+    fi
+    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
+    $CI_TIME make -j4
+    $CI_TIME make install
+    echo "Leaving from ${PWD}"
+    cd "${BASE_PWD}"
+    echo "Now in ${PWD}"
+fi
+fi
+
+
+# Start of recipe for dependency: fty-security-wallet
+if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_security_wallet-dev >/dev/null 2>&1) || \
+       (command -v brew >/dev/null 2>&1 && brew ls --versions fty-security-wallet >/dev/null 2>&1) || \
+       ([ -e "fty-security-wallet" ]) \
+; then
+
+    FOLDER_NAME="fty-security-wallet"
+
+if [ -d "$FOLDER_NAME" ]; then
+    echo "$FOLDER_NAME already exist. Skipped." >&2
+else
+    echo ""
+    BASE_PWD=${PWD}
+    echo "`date`: INFO: Building prerequisite 'fty-security-wallet' from Git repository..." >&2
+    if [ "x$REQUESTED_BRANCH" = "x" ]; then
+        echo "git clone https://github.com/42ity/fty-security-wallet.git $FOLDER_NAME"
+        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-security-wallet.git $FOLDER_NAME
+    else
+        if git ls-remote --heads https://github.com/42ity/fty-security-wallet.git | grep -q "$REQUESTED_BRANCH"; then
+            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-security-wallet.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/fty-security-wallet.git $FOLDER_NAME
+        else
+            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/fty-security-wallet.git"
+            echo "git clone https://github.com/42ity/fty-security-wallet.git $FOLDER_NAME"
+            $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/fty-security-wallet.git $FOLDER_NAME
+        fi
+    fi
+    echo "Entering in ${PWD}/${FOLDER_NAME}"
+    cd "./${FOLDER_NAME}"
+    CCACHE_BASEDIR=${PWD}
+    export CCACHE_BASEDIR
+        git --no-pager log --oneline -n1
+    if [ -e ci_dependencies.sh ]; then
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
+        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
+        if [ "x$REQUESTED_BRANCH" = "x" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-security-wallet' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
+            echo "`date`: INFO: Building prerequisites of 'fty-security-wallet' using ci_dependencies.sh the default branch..." >&2
+            ($CI_TIME source ./ci_dependencies.sh)
+        else
+            echo "`date`: INFO: Building prerequisites of 'fty-security-wallet' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
             ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
         fi
     fi
@@ -552,7 +903,7 @@ else
     export CCACHE_BASEDIR
         git --no-pager log --oneline -n1
     if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
+        PROPAGATED_BRANCH="`git branch | grep \* | cut -d ' ' -f2`"
         DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
         if [ "x$REQUESTED_BRANCH" = "x" ]; then
             echo "`date`: INFO: Building prerequisites of 'fty-common-nut' using ci_dependencies.sh the default branch..." >&2
@@ -562,195 +913,6 @@ else
             ($CI_TIME source ./ci_dependencies.sh)
         else
             echo "`date`: INFO: Building prerequisites of 'fty-common-nut' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
-        fi
-    fi
-    if [ -e autogen.sh ]; then
-        $CI_TIME ./autogen.sh 2> /dev/null
-    fi
-    if [ -e buildconf ]; then
-        $CI_TIME ./buildconf 2> /dev/null
-    fi
-    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-        $CI_TIME libtoolize --copy --force && \
-        $CI_TIME aclocal -I . && \
-        $CI_TIME autoheader && \
-        $CI_TIME automake --add-missing --copy && \
-        $CI_TIME autoconf || \
-        $CI_TIME autoreconf -fiv
-    fi
-    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-    $CI_TIME make -j4
-    $CI_TIME make install
-    echo "Leaving from ${PWD}"
-    cd "${BASE_PWD}"
-    echo "Now in ${PWD}"
-fi
-fi
-
-
-# Start of recipe for dependency: tntdb
-if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list tntdb-dev >/dev/null 2>&1) || \
-       (command -v brew >/dev/null 2>&1 && brew ls --versions tntdb >/dev/null 2>&1) || \
-       ([ -e "tntdb" ]) \
-; then
-
-    FOLDER_NAME="tntdb-1.3-fty-master"
-
-if [ -d "$FOLDER_NAME" ]; then
-    echo "$FOLDER_NAME already exist. Skipped." >&2
-else
-    echo ""
-    BASE_PWD=${PWD}
-    echo "`date`: INFO: Building prerequisite 'tntdb' from Git repository..." >&2
-    echo "git clone -b 1.3-FTY-master https://github.com/42ity/tntdb.git $FOLDER_NAME"
-    $CI_TIME git clone --quiet --depth 1 -b 1.3-FTY-master https://github.com/42ity/tntdb.git $FOLDER_NAME
-    echo "Entering in ${PWD}/${FOLDER_NAME}"
-    cd "./${FOLDER_NAME}"
-    cd ./tntdb
-    CCACHE_BASEDIR=${PWD}
-    export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-    if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
-        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
-        if [ "x$REQUESTED_BRANCH" = "x" ]; then
-            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh the default branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh)
-        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
-            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh the default branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh)
-        else
-            echo "`date`: INFO: Building prerequisites of 'tntdb' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
-        fi
-    fi
-    if [ -e autogen.sh ]; then
-        $CI_TIME ./autogen.sh 2> /dev/null
-    fi
-    if [ -e buildconf ]; then
-        $CI_TIME ./buildconf 2> /dev/null
-    fi
-    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-        $CI_TIME libtoolize --copy --force && \
-        $CI_TIME aclocal -I . && \
-        $CI_TIME autoheader && \
-        $CI_TIME automake --add-missing --copy && \
-        $CI_TIME autoconf || \
-        $CI_TIME autoreconf -fiv
-    fi
-    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-    $CI_TIME make -j4
-    $CI_TIME make install
-    echo "Leaving from ${PWD}"
-    cd "${BASE_PWD}"
-    echo "Now in ${PWD}"
-fi
-fi
-
-
-# Start of recipe for dependency: fty-common-db
-if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list libfty_common_db-dev >/dev/null 2>&1) || \
-       (command -v brew >/dev/null 2>&1 && brew ls --versions fty-common-db >/dev/null 2>&1) || \
-       ([ -e "fty-common-db" ]) \
-; then
-
-    FOLDER_NAME="fty-common-db-master"
-
-if [ -d "$FOLDER_NAME" ]; then
-    echo "$FOLDER_NAME already exist. Skipped." >&2
-else
-    echo ""
-    BASE_PWD=${PWD}
-    echo "`date`: INFO: Building prerequisite 'fty-common-db' from Git repository..." >&2
-    echo "git clone -b master https://github.com/42ity/fty-common-db.git $FOLDER_NAME"
-    $CI_TIME git clone --quiet --depth 1 -b master https://github.com/42ity/fty-common-db.git $FOLDER_NAME
-    echo "Entering in ${PWD}/${FOLDER_NAME}"
-    cd "./${FOLDER_NAME}"
-    CCACHE_BASEDIR=${PWD}
-    export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-    if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
-        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
-        if [ "x$REQUESTED_BRANCH" = "x" ]; then
-            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh the default branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh)
-        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
-            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh the default branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh)
-        else
-            echo "`date`: INFO: Building prerequisites of 'fty-common-db' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
-        fi
-    fi
-    if [ -e autogen.sh ]; then
-        $CI_TIME ./autogen.sh 2> /dev/null
-    fi
-    if [ -e buildconf ]; then
-        $CI_TIME ./buildconf 2> /dev/null
-    fi
-    if [ ! -e autogen.sh ] && [ ! -e buildconf ] && [ ! -e ./configure ] && [ -s ./configure.ac ]; then
-        $CI_TIME libtoolize --copy --force && \
-        $CI_TIME aclocal -I . && \
-        $CI_TIME autoheader && \
-        $CI_TIME automake --add-missing --copy && \
-        $CI_TIME autoconf || \
-        $CI_TIME autoreconf -fiv
-    fi
-    $CI_TIME ./configure "${CONFIG_OPTS[@]}"
-    $CI_TIME make -j4
-    $CI_TIME make install
-    echo "Leaving from ${PWD}"
-    cd "${BASE_PWD}"
-    echo "Now in ${PWD}"
-fi
-fi
-
-
-# Start of recipe for dependency: cxxtools
-if ! (command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list cxxtools-dev >/dev/null 2>&1) || \
-       (command -v brew >/dev/null 2>&1 && brew ls --versions cxxtools >/dev/null 2>&1) || \
-       ([ -e "cxxtools" ]) \
-; then
-
-    FOLDER_NAME="cxxtools"
-
-if [ -d "$FOLDER_NAME" ]; then
-    echo "$FOLDER_NAME already exist. Skipped." >&2
-else
-    echo ""
-    BASE_PWD=${PWD}
-    echo "`date`: INFO: Building prerequisite 'cxxtools' from Git repository..." >&2
-    if [ "x$REQUESTED_BRANCH" = "x" ]; then
-        echo "git clone https://github.com/42ity/cxxtools.git $FOLDER_NAME"
-        $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git $FOLDER_NAME
-    else
-        if git ls-remote --heads https://github.com/42ity/cxxtools.git | grep -q "$REQUESTED_BRANCH"; then
-            echo "git clone -b "$REQUESTED_BRANCH" https://github.com/42ity/cxxtools.git $FOLDER_NAME"
-            $CI_TIME git clone --quiet --depth 1 -b "$REQUESTED_BRANCH" https://github.com/42ity/cxxtools.git $FOLDER_NAME
-        else
-            echo "$REQUESTED_BRANCH not found for https://github.com/42ity/cxxtools.git"
-            echo "git clone https://github.com/42ity/cxxtools.git $FOLDER_NAME"
-            $CI_TIME git clone --quiet --depth 1 https://github.com/42ity/cxxtools.git $FOLDER_NAME
-        fi
-    fi
-    echo "Entering in ${PWD}/${FOLDER_NAME}"
-    cd "./${FOLDER_NAME}"
-    CCACHE_BASEDIR=${PWD}
-    export CCACHE_BASEDIR
-        git --no-pager log --oneline -n1
-    if [ -e ci_dependencies.sh ]; then
-        PROPAGATED_BRANCH="`git branch | grep * | cut -d ' ' -f2`"
-        DEFAULT_BRANCH="`git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`"
-        if [ "x$REQUESTED_BRANCH" = "x" ]; then
-            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh the default branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh)
-        elif [ "x$PROPAGATED_BRANCH" = "x$DEFAULT_BRANCH" ]; then
-            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh the default branch..." >&2
-            ($CI_TIME source ./ci_dependencies.sh)
-        else
-            echo "`date`: INFO: Building prerequisites of 'cxxtools' using ci_dependencies.sh $PROPAGATED_BRANCH branch..." >&2
             ($CI_TIME source ./ci_dependencies.sh $PROPAGATED_BRANCH)
         fi
     fi
