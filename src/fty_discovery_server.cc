@@ -349,18 +349,21 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             item = zconfig_next(item);
         }
     }
+    self->default_values_aux.clear();
     section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_AUX);
     if (section) {
         for (zconfig_t *item = zconfig_child(section); item; item = zconfig_next(item)) {
             self->default_values_aux[zconfig_name(item)] = zconfig_value(item);
         }
     }
+    self->default_values_ext.clear();
     section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_EXT);
     if (section) {
         for (zconfig_t *item = zconfig_child(section); item; item = zconfig_next(item)) {
             self->default_values_ext[zconfig_name(item)] = zconfig_value(item);
         }
     }
+    self->default_values_links.clear();
     section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_LINKS);
     if (section) {
         for (zconfig_t *link = zconfig_child(section); link; link = zconfig_next(link)) {
