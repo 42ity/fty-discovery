@@ -1,7 +1,7 @@
 [Unit]
 Description=fty-discovery service
-After=malamute.service network.target fty-db-init.service
-Requires=malamute.service network.target fty-db-init.service
+After=malamute.service network.target fty-db.target
+Requires=malamute.service network.target fty-db.target
 Before=fty-asset.service
 PartOf=bios.target
 
