@@ -507,7 +507,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
     fty_proto_print(asset);
     log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
-    fty_proto_set_operation(asset, "create");
+    fty_proto_set_operation(asset, "create-force");
 
     fty_proto_t *assetDup = fty_proto_dup(asset);
     zmsg_t *msg = fty_proto_encode(&assetDup);
