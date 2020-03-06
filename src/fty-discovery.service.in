@@ -2,7 +2,12 @@
 Description=fty-discovery service
 After=malamute.service network.target fty-db.target
 Requires=malamute.service network.target fty-db.target
-Before=fty-asset.service
+
+#WAS#Before=fty-asset.service
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+
 PartOf=bios.target
 
 [Service]
