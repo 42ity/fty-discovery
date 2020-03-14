@@ -8,6 +8,14 @@ PartOf=bios.target
 [Service]
 Type=simple
 User=discovery-monitoring-daemon
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-@prefix@/share/fty/etc/default/fty
+EnvironmentFile=-@prefix@/share/fty/etc/default/fty__%n.conf
+EnvironmentFile=-@sysconfdir@/default/bios
+EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
+EnvironmentFile=-@sysconfdir@/default/fty
+EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut:"
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
