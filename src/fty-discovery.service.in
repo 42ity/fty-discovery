@@ -16,7 +16,7 @@ EnvironmentFile=-@sysconfdir@/default/bios
 EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
 EnvironmentFile=-@sysconfdir@/default/fty
 EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
-Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut:"
+Environment="PATH=/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut"
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 Environment="NUT_ALTPIDPATH=\"\""
