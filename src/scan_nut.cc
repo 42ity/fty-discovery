@@ -89,14 +89,13 @@ void s_nut_output_to_messages(std::vector<NutOutput>& assets, const nutcommon::D
         if (itPort != device.end()) {
             std::string ip;
             size_t pos = itPort->second.find("://");
-            if(pos != std::string::npos)
+            if(pos != std::string::npos) {
                 ip = itPort->second.substr(pos+3);
-            else
+            }
+            else {
                 ip = itPort->second;
-            if(ip_present(devices, ip)) {
-                found = false;
-                break;
-            } else {
+            }
+            if(!ip_present(devices, ip)) {
                 asset.ip = ip.c_str();
                 asset.port = itPort->second.c_str();
                 found = true;
