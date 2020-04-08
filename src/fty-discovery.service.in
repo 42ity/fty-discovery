@@ -10,6 +10,10 @@ BindsTo=fty-asset.service
 
 PartOf=bios.target
 
+After=fty-security-wallet.service
+Requires=fty-security-wallet.service
+BindsTo=fty-security-wallet.service
+
 [Service]
 Type=simple
 User=discovery-monitoring-daemon
