@@ -1,6 +1,6 @@
 # fty-discovery
-it discovers power devices (ups, epdu, ats) over the network and publishes new device
-element in the asset DB.
+it discovers NUT - Network UPS Tools supported devices, including power devices (ups, epdu, ats)
+and cooling devices, over the network and publishes new device element in the asset DB.
 
 The default configuration values are in fty-discovery.cfg file (section default)
 
