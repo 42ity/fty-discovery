@@ -28,6 +28,7 @@
 
 #include <ctime>
 #include <vector>
+#include <sstream>
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include <string>
@@ -367,8 +368,20 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
     section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_LINKS);
     if (section) {
         for (zconfig_t *link = zconfig_child(section); link; link = zconfig_next(link)) {
+
+            //TEMPORARY FIX: Extract "id" from the iname ex: "datacenter-85487"
+
+            std::stringstream iname(zconfig_get(link, "src", "0"));
+            std::string segment;
+            std::vector<std::string> seglist;
+
+            while(std::getline(test, segment, '-'))
+            {
+                seglist.push_back(segment);
+            }
+
             link_t l;
-            l.src = std::stoul(zconfig_get(link, "src", "0"));
+            l.src = std::stoul(seglist.at(seglist.size()-1));
             l.dest = 0;
             l.src_out = nullptr;
             l.dest_in = nullptr;
