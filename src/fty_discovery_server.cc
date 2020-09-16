@@ -375,7 +375,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             std::string segment;
             std::vector<std::string> seglist;
 
-            while(std::getline(test, segment, '-'))
+            while(std::getline(iname, segment, '-'))
             {
                 seglist.push_back(segment);
             }
