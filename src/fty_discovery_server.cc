@@ -369,19 +369,10 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
     if (section) {
         for (zconfig_t *link = zconfig_child(section); link; link = zconfig_next(link)) {
 
-            //TEMPORARY FIX: Extract "id" from the iname ex: "datacenter-85487"
-
-            std::stringstream iname(zconfig_get(link, "src", "0"));
-            std::string segment;
-            std::vector<std::string> seglist;
-
-            while(std::getline(iname, segment, '-'))
-            {
-                seglist.push_back(segment);
-            }
+            std::string iname(zconfig_get(link, "src", ""));
 
             link_t l;
-            l.src = std::stoul(seglist.at(seglist.size()-1));
+            l.src = DBAssets::name_to_asset_id(iname);
             l.dest = 0;
             l.src_out = nullptr;
             l.dest_in = nullptr;
