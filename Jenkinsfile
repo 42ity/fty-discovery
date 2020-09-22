@@ -547,18 +547,26 @@ pipeline {
                 anyOf {
                     branch 'master'
                     branch "release/*"
-                    changeRequest()
-                }    
+                    changeRequest target: "master"
+                    changeRequest target: "release/*"
+                }
             }
             stages {
                 stage('Compile') {
                     steps {
                         sh '''
+                            export CCACHE_DISABLE=1
+
                             ./autogen.sh
                             ./configure
                             make clean
                             coverity.sh --build $PWD
                             '''
+                        script {
+                            sh """ tar -czf coverity-output.tar.gz $WORKSPACE/tmp_cov_dir """
+                            archiveArtifacts artifacts: 'coverity-output.tar.gz'
+                            sh "rm -f coverity-output.tar.gz"
+                        }
                     }
                 }
                 stage('Analyse') {

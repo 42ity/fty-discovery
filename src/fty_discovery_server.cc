@@ -372,7 +372,9 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             std::string iname(zconfig_get(link, "src", ""));
 
             link_t l;
-            l.src = DBAssets::name_to_asset_id(iname);
+
+            //when link to no source, the file will have "0"
+            l.src = (iname == "0") ? 0 : DBAssets::name_to_asset_id(iname);
             l.dest = 0;
             l.src_out = nullptr;
             l.dest_in = nullptr;
@@ -548,9 +550,12 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
             return;
         }
 
+        std::string iname(str_resp);
+
         // create asset links
         for (auto& link : self->default_values_links) {
-            link.dest = std::stoul(strchr(str_resp, '-')+1);
+
+            link.dest = DBAssets::name_to_asset_id(iname);
         }
         auto conn = tntdb::connectCached(DBConn::url);
         DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
