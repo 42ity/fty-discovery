@@ -471,7 +471,7 @@ create_pool_dumpdata(const ScanResult &result, discovered_devices_t *devices, zs
     return stop_now;
 }
 
-static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain);
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain)
 {
     std::map<std::string, std::string> extAttributs;
 
