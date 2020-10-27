@@ -476,19 +476,19 @@ static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResu
     std::map<std::string, std::string> extAttributs;
 
     if(scanResult.nutDriver == "snmp-ups") {
-        extAttributs["endpoint.1.protocol"] = "NUT_SNMP";
+        extAttributs["endpoint.1.protocol"] = "nut_snmp";
         extAttributs["endpoint.1.port"] = "161";
         extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
 
         if(scanResult.documents.size() > 0) {
-            extAttributs["endpoint.1.NUT_SNMP.secw_credential_id"] = scanResult.documents[0]->getId();
+            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = scanResult.documents[0]->getId();
         } else {
-            extAttributs["endpoint.1.NUT_SNMP.secw_credential_id"] = "";
+            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = "";
         }
 
 
     } else if( scanResult.nutDriver == "netxml-ups" ) {
-        extAttributs["endpoint.1.protocol"] = "NUT_XML_PDC";
+        extAttributs["endpoint.1.protocol"] = "nut_xml_pdc";
         extAttributs["endpoint.1.port"] = "80";
         extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
     }
