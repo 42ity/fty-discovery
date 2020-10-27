@@ -471,7 +471,7 @@ create_pool_dumpdata(const ScanResult &result, discovered_devices_t *devices, zs
     return stop_now;
 }
 
-static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain = "");
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain);
 {
     std::map<std::string, std::string> extAttributs;
 
@@ -481,13 +481,13 @@ static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResu
         extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
 
         if(scanResult.documents.size() > 0) {
-            extAttributs["endpoint.1.NUT_SNMP.secw_credential_id"] = scanResult.documents[0].getId();
+            extAttributs["endpoint.1.NUT_SNMP.secw_credential_id"] = scanResult.documents[0]->getId();
         } else {
             extAttributs["endpoint.1.NUT_SNMP.secw_credential_id"] = "";
         }
 
 
-    } else if( nutDriver == "netxml-ups" ) {
+    } else if( scanResult.nutDriver == "netxml-ups" ) {
         extAttributs["endpoint.1.protocol"] = "NUT_XML_PDC";
         extAttributs["endpoint.1.port"] = "80";
         extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
