@@ -32,6 +32,8 @@
 #include <cxxtools/regex.h>
 #include <algorithm>
 
+#include <map>
+
 static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
 
 struct ScanResult {
@@ -43,6 +45,8 @@ struct ScanResult {
     std::vector<secw::DocumentPtr> documents;
     fty::nut::DeviceConfigurations deviceConfigurations;
 };
+
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain = "");
 
 bool ip_present(discovered_devices_t *device_discovered, std::string ip);
 
@@ -296,6 +300,15 @@ dump_data_actor(zsock_t *pipe, void *args) {
 
                 for (auto i = assets.cbegin(); i != assets.cend(); i++) {
                     fty_proto_t *asset = *i;
+
+                    //add the endpoint data
+                    std::string daisyChain(fty_proto_ext_string(asset, "daisy_chain", ""));
+
+                    for(const auto item : getEndpointExtAttributs(*cpsr, daisyChain))
+                    {
+                        fty_proto_ext_insert(asset, item.first.c_str(), "%s", item.second.c_str());
+                    }
+
                     reply = fty_proto_encode(&asset);
                     zmsg_pushstr(reply, i == (assets.cend()-1) ? "FOUND" : "FOUND_DC");
                     zmsg_send(&reply, pipe);
@@ -456,6 +469,31 @@ create_pool_dumpdata(const ScanResult &result, discovered_devices_t *devices, zs
     zpoller_destroy(&poller);
     zconfig_destroy(&config);
     return stop_now;
+}
+
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain = "");
+{
+    std::map<std::string, std::string> extAttributs;
+
+    if(scanResult.nutDriver == "snmp-ups") {
+        extAttributs["endpoint.1.protocol"] = "NUT_SNMP";
+        extAttributs["endpoint.1.port"] = "161";
+        extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+
+        if(scanResult.documents.size() > 0) {
+            extAttributs["endpoint.1.NUT_SNMP.secw_credential_id"] = scanResult.documents[0].getId();
+        } else {
+            extAttributs["endpoint.1.NUT_SNMP.secw_credential_id"] = "";
+        }
+
+
+    } else if( nutDriver == "netxml-ups" ) {
+        extAttributs["endpoint.1.protocol"] = "NUT_XML_PDC";
+        extAttributs["endpoint.1.port"] = "80";
+        extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+    }
+
+    return extAttributs;
 }
 
 //  --------------------------------------------------------------------------
