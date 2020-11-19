@@ -536,7 +536,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
         if(!str_resp || !streq(str_resp, "OK")) {
             self->devices_discovered.mtx_list.unlock();
-            log_info("Error during asset creation.");
+            log_error("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
@@ -545,7 +545,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         str_resp = zmsg_popstr(response);
         if(!str_resp) {
             self->devices_discovered.mtx_list.unlock();
-            log_info("Error during asset creation.");
+            log_error("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
