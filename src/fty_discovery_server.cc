@@ -354,7 +354,14 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
     section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_AUX);
     if (section) {
         for (zconfig_t *item = zconfig_child(section); item; item = zconfig_next(item)) {
-            self->default_values_aux[zconfig_name(item)] = zconfig_value(item);
+            std::string configName(zconfig_name(item));
+            // the config API call returns the parent internal name, while fty-proto-t needs to carry the database ID
+            if(configName == "parent") {
+                std::string parentIname(zconfig_value(item));
+                self->default_values_aux[zconfig_name(item)] = (parentIname == "0" || parentIname == "") ? "0" : std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
+            } else {
+                self->default_values_aux[zconfig_name(item)] = zconfig_value(item);
+            }
         }
     }
     self->default_values_ext.clear();
@@ -536,7 +543,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
         if(!str_resp || !streq(str_resp, "OK")) {
             self->devices_discovered.mtx_list.unlock();
-            log_info("Error during asset creation.");
+            log_error("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
@@ -545,7 +552,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         str_resp = zmsg_popstr(response);
         if(!str_resp) {
             self->devices_discovered.mtx_list.unlock();
-            log_info("Error during asset creation.");
+            log_error("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
