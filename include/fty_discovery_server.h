@@ -1,7 +1,7 @@
 /*  =========================================================================
     ftydiscovery - Manages discovery requests, provides feedback
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,6 +35,9 @@ extern "C" {
 #define CFG_DISCOVERY_SCANS_NUM  CFG_DISCOVERY_SCANS"/scanNumber"
 #define CFG_DISCOVERY_IPS_NUM    CFG_DISCOVERY_IPS"/ipNumber"
 #define CFG_DISCOVERY_DOCUMENTS  CFG_DISCOVERY"/documents"
+#define CFG_DISCOVERY_DEFAULT_VALUES_AUX    "/defaultValuesAux"
+#define CFG_DISCOVERY_DEFAULT_VALUES_EXT    "/defaultValuesExt"
+#define CFG_DISCOVERY_DEFAULT_VALUES_LINKS  "/defaultValuesLinks"
 
 #define CFG_PARAMETERS                  "/parameters"
 #define CFG_PARAM_MAPPING_FILE          CFG_PARAMETERS"/mappingFile"

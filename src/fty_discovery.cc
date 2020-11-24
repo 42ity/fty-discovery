@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty_discovery - Agent performing device discovery in network
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -89,6 +89,7 @@ int main (int argc, char *argv [])
         ManageFtyLog::getInstanceFtylog()->setVeboseMode();
 
     zsys_init ();
+    DBConn::dbpath();
     log_debug ("fty_discovery - range: %s, agent %i", range ? range : "none", agent);
 
     // configure actor

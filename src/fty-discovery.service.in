@@ -1,18 +1,36 @@
 [Unit]
 Description=fty-discovery service
-After=malamute.service network.target
-Requires=malamute.service network.target
-Before=fty-asset.service
+After=malamute.service network.target fty-db.target
+Requires=malamute.service network.target fty-db.target
+
+#WAS#Before=fty-asset.service
+After=fty-asset.service
+Requires=fty-asset.service
+BindsTo=fty-asset.service
+
 PartOf=bios.target
+
+After=fty-security-wallet.service
+Requires=fty-security-wallet.service
+BindsTo=fty-security-wallet.service
 
 [Service]
 Type=simple
-User=bios
-Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut:"
+User=discovery-monitoring-daemon
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios
+EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
+EnvironmentFile=-@prefix@/share/fty/etc/default/fty
+EnvironmentFile=-@prefix@/share/fty/etc/default/fty__%n.conf
+EnvironmentFile=-@sysconfdir@/default/bios
+EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
+EnvironmentFile=-@sysconfdir@/default/fty
+EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
+Environment="PATH=/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut"
 Environment="prefix=@prefix@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 Environment="NUT_ALTPIDPATH=\"\""
 Environment="NUT_STATEPATH=/tmp"
+EnvironmentFile=@sysconfdir@/default/bios-db-rw
 ExecStart=@prefix@/bin/fty-discovery --agent
 Restart=always
 

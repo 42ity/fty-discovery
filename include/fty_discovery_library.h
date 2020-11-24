@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty-discovery - generated layer of public API
 
-    Copyright (C) 2014 - 2018 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -33,9 +33,14 @@
 #include <openssl/sha.h>
 #include <libcidr.h>
 #include <czmq.h>
+#include <cxxtools/allocator.h>
 #include <malamute.h>
+#include <tntdb.h>
+#include <fty_common.h>
 #include <fty_log.h>
 #include <ftyproto.h>
+#include <fty_common_db.h>
+#include <fty_security_wallet.h>
 #include <fty_common_nut.h>
 
 //  FTY_DISCOVERY version macros for compile-time API detection

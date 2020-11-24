@@ -1,7 +1,7 @@
 #
 #    fty-discovery - 42ity service for discovering devices
 #
-#    Copyright (C) 2014 - 2018 Eaton
+#    Copyright (C) 2014 - 2020 Eaton
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -60,13 +60,13 @@ BuildRequires:  libcidr-devel
 BuildRequires:  libsodium-devel
 BuildRequires:  zeromq-devel
 BuildRequires:  czmq-devel >= 3.0.2
+BuildRequires:  cxxtools-devel
 BuildRequires:  malamute-devel >= 1.0.0
-BuildRequires:  log4cplus-devel
+BuildRequires:  tntdb-devel
+BuildRequires:  fty-common-devel
 BuildRequires:  fty-common-logging-devel
 BuildRequires:  fty-proto-devel >= 1.0.0
-BuildRequires:  cxxtools-devel
-BuildRequires:  fty-common-devel
-BuildRequires:  fty-common-mlm-devel
+BuildRequires:  fty-common-db-devel
 BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -97,13 +97,13 @@ Requires:       libcidr-devel
 Requires:       libsodium-devel
 Requires:       zeromq-devel
 Requires:       czmq-devel >= 3.0.2
+Requires:       cxxtools-devel
 Requires:       malamute-devel >= 1.0.0
-Requires:       log4cplus-devel
+Requires:       tntdb-devel
+Requires:       fty-common-devel
 Requires:       fty-common-logging-devel
 Requires:       fty-proto-devel >= 1.0.0
-Requires:       cxxtools-devel
-Requires:       fty-common-devel
-Requires:       fty-common-mlm-devel
+Requires:       fty-common-db-devel
 Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
 

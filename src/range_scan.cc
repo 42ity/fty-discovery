@@ -1,7 +1,7 @@
 /*  =========================================================================
     range_scan - Perform one range scan
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -103,8 +103,9 @@ range_scan_actor (zsock_t *pipe, void *args)
     zsock_signal (pipe, 0);
     range_scan_args_t *params;
     discovered_devices_t *params2;
-    const nutcommon::KeyValues *mappings;
-    const nutcommon::KeyValues *sensorMappings;
+    const fty::nut::KeyValues *mappings;
+    const fty::nut::KeyValues *sensorMappings;
+
     zlist_t *argv;
     {
         // args check
@@ -122,8 +123,8 @@ range_scan_actor (zsock_t *pipe, void *args)
         }
         params = (range_scan_args_t *) zlist_first(argv);
         params2 = (discovered_devices_t *) zlist_next(argv);
-        mappings = (const nutcommon::KeyValues *) zlist_next(argv);
-        sensorMappings = (const nutcommon::KeyValues *) zlist_next(argv);
+        mappings = (const fty::nut::KeyValues *) zlist_next(argv);
+        sensorMappings = (const fty::nut::KeyValues *) zlist_next(argv);
         if (! params || (params->ranges.size() < 1) || !params->config || !params2) {
             log_error ("Scanning range not defined!");
             zstr_send (pipe, REQ_DONE);

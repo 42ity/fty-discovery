@@ -1,7 +1,7 @@
 /*  =========================================================================
     device_scan - Perform one IP address scan
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,7 +28,8 @@
 
 #include "fty_discovery_classes.h"
 #include <algorithm>
-bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_t *pipe, const nutcommon::KeyValues *mappings, const nutcommon::KeyValues *sensorMappings, const std::set<std::string> &documentIds)
+
+bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_t *pipe, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings, const std::set<std::string> &documentIds)
 {
     CIDRList *listAddr = (CIDRList *) zlist_first(listScans);
     zpoller_t *poller = zpoller_new(pipe, NULL);
@@ -162,9 +163,9 @@ device_scan_actor (zsock_t *pipe, void *args)
         return;
     }
     discovered_devices_t *devices = (discovered_devices_t*) zlist_next(argv);
-    const nutcommon::KeyValues *mappings = (const nutcommon::KeyValues*) zlist_next(argv);
-    const nutcommon::KeyValues *sensorMappings = (const nutcommon::KeyValues*) zlist_next(argv);
-
+    const fty::nut::KeyValues *mappings = (const fty::nut::KeyValues*) zlist_next(argv);
+    const fty::nut::KeyValues *sensorMappings = (const fty::nut::KeyValues*) zlist_next(argv);
+  
     log_debug ("dsa: device scan actor created");
     while (!zsys_interrupted) {
         zmsg_t *msg = zmsg_recv (pipe);
@@ -226,7 +227,7 @@ device_scan_actor (zsock_t *pipe, void *args)
 //  Create a new device_scan actor
 
 zactor_t *
-device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const nutcommon::KeyValues *mappings, const nutcommon::KeyValues *sensorMappings)
+device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings)
 {
     zlist_t *args = zlist_new();
     zlist_append(args, arg0);

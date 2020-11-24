@@ -2,24 +2,31 @@
 # This is a skeleton created by zproject.
 # You can add hand-written code here.
 
-server
-    timeout = 10000     #   Client connection timeout, msec
-    background = 0      #   Run as background process
-    workdir = .         #   Working directory for daemon
-    verbose = 0         #   Do verbose logging of activity?
-
-discovery
+server = ""
+    timeout = "10000"   #   Client connection timeout, msec
+    background = "0"    #   Run as background process
+    workdir = "."       #   Working directory for daemon
+    verbose = "0"       #   Do verbose logging of activity?
+discovery = ""
     type = "localscan"
-    scans
-    ips
-    documents
-
-parameters
+    scans = ""
+    ips = ""
+    documents = ""
+defaultValuesAux = ""
+    create_mode = "3"
+    create_user = "system"
+    parent = "0"
+    priority = "5"
+    status = "nonactive"
+defaultValuesLinks = ""
+    0 = ""
+        src = "0"
+        type = "1"
+parameters = ""
     mappingFile = "/usr/share/fty-common-nut/mapping.conf"
-    maxDumpPoolNumber = 15
-    maxScanPoolNumber = 4
-    nutScannerTimeOut = 20
-    dumpDataLoopTime = 90
-
-log
+    maxDumpPoolNumber = "15"
+    maxScanPoolNumber = "4"
+    nutScannerTimeOut = "20"
+    dumpDataLoopTime = "90"
+log = ""
     config = "/etc/fty/ftylog.cfg"     #   Path to the log configuration file (optional)

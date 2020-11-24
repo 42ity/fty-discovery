@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty_discovery_server - Manages discovery requests, provides feedback
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 
 #include <ctime>
 #include <vector>
+#include <sstream>
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include <string>
@@ -70,8 +71,11 @@ struct _fty_discovery_server_t {
     zactor_t *range_scanner;
     char *percent;
     discovered_devices_t devices_discovered;
-    nutcommon::KeyValues nut_mapping_inventory;
-    nutcommon::KeyValues nut_sensor_mapping_inventory;
+    fty::nut::KeyValues nut_mapping_inventory;
+    fty::nut::KeyValues nut_sensor_mapping_inventory;
+    std::map<std::string, std::string> default_values_aux;
+    std::map<std::string, std::string> default_values_ext;
+    std::vector<link_t> default_values_links;
 };
 
 zactor_t* range_scanner_new(fty_discovery_server_t *self) {
@@ -350,6 +354,48 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             item = zconfig_next(item);
         }
     }
+    self->default_values_aux.clear();
+    section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_AUX);
+    if (section) {
+        for (zconfig_t *item = zconfig_child(section); item; item = zconfig_next(item)) {
+            std::string configName(zconfig_name(item));
+            // the config API call returns the parent internal name, while fty-proto-t needs to carry the database ID
+            if(configName == "parent") {
+                std::string parentIname(zconfig_value(item));
+                self->default_values_aux[zconfig_name(item)] = (parentIname == "0" || parentIname == "") ? "0" : std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
+            } else {
+                self->default_values_aux[zconfig_name(item)] = zconfig_value(item);
+            }
+        }
+    }
+    self->default_values_ext.clear();
+    section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_EXT);
+    if (section) {
+        for (zconfig_t *item = zconfig_child(section); item; item = zconfig_next(item)) {
+            self->default_values_ext[zconfig_name(item)] = zconfig_value(item);
+        }
+    }
+    self->default_values_links.clear();
+    section = zconfig_locate(config, CFG_DISCOVERY_DEFAULT_VALUES_LINKS);
+    if (section) {
+        for (zconfig_t *link = zconfig_child(section); link; link = zconfig_next(link)) {
+
+            std::string iname(zconfig_get(link, "src", ""));
+
+            link_t l;
+
+            //when link to no source, the file will have "0"
+            l.src = (iname == "0") ? 0 : DBAssets::name_to_asset_id(iname);
+            l.dest = 0;
+            l.src_out = nullptr;
+            l.dest_in = nullptr;
+            l.type = std::stoul(zconfig_get(link, "type", "1"));
+
+            if (l.src > 0) {
+                self->default_values_links.emplace_back(l);
+            }
+        }
+    }
     if (list_scans.empty() && streq(strType, DISCOVERY_TYPE_MULTI)) {
         valid = false;
         log_error("error in config file %s : can't have rangescan without range",
@@ -423,8 +469,6 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         return;
     }
 
-    fty_proto_aux_insert(asset, "status", "%s", "nonactive");
-
     // set name
     const char *name = fty_proto_ext_string(asset, "hostname", NULL);
     if (name) {
@@ -461,8 +505,6 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
         fty_proto_ext_insert(asset, "create_ts", "%s", mbstr);
     }
-    fty_proto_ext_insert(asset, "create_user", CREATE_USER);
-    fty_proto_ext_insert(asset, "create_mode", CREATE_MODE);
 
     self->devices_discovered.mtx_list.lock();
     if(!daisy_chain) {
@@ -480,9 +522,16 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         }
     }
 
+    for (const auto& property : self->default_values_aux) {
+        fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+    }
+    for (const auto& property : self->default_values_ext) {
+        fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
+    }
+
     fty_proto_print(asset);
     log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
-    fty_proto_set_operation(asset, "create");
+    fty_proto_set_operation(asset, "create-force");
 
     fty_proto_t *assetDup = fty_proto_dup(asset);
     zmsg_t *msg = fty_proto_encode(&assetDup);
@@ -505,7 +554,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
         if(!str_resp || !streq(str_resp, "OK")) {
             self->devices_discovered.mtx_list.unlock();
-            log_info("Error during asset creation.");
+            log_error("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
@@ -514,10 +563,20 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         str_resp = zmsg_popstr(response);
         if(!str_resp) {
             self->devices_discovered.mtx_list.unlock();
-            log_info("Error during asset creation.");
+            log_error("Error during asset creation.");
             fty_proto_destroy(&asset);
             return;
         }
+
+        std::string iname(str_resp);
+
+        // create asset links
+        for (auto& link : self->default_values_links) {
+
+            link.dest = DBAssets::name_to_asset_id(iname);
+        }
+        auto conn = tntdb::connectCached(DBConn::url);
+        DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
 
         zhash_update(self->devices_discovered.device_list, str_resp, strdup(ip));
         zhash_freefn(self->devices_discovered.device_list, str_resp, free);
@@ -659,7 +718,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
         else {
             // Load general mapping
             try {
-                self->nut_mapping_inventory = nutcommon::loadMapping(mappingPath, "inventoryMapping");
+                self->nut_mapping_inventory = fty::nut::loadMapping(mappingPath, "inventoryMapping");
                 log_info("Mapping file '%s' loaded, %d inventory mappings", mappingPath, self->nut_mapping_inventory.size());
             }
             catch (std::exception &e) {
@@ -1127,8 +1186,11 @@ fty_discovery_server_new() {
     self->configuration_scan.scan_size = 0;
     self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
-    self->nut_mapping_inventory = nutcommon::KeyValues();
-    self->nut_sensor_mapping_inventory = nutcommon::KeyValues();
+    self->nut_mapping_inventory = fty::nut::KeyValues();
+    self->nut_sensor_mapping_inventory = fty::nut::KeyValues();
+    self->default_values_aux = std::map<std::string, std::string>();
+    self->default_values_ext = std::map<std::string, std::string>();
+    self->default_values_links = std::vector<link_t>();
     return self;
 }
 
@@ -1163,6 +1225,9 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
         self->localscan_subscan.~vector();
         self->nut_mapping_inventory.~map();
         self->nut_sensor_mapping_inventory.~map();
+        self->default_values_aux.~map();
+        self->default_values_ext.~map();
+        self->default_values_links.~vector();
         //  Free object itself
         free(self);
         *self_p = NULL;

@@ -1,7 +1,7 @@
 /*  =========================================================================
     device_scan - Perform one IP address scan
 
-    Copyright (C) 2014 - 2017 Eaton
+    Copyright (C) 2014 - 2020 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ extern "C" {
 
 //  Create a new device_scan
 FTY_DISCOVERY_PRIVATE zactor_t *
-    device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const nutcommon::KeyValues *mappings, const nutcommon::KeyValues *sensorMappings);
+    device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings);
 
 //  One device scan actor
 FTY_DISCOVERY_PRIVATE void
