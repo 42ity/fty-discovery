@@ -104,6 +104,8 @@ range_scan_actor (zsock_t *pipe, void *args)
     range_scan_args_t *params;
     discovered_devices_t *params2;
     const fty::nut::KeyValues *mappings;
+    const fty::nut::KeyValues *sensorMappings;
+
     zlist_t *argv;
     {
         // args check
@@ -113,7 +115,7 @@ range_scan_actor (zsock_t *pipe, void *args)
             return;
         }
         argv = (zlist_t *) args;
-        if(! argv || zlist_size(argv) != 3) {
+        if(! argv || zlist_size(argv) != 4) {
             log_error ("Error in parameters");
             zstr_send (pipe, REQ_DONE);
             zlist_destroy(&argv);
@@ -122,6 +124,7 @@ range_scan_actor (zsock_t *pipe, void *args)
         params = (range_scan_args_t *) zlist_first(argv);
         params2 = (discovered_devices_t *) zlist_next(argv);
         mappings = (const fty::nut::KeyValues *) zlist_next(argv);
+        sensorMappings = (const fty::nut::KeyValues *) zlist_next(argv);
         if (! params || (params->ranges.size() < 1) || !params->config || !params2) {
             log_error ("Scanning range not defined!");
             zstr_send (pipe, REQ_DONE);
@@ -168,7 +171,7 @@ range_scan_actor (zsock_t *pipe, void *args)
         zlist_append(listScans, list);
     }
 
-    zactor_t *device_actor = device_scan_new(listScans, params2, mappings);
+    zactor_t *device_actor = device_scan_new(listScans, params2, mappings, sensorMappings);
     zpoller_t *poller = zpoller_new (pipe, device_actor, NULL);
 
     zstr_sendx (device_actor, "SCAN", NULL);

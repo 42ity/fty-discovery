@@ -28,7 +28,8 @@
 
 #include "fty_discovery_classes.h"
 #include <algorithm>
-bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_t *pipe, const fty::nut::KeyValues *mappings, const std::set<std::string> &documentIds)
+
+bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_t *pipe, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings, const std::set<std::string> &documentIds)
 {
     CIDRList *listAddr = (CIDRList *) zlist_first(listScans);
     zpoller_t *poller = zpoller_new(pipe, NULL);
@@ -39,6 +40,7 @@ bool device_scan_scan (zlist_t *listScans, discovered_devices_t *devices, zsock_
         zlist_append(args, listAddr);
         zlist_append(args, devices);
         zlist_append(args, const_cast<void*>(static_cast<const void*>(mappings)));
+        zlist_append(args, const_cast<void*>(static_cast<const void*>(sensorMappings)));
         zlist_append(args, const_cast<void*>(static_cast<const void*>(&documentIds)));
         zactor_t *scan_nut = zactor_new (scan_nut_actor, args);
         zpoller_add(poller, scan_nut);
@@ -148,7 +150,7 @@ device_scan_actor (zsock_t *pipe, void *args)
 
     zlist_t *argv = (zlist_t *)args;
 
-    if (!argv || zlist_size(argv) != 3) {
+    if (!argv || zlist_size(argv) != 4) {
         log_error ("dsa: actor created without config");
         zlist_destroy(&argv);
         return;
@@ -162,7 +164,8 @@ device_scan_actor (zsock_t *pipe, void *args)
     }
     discovered_devices_t *devices = (discovered_devices_t*) zlist_next(argv);
     const fty::nut::KeyValues *mappings = (const fty::nut::KeyValues*) zlist_next(argv);
-
+    const fty::nut::KeyValues *sensorMappings = (const fty::nut::KeyValues*) zlist_next(argv);
+  
     log_debug ("dsa: device scan actor created");
     while (!zsys_interrupted) {
         zmsg_t *msg = zmsg_recv (pipe);
@@ -203,7 +206,7 @@ device_scan_actor (zsock_t *pipe, void *args)
                         zlist_append(scanPool, zlist_pop(listScans));
                         number_of_scans++;
                     }
-                    stopped = device_scan_scan(scanPool, devices, pipe, mappings, documentIds);
+                    stopped = device_scan_scan(scanPool, devices, pipe, mappings, sensorMappings, documentIds);
                 }
                 zlist_destroy(&listScans);
 
@@ -224,12 +227,13 @@ device_scan_actor (zsock_t *pipe, void *args)
 //  Create a new device_scan actor
 
 zactor_t *
-device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty::nut::KeyValues *mappings)
+device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings)
 {
     zlist_t *args = zlist_new();
     zlist_append(args, arg0);
     zlist_append(args, arg1);
     zlist_append(args, const_cast<void*>(static_cast<const void*>(mappings)));
+    zlist_append(args, const_cast<void*>(static_cast<const void*>(sensorMappings)));
     return zactor_new (device_scan_actor, (void *)args);
 }
 
@@ -260,7 +264,7 @@ device_scan_test (bool verbose)
     //assert ( (str_SELFTEST_DIR_RW != "") );
     // NOTE that for "char*" context you need (str_SELFTEST_DIR_RO + "/myfilename").c_str()
 
-    zactor_t *self = device_scan_new(nullptr, nullptr, nullptr);
+    zactor_t *self = device_scan_new(nullptr, nullptr, nullptr, nullptr);
     assert (self);
 
     // zconfig /etc/default/fty.cfg

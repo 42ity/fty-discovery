@@ -62,6 +62,7 @@ struct _fty_discovery_server_t {
     int64_t nb_ups_discovered;
     int64_t nb_epdu_discovered;
     int64_t nb_sts_discovered;
+    int64_t nb_sensor_discovered;
     int32_t status_scan;
     bool ongoing_stop;
     std::vector<std::string> localscan_subscan;
@@ -71,6 +72,7 @@ struct _fty_discovery_server_t {
     char *percent;
     discovered_devices_t devices_discovered;
     fty::nut::KeyValues nut_mapping_inventory;
+    fty::nut::KeyValues nut_sensor_mapping_inventory;
     std::map<std::string, std::string> default_values_aux;
     std::map<std::string, std::string> default_values_ext;
     std::vector<link_t> default_values_links;
@@ -81,6 +83,7 @@ zactor_t* range_scanner_new(fty_discovery_server_t *self) {
     zlist_append(args, &self->range_scan_config);
     zlist_append(args, &self->devices_discovered);
     zlist_append(args, &self->nut_mapping_inventory);
+    zlist_append(args, &self->nut_sensor_mapping_inventory);
     return zactor_new(range_scan_actor, args);
 }
 
@@ -89,6 +92,7 @@ void reset_nb_discovered(fty_discovery_server_t *self) {
     self->nb_epdu_discovered = 0;
     self->nb_sts_discovered = 0;
     self->nb_ups_discovered = 0;
+    self->nb_sensor_discovered = 0;
 }
 
 bool compute_ip_list(std::vector<std::string>* listIp) {
@@ -453,6 +457,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     if (!ip) return;
 
     bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
+    // FIXME
     if (!daisy_chain && assets_find(self->assets, "ip", ip)) {
         log_info("Asset with IP address %s already exists", ip);
         return;
@@ -471,7 +476,13 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     } else {
         name = fty_proto_aux_string(asset, "subtype", NULL);
         if (name) {
-            fty_proto_ext_insert(asset, "name", "%s (%s)", name, ip);
+            if (streq(name, "sensor")) {
+                const char *port = fty_proto_ext_string(asset, "port", NULL);
+                fty_proto_ext_insert(asset, "name", "%s (%s - port %s)", name, ip, port);
+            }
+            else {
+                fty_proto_ext_insert(asset, "name", "%s (%s)", name, ip);
+            }
         } else {
             fty_proto_ext_insert(asset, "name", "%s", ip);
         }
@@ -575,6 +586,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         if (streq(name, "ups")) self->nb_ups_discovered++;
         else if (streq(name, "epdu")) self->nb_epdu_discovered++;
         else if (streq(name, "sts")) self->nb_sts_discovered++;
+        else if (streq(name, "sensor")) self->nb_sensor_discovered++;
         if(!streq(name, "error"))
           self->nb_discovered++;
     }
@@ -704,12 +716,22 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
             valid = false;
         }
         else {
+            // Load general mapping
             try {
                 self->nut_mapping_inventory = fty::nut::loadMapping(mappingPath, "inventoryMapping");
                 log_info("Mapping file '%s' loaded, %d inventory mappings", mappingPath, self->nut_mapping_inventory.size());
             }
             catch (std::exception &e) {
                 log_error("Couldn't load mapping file '%s': %s", mappingPath, e.what());
+                valid = false;
+            }
+            // Load sensor specific mapping
+            try {
+                self->nut_sensor_mapping_inventory = nutcommon::loadMapping(mappingPath, "sensorInventoryMapping");
+                log_info("Sensor mapping file '%s' loaded, %d sensor inventory mappings", mappingPath, self->nut_sensor_mapping_inventory.size());
+            }
+            catch (std::exception &e) {
+                log_error("Couldn't load sensor mapping file '%s': %s", mappingPath, e.what());
                 valid = false;
             }
         }
@@ -951,6 +973,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_ups_discovered);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_epdu_discovered);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_sts_discovered);
+                zmsg_addstrf(reply, "%" PRIi64, self->nb_sensor_discovered);                
             } else {
                 zmsg_addstr(reply, RESP_OK);
                 zmsg_addstrf(reply, "%" PRIi32, -1);
@@ -1154,6 +1177,7 @@ fty_discovery_server_new() {
     self->nb_epdu_discovered = 0;
     self->nb_sts_discovered = 0;
     self->nb_ups_discovered = 0;
+    self->nb_sensor_discovered = 0;    
     self->scan_size = 0;
     self->ongoing_stop = false;
     self->status_scan = -1;
@@ -1163,6 +1187,7 @@ fty_discovery_server_new() {
     self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
     self->nut_mapping_inventory = fty::nut::KeyValues();
+    self->nut_sensor_mapping_inventory = fty::nut::KeyValues();
     self->default_values_aux = std::map<std::string, std::string>();
     self->default_values_ext = std::map<std::string, std::string>();
     self->default_values_links = std::vector<link_t>();
@@ -1199,6 +1224,7 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
         self->configuration_scan.scan_list.~vector();
         self->localscan_subscan.~vector();
         self->nut_mapping_inventory.~map();
+        self->nut_sensor_mapping_inventory.~map();
         self->default_values_aux.~map();
         self->default_values_ext.~map();
         self->default_values_links.~vector();
