@@ -392,50 +392,97 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             }
         }
     }
-    if (list_scans.empty() && streq(strType, DISCOVERY_TYPE_MULTI)) {
-        valid = false;
-        log_error("error in config file %s : can't have rangescan without range",
+
+    //check we have all the params we need to launch the scan
+    int64_t sizeTemp = 0;
+
+    //check for multiscan
+    if (streq(strType, DISCOVERY_TYPE_MULTI)) {
+        if(list_scans.empty()) { //nothing to scan
+            log_error("error in config file %s : can't have rangescan without range",
                 self->range_scan_config.config);
-    } else if (listIp.empty() && streq(strType, DISCOVERY_TYPE_IP)) {
-        valid = false;
-        log_error("error in config file %s : can't have ipscan without ip list",
+            zconfig_destroy(&config);
+            return false;
+        } else if (!compute_scans_size(&list_scans, &sizeTemp)) { //error in the range
+            log_error("Error in config file %s: error in range or subnet",
                 self->range_scan_config.config);
-    } else {
-        int64_t sizeTemp = 0;
-        if(streq(strType, DISCOVERY_TYPE_MULTI)) {
-            if(!compute_scans_size(&list_scans, &sizeTemp)) {
-                valid = false;
-                log_error("Error in config file %s: error in range or subnet", self->range_scan_config.config);
-            } else {
-                self->configuration_scan.type = TYPE_MULTISCAN;
-                self->configuration_scan.scan_size = sizeTemp;
-                self->configuration_scan.scan_list.clear();
-                self->configuration_scan.scan_list = list_scans;
-            }
-        } else if(streq(strType, DISCOVERY_TYPE_IP)) {
-            if(!compute_ip_list(&listIp)) {
-                valid = false;
-                log_error("Error in config file %s: error in ip list", self->range_scan_config.config);
-            } else {
-                self->configuration_scan.type = TYPE_IPSCAN;
-                self->configuration_scan.scan_size = listIp.size();
-                self->configuration_scan.scan_list.clear();
-                self->configuration_scan.scan_list = listIp;
-            }
-        } else if(streq(strType, DISCOVERY_TYPE_LOCAL)) {
-            self->configuration_scan.type = TYPE_LOCALSCAN;
-        } else {
-            valid = false;
+            zconfig_destroy(&config);
+            return false;
+        }
+
+    }
+
+    //check for ipscans
+    if (streq(strType, DISCOVERY_TYPE_IP)) {
+        if(listIp.empty()) {
+            log_error("error in config file %s : can't have ipscan without ip list",
+                self->range_scan_config.config);
+            zconfig_destroy(&config);
+            return false;
+        } else if (!compute_ip_list(&listIp)) { //bad format in list
+            log_error("Error in config file %s: error in ip list",
+                self->range_scan_config.config);
+            zconfig_destroy(&config);
+            return false;
         }
     }
 
-    if (valid)
-        log_debug("config file %s applied successfully",
+    //check for ipscans
+    if (streq(strType, DISCOVERY_TYPE_FULL)) {
+        if(listIp.empty() && list_scans.empty()) {
+            log_error("error in config file %s : can't have fullscan without ip list or without range",
+                self->range_scan_config.config);
+            zconfig_destroy(&config);
+            return false;
+        } else if ( (!listIp.empty()) && (!compute_ip_list(&listIp))) { //bad format in list
+            log_error("Error in config file %s: error in ip list",
+                self->range_scan_config.config);
+            zconfig_destroy(&config);
+            return false;
+        } else if ((!list_scans.empty()) && (!compute_scans_size(&list_scans, &sizeTemp))) { //error in the range
+            log_error("Error in config file %s: error in range or subnet",
+                self->range_scan_config.config);
+            zconfig_destroy(&config);
+            return false;
+        }
+    }
+
+    //get ready to launch
+    if(streq(strType, DISCOVERY_TYPE_MULTI)) {
+        self->configuration_scan.type = TYPE_MULTISCAN;
+        self->configuration_scan.scan_size = sizeTemp;
+        self->configuration_scan.scan_list.clear();
+        self->configuration_scan.scan_list = list_scans;
+
+    } else if(streq(strType, DISCOVERY_TYPE_IP)) {
+
+        self->configuration_scan.type = TYPE_IPSCAN;
+        self->configuration_scan.scan_size = listIp.size();
+        self->configuration_scan.scan_list.clear();
+        self->configuration_scan.scan_list = listIp;
+
+    } else if(streq(strType, DISCOVERY_TYPE_FULL)) {
+        std::vector<std::string> fullList(listIp);
+        fullList.insert(fullList.end(), list_scans.begin(), list_scans.end());
+
+        self->configuration_scan.type = TYPE_FULLSCAN;
+        self->configuration_scan.scan_size = ( listIp.size() + sizeTemp );
+        self->configuration_scan.scan_list.clear();
+        self->configuration_scan.scan_list = fullList;
+
+    } else if(streq(strType, DISCOVERY_TYPE_LOCAL)) {
+        self->configuration_scan.type = TYPE_LOCALSCAN;
+    } else {
+        log_debug("unknown command type %s", strType);
+        zconfig_destroy(&config);
+        return false;
+    }
+
+    log_debug("config file %s applied successfully",
             self->range_scan_config.config);
 
-    list_scans.clear();
-    listIp.clear();
     zconfig_destroy(&config);
+
     return valid;
 }
 
@@ -670,25 +717,38 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
             valid = false;
             log_error("error in config file %s : can't have ipscan without ip list",
                     self->range_scan_config.config);
+        } else if ((listIp.empty() && listIp.empty()) && streq(strType, DISCOVERY_TYPE_FULL)) {
+            valid = false;
+            log_error("error in config file %s : can't have fullscan without ip list or range",
+                    self->range_scan_config.config);
         } else {
             int64_t sizeTemp = 0;
             if (compute_scans_size(&list_scans, &sizeTemp) && compute_ip_list(&listIp)) {
                 //ok, validate the config
-                if (streq(strType, DISCOVERY_TYPE_MULTI))
-                    self->configuration_scan.type = TYPE_MULTISCAN;
-                else if (streq(strType, DISCOVERY_TYPE_LOCAL))
-                    self->configuration_scan.type = TYPE_LOCALSCAN;
-                else
-                    self->configuration_scan.type = TYPE_IPSCAN;
-                self->configuration_scan.scan_size = sizeTemp;
-                self->configuration_scan.scan_list.clear();
-                self->configuration_scan.scan_list = list_scans;
 
-                if (self->configuration_scan.type == TYPE_IPSCAN) {
+                self->configuration_scan.type = TYPE_LOCALSCAN;
+                self->configuration_scan.scan_list.clear();
+                self->configuration_scan.scan_size = 0;
+
+                if (streq(strType, DISCOVERY_TYPE_MULTI)) {
+                    self->configuration_scan.type = TYPE_MULTISCAN;
+                    self->configuration_scan.scan_list = list_scans;
+                    self->configuration_scan.scan_size = sizeTemp;
+
+                } else if (streq(strType, DISCOVERY_TYPE_IP)) {
+                    self->configuration_scan.type = TYPE_IPSCAN;
                     self->configuration_scan.scan_size = listIp.size();
-                    self->configuration_scan.scan_list.clear();
                     self->configuration_scan.scan_list = listIp;
+
+                } else  if (streq(strType, DISCOVERY_TYPE_FULL)) {
+                    std::vector<std::string> fullList(listIp);
+                    fullList.insert(fullList.end(), list_scans.begin(), list_scans.end());
+
+                    self->configuration_scan.type = TYPE_FULLSCAN;
+                    self->configuration_scan.scan_size = (listIp.size() + sizeTemp);
+                    self->configuration_scan.scan_list = fullList;
                 }
+
                 listIp.clear();
                 list_scans.clear();
             } else {
