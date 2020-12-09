@@ -942,7 +942,8 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                             zmsg_addstr(reply, RESP_ERR);
 
                     } else if ((self->configuration_scan.type == TYPE_MULTISCAN) ||
-                            (self->configuration_scan.type == TYPE_IPSCAN)) {
+                            (self->configuration_scan.type == TYPE_IPSCAN) ||
+                            (self->configuration_scan.type == TYPE_FULLSCAN)) {
                         //Launch rangeScan
                         self->localscan_subscan = self->configuration_scan.scan_list;
                         self->scan_size = self->configuration_scan.scan_size;
