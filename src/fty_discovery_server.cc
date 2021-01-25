@@ -27,6 +27,7 @@
  */
 
 #include <ctime>
+#include <stdexcept>
 #include <vector>
 #include <sstream>
 #include <sys/types.h>
@@ -912,6 +913,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 if(compute_configuration_file(self)) {
                     if (self->configuration_scan.type == TYPE_LOCALSCAN) {
                         //Launch localScan
+                        log_debug("Configuring localscan...");
                         configure_local_scan(self);
 
                         if (self->scan_size > 0) {
@@ -938,12 +940,16 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                             self->status_scan = STATUS_PROGESS;
 
                             zmsg_addstr(reply, RESP_OK);
-                        } else
+                        } else {
                             zmsg_addstr(reply, RESP_ERR);
+                        }
+
 
                     } else if ((self->configuration_scan.type == TYPE_MULTISCAN) ||
                             (self->configuration_scan.type == TYPE_IPSCAN) ||
                             (self->configuration_scan.type == TYPE_FULLSCAN)) {
+
+                        log_debug("Configuring rangeScan...");
                         //Launch rangeScan
                         self->localscan_subscan = self->configuration_scan.scan_list;
                         self->scan_size = self->configuration_scan.scan_size;
@@ -990,6 +996,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                         zmsg_addstr(reply, RESP_ERR);
                     }
                 } else {
+                    log_error("compute_configuration_file: Error");
                     zmsg_addstr(reply, RESP_ERR);
                 }
             }
