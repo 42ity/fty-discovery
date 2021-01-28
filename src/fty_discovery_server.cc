@@ -443,21 +443,20 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
 //  --------------------------------------------------------------------------
 //  send create asset if it is new
 
-static void
-s_fixup_nmc_netxml(fty_proto_t *asset) {
+static bool
+s_skip_nmc_netxml(fty_proto_t *asset) {
     if (streq (fty_proto_ext_string (asset, "device.type", ""), "ups") && streq (fty_proto_ext_string (asset, "endpoint.1.protocol", ""), "nut_snmp")) {
         /**
-         * We don't want to store a nut_snmp endpoint configuration for NMC cards if NetXML works.
+         * We don't want to use a nut_snmp endpoint configuration for NMC cards if NetXML works.
          * Very hackish, but fty-discovery should eventually be replaced by fty-discovery-ng.
          * Hopefully this doesn't cause more problems than it tries to fix...
          */
         if (!fty::nut::scanDevice(fty::nut::ScanProtocol::SCAN_PROTOCOL_NETXML, fty_proto_ext_string (asset, "ip.1", "xxx"), 5).empty()) {
-            log_warning ("Fixing up NMC card to nut_xml_pdc protocol!");
-            fty_proto_ext_insert (asset, "endpoint.1.protocol", "nut_xml_pdc");
-            fty_proto_ext_insert (asset, "endpoint.1.port", "161");
-            zhash_delete (fty_proto_ext (asset), "endpoint.1.nut_snmp.secw_credential_id");
+            log_warning ("Skipping SNMP dump for NMC card!");
+            return true;
         }
     }
+    return false;
 }
 
 void
@@ -539,8 +538,8 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
     fty_proto_set_operation(asset, "create-force");
 
+    if (!s_skip_nmc_netxml (asset)) {
     fty_proto_t *assetDup = fty_proto_dup(asset);
-    s_fixup_nmc_netxml (assetDup);
     zmsg_t *msg = fty_proto_encode(&assetDup);
     zmsg_pushstrf (msg, "%s", "READONLY");
     log_debug("about to send create message");
@@ -595,6 +594,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         else if (streq(name, "sts")) self->nb_sts_discovered++;
         if(!streq(name, "error"))
           self->nb_discovered++;
+    }
     }
     self->devices_discovered.mtx_list.unlock();
     fty_proto_destroy(&asset);
