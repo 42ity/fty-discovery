@@ -9,7 +9,7 @@ DISTCHECK_CONFIGURE_FLAGS = \
 ACLOCAL_AMFLAGS = -I config
 
 AM_CXXFLAGS = \
-    -std=c++11
+    -std=c++17
 
 AM_CPPFLAGS = \
     ${openssl_CFLAGS} \

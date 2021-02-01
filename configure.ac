@@ -1625,7 +1625,7 @@ AM_CONDITIONAL([ENABLE_GCC_STD_REGEX], [test x$enable_gcc_std_regex != xno])
 AS_IF([test -n "$CXX"],[AS_IF([$CXX --version 2>&1 | grep 'Free Software Foundation' > /dev/null && test "x$GCC" = "xyes"],
   [AS_IF([test "x$enable_gcc_std_regex" = "xyes" || test "x$enable_gcc_std_regex" = "xauto"],
     [AC_MSG_CHECKING([for GNU C++11 support level expected by gcc-4.9 release or newer])
-     CXXFLAGS="$CXXFLAGS --std=c++11"
+     CXXFLAGS="$CXXFLAGS --std=c++17"
      AC_LANG_PUSH([C++])
      AC_TRY_RUN([/* Note: private macros in use, test can break over time */
 #include <regex>
