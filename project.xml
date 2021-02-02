@@ -100,6 +100,13 @@
     <use project = "fty-common-nut" libname = "libfty_common_nut" header = "fty_common_nut.h"
         repository = "https://github.com/42ity/fty-common-nut.git"
         test = "fty_common_nut_selftest" />
+    
+    <use project = "fty-asset" libname = "libfty-asset" header = "fty_asset_dto.h"
+        repository = "https://github.com/42ity/fty-asset.git"/>
+    
+    <use project = "fty-asset-accessor" libname = "libfty-asset-accessor" header = "fty_asset_accessor.h"
+        repository = "https://github.com/42ity/fty-asset.git"
+        test = "fty-asset-accessor-test" />
 
     <class name = "cidr"         private = "1">C++ Wrapper around libcidr</class>
     <class name = "range_scan"   private = "1">Perform one range scan</class>

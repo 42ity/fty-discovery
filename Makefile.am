@@ -26,10 +26,12 @@ AM_CPPFLAGS = \
     ${fty_common_db_CFLAGS} \
     ${fty_security_wallet_CFLAGS} \
     ${fty_common_nut_CFLAGS} \
+    ${fty_asset_CFLAGS} \
+    ${fty_asset_accessor_CFLAGS} \
     -D__STDC_FORMAT_MACROS \
     -I$(srcdir)/include
 
-project_libs = ${openssl_LIBS} ${cidr_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${cxxtools_LIBS} ${malamute_LIBS} ${tntdb_LIBS} ${fty_common_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${fty_common_db_LIBS} ${fty_security_wallet_LIBS} ${fty_common_nut_LIBS}
+project_libs = ${openssl_LIBS} ${cidr_LIBS} ${libsodium_LIBS} ${libzmq_LIBS} ${czmq_LIBS} ${cxxtools_LIBS} ${malamute_LIBS} ${tntdb_LIBS} ${fty_common_LIBS} ${fty_common_logging_LIBS} ${fty_proto_LIBS} ${fty_common_db_LIBS} ${fty_security_wallet_LIBS} ${fty_common_nut_LIBS} ${fty_asset_LIBS} ${fty_asset_accessor_LIBS}
 
 SUBDIRS = doc
 SUBDIRS += include
@@ -64,6 +66,8 @@ EXTRA_DIST += \
     Findfty_common_db.cmake \
     Findfty_security_wallet.cmake \
     Findfty_common_nut.cmake \
+    Findfty_asset.cmake \
+    Findfty_asset_accessor.cmake \
     builds/cmake/Modules/ClangFormat.cmake \
     builds/cmake/clang-format-check.sh.in \
     builds/cmake/Config.cmake.in \

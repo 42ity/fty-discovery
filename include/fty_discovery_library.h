@@ -42,6 +42,8 @@
 #include <fty_common_db.h>
 #include <fty_security_wallet.h>
 #include <fty_common_nut.h>
+#include <fty_asset_dto.h>
+#include <fty_asset_accessor.h>
 
 //  FTY_DISCOVERY version macros for compile-time API detection
 #define FTY_DISCOVERY_VERSION_MAJOR 1

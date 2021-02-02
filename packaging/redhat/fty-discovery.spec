@@ -69,6 +69,8 @@ BuildRequires:  fty-proto-devel >= 1.0.0
 BuildRequires:  fty-common-db-devel
 BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
+BuildRequires:  fty-asset-devel
+BuildRequires:  fty-asset-accessor-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -106,6 +108,8 @@ Requires:       fty-proto-devel >= 1.0.0
 Requires:       fty-common-db-devel
 Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
+Requires:       fty-asset-devel
+Requires:       fty-asset-accessor-devel
 
 %description devel
 42ity service for discovering devices development tools
