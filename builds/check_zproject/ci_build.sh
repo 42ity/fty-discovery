@@ -24,6 +24,7 @@ git clone --quiet --depth 1 https://github.com/42ity/fty-security-wallet.git fty
 git clone --quiet --depth 1 https://github.com/42ity/fty-common-nut.git fty-common-nut
 git clone --quiet --depth 1 https://github.com/42ity/fty-asset.git fty-asset
 git clone --quiet --depth 1 https://github.com/42ity/fty-asset.git fty-asset-accessor
+git clone --quiet --depth 1 https://github.com/42ity/fty-utils.git fty-utils
 cd -
 
 if ! ((command -v dpkg-query >/dev/null 2>&1 && dpkg-query --list zproject >/dev/null 2>&1) || \

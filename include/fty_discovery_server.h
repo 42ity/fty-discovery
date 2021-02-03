@@ -22,7 +22,9 @@
 #ifndef FTYDISCOVERY_H_INCLUDED
 #define FTYDISCOVERY_H_INCLUDED
 
+#include <map>
 #include <mutex>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -99,7 +101,7 @@ extern "C" {
 
 typedef struct _discovered_devices_t {
     std::mutex mtx_list;
-    zhash_t *device_list;
+    std::map<std::string, std::string> device_list;
 } discovered_devices_t;
 
 //  @interface

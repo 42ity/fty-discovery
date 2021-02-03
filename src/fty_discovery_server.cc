@@ -33,9 +33,12 @@
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include <string>
+#include <map>
 #include <mutex>
+#include <utility>
 #include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
+#include <fty/expected.h>
 #include "fty_discovery_classes.h"
 
 static std::string discovery_config_file = FTY_DISCOVERY_CFG_FILE;
@@ -517,146 +520,259 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
     if (!self || !msg_p) return;
     if (!is_fty_proto(*msg_p)) return;
 
+    // DEBUG: list discovered devices
+    {
+        std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
+        for(const auto el: self->devices_discovered.device_list) {
+            log_debug("Found device %s - %s in discovered list", el.first.c_str(), el.second.c_str());
+        }
+    }
+
     fty_proto_t *asset = fty_proto_decode(msg_p);
-    const char *ip = fty_proto_ext_string(asset, "ip.1", NULL);
-    if (!ip) return;
 
-    bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
-    // FIXME
-    if (!daisy_chain && assets_find(self->assets, "ip", ip)) {
-        log_info("Asset with IP address %s already exists", ip);
-        return;
-    }
+    bool sensor = streq(fty_proto_aux_string(asset, "subtype", "unknown"), "sensor");
 
-    const char *uuid = fty_proto_ext_string(asset, "uuid", NULL);
-    if (uuid && assets_find(self->assets, "uuid", uuid)) {
-        log_info("Asset with uuid %s already exists", uuid);
-        return;
-    }
+    if(!sensor) {
+        const char *ip = fty_proto_ext_string(asset, "ip.1", NULL);
+        if (!ip) return;
 
-    // set name
-    const char *name = fty_proto_ext_string(asset, "hostname", NULL);
-    if (name) {
-        fty_proto_ext_insert(asset, "name", "%s", name);
-    } else {
-        name = fty_proto_aux_string(asset, "subtype", NULL);
-        if (name) {
-            if (streq(name, "sensor")) {
-                const char *port = fty_proto_ext_string(asset, "port", NULL);
-                fty_proto_ext_insert(asset, "name", "%s (%s - port %s)", name, ip, port);
-            }
-            else {
-                fty_proto_ext_insert(asset, "name", "%s (%s)", name, ip);
-            }
-        } else {
-            fty_proto_ext_insert(asset, "name", "%s", ip);
-        }
-    }
-
-    if(daisy_chain) {
-        const char* dc_number = fty_proto_ext_string(asset, "daisy_chain", NULL);
-        name = fty_proto_ext_string(asset, "name", NULL);
-
-        if(streq (dc_number, "1"))
-            fty_proto_ext_insert(asset, "name", "%s Host", name);
-        else {
-            int dc_numberI = atoi(dc_number);
-            fty_proto_ext_insert(asset, "name", "%s Device%i", name, dc_numberI-1);
-        }
-    }
-
-    std::time_t timestamp = std::time(NULL);
-    char mbstr[100];
-    if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
-        fty_proto_ext_insert(asset, "create_ts", "%s", mbstr);
-    }
-
-    self->devices_discovered.mtx_list.lock();
-    if(!daisy_chain) {
-        char* c = (char*) zhash_first( self->devices_discovered.device_list);
-
-        while(c && !streq(c, ip)) {
-            c = (char*) zhash_next( self->devices_discovered.device_list);
-        }
-
-        if(c != NULL) {
-            self->devices_discovered.mtx_list.unlock();
+        bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
+        // FIXME
+        if (!daisy_chain && assets_find(self->assets, "ip", ip)) {
             log_info("Asset with IP address %s already exists", ip);
-            fty_proto_destroy(&asset);
             return;
         }
-    }
 
-    for (const auto& property : self->default_values_aux) {
-        fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
-    }
-    for (const auto& property : self->default_values_ext) {
-        fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
-    }
+        const char *uuid = fty_proto_ext_string(asset, "uuid", NULL);
+        if (uuid && assets_find(self->assets, "uuid", uuid)) {
+            log_info("Asset with uuid %s already exists", uuid);
+            return;
+        }
 
-    fty_proto_print(asset);
-    log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
-    fty_proto_set_operation(asset, "create-force");
+        // set name
+        const char *name = fty_proto_ext_string(asset, "hostname", NULL);
+        if (name) {
+            fty_proto_ext_insert(asset, "name", "%s", name);
+        } else {
+            name = fty_proto_aux_string(asset, "subtype", NULL);
+            if (name) {
+                if (streq(name, "sensor")) {
+                    const char *port = fty_proto_ext_string(asset, "port", NULL);
+                    fty_proto_ext_insert(asset, "name", "%s (%s - port %s)", name, ip, port);
+                }
+                else {
+                    fty_proto_ext_insert(asset, "name", "%s (%s)", name, ip);
+                }
+            } else {
+                fty_proto_ext_insert(asset, "name", "%s", ip);
+            }
+        }
 
-    fty_proto_t *assetDup = fty_proto_dup(asset);
-    s_fixup_nmc_netxml (assetDup);
-    zmsg_t *msg = fty_proto_encode(&assetDup);
-    zmsg_pushstrf (msg, "%s", "READONLY");
-    log_debug("about to send create message");
-    int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
-    if (rv == -1) {
-        log_error("Failed to send ASSET_MANIPULATION message to asset-agent");
+        if(daisy_chain) {
+            const char* dc_number = fty_proto_ext_string(asset, "daisy_chain", NULL);
+            name = fty_proto_ext_string(asset, "name", NULL);
+
+            if(streq (dc_number, "1"))
+                fty_proto_ext_insert(asset, "name", "%s Host", name);
+            else {
+                int dc_numberI = atoi(dc_number);
+                fty_proto_ext_insert(asset, "name", "%s Device%i", name, dc_numberI-1);
+            }
+        }
+
+        std::time_t timestamp = std::time(NULL);
+        char mbstr[100];
+        if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
+            fty_proto_ext_insert(asset, "create_ts", "%s", mbstr);
+        }
+
+        std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
+        if(!daisy_chain) {
+            auto found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
+            [&](const std::pair<std::string, std::string> el) {
+                return streq(el.second.c_str(), ip);
+            });
+
+            if(found != self->devices_discovered.device_list.end()) {
+                log_info("Asset with IP address %s already exists", ip);
+                fty_proto_destroy(&asset);
+                return;
+            }
+        }
+
+        for (const auto& property : self->default_values_aux) {
+            fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+        }
+        for (const auto& property : self->default_values_ext) {
+            fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
+        }
+
+        fty_proto_print(asset);
+        log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
+        fty_proto_set_operation(asset, "create-force");
+
+        fty_proto_t *assetDup = fty_proto_dup(asset);
+        s_fixup_nmc_netxml (assetDup);
+        zmsg_t *msg = fty_proto_encode(&assetDup);
+        zmsg_pushstrf (msg, "%s", "READONLY");
+        log_debug("about to send create message");
+        int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
+        if (rv == -1) {
+            log_error("Failed to send ASSET_MANIPULATION message to asset-agent");
+        } else {
+            log_info("Create message has been sent to asset-agent (rv = %i)", rv);
+
+            zmsg_t *response = mlm_client_recv(self->mlmCreate);
+            if(!response) {
+                fty_proto_destroy(&asset);
+                return;
+            }
+
+            char *str_resp = zmsg_popstr(response);
+
+            if(!str_resp || !streq(str_resp, "OK")) {
+                log_error("Error during asset creation.");
+                fty_proto_destroy(&asset);
+                return;
+            }
+
+            zstr_free(&str_resp);
+            str_resp = zmsg_popstr(response);
+            if(!str_resp) {
+                log_error("Error during asset creation.");
+                fty_proto_destroy(&asset);
+                return;
+            }
+
+            std::string iname(str_resp);
+
+            // create asset links
+            for (auto& link : self->default_values_links) {
+
+                link.dest = DBAssets::name_to_asset_id(iname);
+            }
+            auto conn = tntdb::connectCached(DBConn::url);
+            DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
+
+            self->devices_discovered.device_list[str_resp] = ip;
+            zstr_free(&str_resp);
+
+            name = fty_proto_aux_string(asset, "subtype", "error");
+            if (streq(name, "ups")) self->nb_ups_discovered++;
+            else if (streq(name, "epdu")) self->nb_epdu_discovered++;
+            else if (streq(name, "sts")) self->nb_sts_discovered++;
+            if(!streq(name, "error"))
+            self->nb_discovered++;
+        }
     } else {
-        log_info("Create message has been sent to asset-agent (rv = %i)", rv);
+        // set external name
+        std::string parent(fty_proto_aux_string(asset, "parent", ""));
+        std::string port(fty_proto_ext_string(asset, "port", ""));
+        std::string serialNo(fty_proto_ext_string(asset, "serial_no", ""));
 
-        zmsg_t *response = mlm_client_recv(self->mlmCreate);
-        if(!response) {
-            self->devices_discovered.mtx_list.unlock();
+        if(serialNo.empty() || parent.empty() || port.empty()) {
+            log_info("Missing info for new sensor");
+            fty_proto_destroy(&asset);
+            return;
+        }
+        fty_proto_ext_insert(asset, "name", "sensor (%s - port %s)", parent.c_str(), port.c_str());
+
+        std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
+        auto found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
+            [&](const std::pair<std::string, std::string> el) {
+                return el.second == serialNo;
+            });
+
+        if(found != self->devices_discovered.device_list.end()) {
+            log_info("Sensor %s already exists", serialNo.c_str());
             fty_proto_destroy(&asset);
             return;
         }
 
-        char *str_resp = zmsg_popstr(response);
+        std::time_t timestamp = std::time(NULL);
+        char mbstr[100];
+        if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
+            fty_proto_ext_insert(asset, "create_ts", "%s", mbstr);
+        }
 
-        if(!str_resp || !streq(str_resp, "OK")) {
-            self->devices_discovered.mtx_list.unlock();
-            log_error("Error during asset creation.");
+        found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
+            [&](const std::pair<std::string, std::string> el) {
+                return el.second == parent;
+            });
+
+        if(found == self->devices_discovered.device_list.end()) {
+            log_info("Could not find parent of sensor %s", serialNo.c_str());
             fty_proto_destroy(&asset);
             return;
         }
 
-        zstr_free(&str_resp);
-        str_resp = zmsg_popstr(response);
-        if(!str_resp) {
-            self->devices_discovered.mtx_list.unlock();
-            log_error("Error during asset creation.");
+        std::string parentName = found->first;
+        log_debug("Parent of sensor %s is %s", serialNo.c_str(), parentName.c_str());
+
+        for (const auto& property : self->default_values_aux) {
+            fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+        }
+        for (const auto& property : self->default_values_ext) {
+            fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
+        }
+
+        auto parentId = fty::AssetAccessor::assetInameToID(parentName);
+        if(!parentId) {
+            log_info("Could not query parent ID of sensor %s", serialNo.c_str());
             fty_proto_destroy(&asset);
             return;
         }
+        fty_proto_aux_insert(asset, "parent", fty::convert<std::string, uint32_t>(parentId.value()).c_str());
 
-        std::string iname(str_resp);
+        fty_proto_print(asset);
+        log_info("Found new sensor %s with parent %s", serialNo.c_str(), parentName.c_str());
+        fty_proto_set_operation(asset, "create-force");
 
-        // create asset links
-        for (auto& link : self->default_values_links) {
+        fty_proto_t *assetDup = fty_proto_dup(asset);
+        s_fixup_nmc_netxml (assetDup);
+        zmsg_t *msg = fty_proto_encode(&assetDup);
+        zmsg_pushstrf (msg, "%s", "READONLY");
+        log_debug("about to send create message");
+        int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
 
-            link.dest = DBAssets::name_to_asset_id(iname);
+        if (rv == -1) {
+            log_error("Failed to send ASSET_MANIPULATION message to asset-agent");
+        } else {
+            log_info("Create message has been sent to asset-agent (rv = %i)", rv);
+
+            zmsg_t *response = mlm_client_recv(self->mlmCreate);
+            if(!response) {
+                fty_proto_destroy(&asset);
+                return;
+            }
+
+            char *str_resp = zmsg_popstr(response);
+
+            if(!str_resp || !streq(str_resp, "OK")) {
+                log_error("Error during asset creation.");
+                fty_proto_destroy(&asset);
+                return;
+            }
+
+            zstr_free(&str_resp);
+            str_resp = zmsg_popstr(response);
+            if(!str_resp) {
+                log_error("Error during asset creation.");
+                fty_proto_destroy(&asset);
+                return;
+            }
+
+            std::string iname(str_resp);
+
+            auto conn = tntdb::connectCached(DBConn::url);
+            DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
+
+            self->devices_discovered.device_list[str_resp] = serialNo;
+            zstr_free(&str_resp);
+
+            self->nb_sensor_discovered++;
         }
-        auto conn = tntdb::connectCached(DBConn::url);
-        DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
-
-        zhash_update(self->devices_discovered.device_list, str_resp, strdup(ip));
-        zhash_freefn(self->devices_discovered.device_list, str_resp, free);
-        zstr_free(&str_resp);
-
-        name = fty_proto_aux_string(asset, "subtype", "error");
-        if (streq(name, "ups")) self->nb_ups_discovered++;
-        else if (streq(name, "epdu")) self->nb_epdu_discovered++;
-        else if (streq(name, "sts")) self->nb_sts_discovered++;
-        else if (streq(name, "sensor")) self->nb_sensor_discovered++;
-        if(!streq(name, "error"))
-          self->nb_discovered++;
     }
-    self->devices_discovered.mtx_list.unlock();
     fty_proto_destroy(&asset);
 }
 
@@ -910,6 +1026,7 @@ void static
 s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
     if (is_fty_proto(msg)) {
         fty_proto_t *fmsg = fty_proto_decode(&msg);
+        log_debug("Adding asset to self->assets");
         assets_put(self->assets, &fmsg);
         fty_proto_destroy(&fmsg);
     } else {
@@ -1107,6 +1224,16 @@ s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {
         // handle fty_proto protocol here
         fty_proto_t *fmsg = fty_proto_decode(&message);
 
+        // for(const auto& el : self->devices_discovered) {
+        //     log_debug("%s - %s", el.first.c_str(), el.second.c_str());
+        // }
+
+        // self->devices_discovered["test"] = "value";
+
+        // for(const auto& el : self->devices_discovered) {
+        //     log_debug("%s - %s", el.first.c_str(), el.second.c_str());
+        // }
+
         if (fmsg && (fty_proto_id(fmsg) == FTY_PROTO_ASSET)) {
 
             const char *operation = fty_proto_operation(fmsg);
@@ -1114,17 +1241,19 @@ s_handle_stream(fty_discovery_server_t* self, zmsg_t *message) {
             //TODO : Remove as soon as we can this ugly hack of "_no_not_really"
             if (streq(operation, FTY_PROTO_ASSET_OP_DELETE) && !zhash_lookup(fty_proto_aux(fmsg), "_no_not_really")) {
                 const char *iname = fty_proto_name(fmsg);
-                self->devices_discovered.mtx_list.lock();
-                zhash_delete(self->devices_discovered.device_list, iname);
-                self->devices_discovered.mtx_list.unlock();
+                std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
+                self->devices_discovered.device_list.erase(iname);
             } else if (streq(operation, FTY_PROTO_ASSET_OP_CREATE) || streq(operation, FTY_PROTO_ASSET_OP_UPDATE)) {
                 const char *iname = fty_proto_name(fmsg);
                 const char *ip = fty_proto_ext_string(fmsg, "ip.1", "");
                 if(!streq(ip, "")){
-                    self->devices_discovered.mtx_list.lock();
-                    zhash_update(self->devices_discovered.device_list, iname, strdup(ip));
-                    zhash_freefn(self->devices_discovered.device_list, iname, free);
-                    self->devices_discovered.mtx_list.unlock();
+                    log_debug("%s", ip);
+                    std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
+                    self->devices_discovered.device_list[iname] = ip;
+                } else {
+                    const char *serial_no = fty_proto_ext_string(fmsg, "serial_no", "");
+                    std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
+                    self->devices_discovered.device_list[iname] = serial_no;
                 }
             }
         }
@@ -1270,8 +1399,8 @@ fty_discovery_server_new() {
     self->range_scan_config.config = strdup(FTY_DISCOVERY_CFG_FILE);
     self->configuration_scan.type = TYPE_LOCALSCAN;
     self->configuration_scan.scan_size = 0;
-    self->devices_discovered.device_list = zhash_new();
     self->percent = NULL;
+    self->devices_discovered.device_list = std::map<std::string, std::string>();
     self->nut_mapping_inventory = fty::nut::KeyValues();
     self->nut_sensor_mapping_inventory = fty::nut::KeyValues();
     self->default_values_aux = std::map<std::string, std::string>();
@@ -1302,10 +1431,9 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
         self->range_scan_config.ranges.shrink_to_fit();
         if (self->percent)
             zstr_free(&self->percent);
+        self->devices_discovered.device_list.~map();
         if (self->range_scanner)
             zactor_destroy(&self->range_scanner);
-        if (self->devices_discovered.device_list)
-            zhash_destroy(&self->devices_discovered.device_list);
         // FIXME: I, feel something so wrong / Doing the right thing...
         self->configuration_scan.scan_list.~vector();
         self->localscan_subscan.~vector();

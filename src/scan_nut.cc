@@ -207,6 +207,8 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             log_debug("Discovered %i sensor(s)", endSensor);
         }
 
+        assets.emplace_back(fmsg);
+
         for(int i = startSensor; i <= endSensor; i++) {
             fty_proto_t *fsmsg = fty_proto_new(FTY_PROTO_ASSET);
 
@@ -223,9 +225,11 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
 
             // FIXME: parent == "<type> (<ip.1>)"
             // Some special cases.
+            fty_proto_aux_insert(fsmsg, "name", "sensor-%s-%d", fty_proto_ext_string(fmsg, "ip.1", "127.0.0.1"), i);
+            fty_proto_aux_insert(fsmsg, "type", "device");
+            fty_proto_aux_insert(fsmsg, "subtype", "sensor");
+            fty_proto_aux_insert(fsmsg, "parent", "%s", ip.c_str());
             fty_proto_ext_insert(fsmsg, "parent_name.1", "%s (%s)", type.c_str(), ip.c_str());
-            fty_proto_aux_insert(fsmsg, "type", "sensor");
-            //fty_proto_aux_insert(fsmsg, "subtype", "sensor");
             if (i != 0) {
                 fty_proto_ext_insert(fsmsg, "port", "%" PRIi32, i);
             }
@@ -236,12 +240,12 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
                 continue;
             }
 
-            //fty_proto_print(fsmsg); // FIXME: debug
+            fty_proto_print(fsmsg); // FIXME: debug
             // FIXME: also dry contacts?
             // FIXME: needed?
+            log_debug("Added sensor %i", i);
             assets.emplace_back(fsmsg);
         }
-        assets.emplace_back(fmsg);
     }
 
     return !assets.empty();
@@ -253,15 +257,12 @@ ip_present(discovered_devices_t *device_discovered, std::string ip) {
     if(!device_discovered)
         return false;
 
-    device_discovered->mtx_list.lock();
-    char* c = (char*) zhash_first( device_discovered->device_list);
+    std::lock_guard<std::mutex> lock(device_discovered->mtx_list);
 
-    while(c && !streq(c, ip.c_str())) {
-        c = (char*) zhash_next( device_discovered->device_list);
-    }
+    const auto& device_list = device_discovered->device_list;
+    auto found = std::find_if(device_list.begin(), device_list.end(), [&](std::pair<std::string, std::string> el) {return ip == el.second;});
 
-    bool present = (c != NULL);
-    device_discovered->mtx_list.unlock();
+    bool present = (found != device_list.end());
 
     return present;
 }
@@ -366,6 +367,8 @@ dump_data_actor(zsock_t *pipe, void *args) {
 
                 for (auto i = assets.cbegin(); i != assets.cend(); i++) {
                     fty_proto_t *asset = *i;
+
+                    log_debug("Processing asset %s (%s - %s)", fty_proto_aux_string(asset, "name", "iname"), fty_proto_aux_string(asset, "type", "error"), fty_proto_aux_string(asset, "subtype", "error"));
 
                     //add the endpoint data
                     std::string daisyChain(fty_proto_ext_string(asset, "daisy_chain", ""));

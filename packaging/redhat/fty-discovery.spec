@@ -71,6 +71,7 @@ BuildRequires:  fty-security-wallet-devel
 BuildRequires:  fty-common-nut-devel
 BuildRequires:  fty-asset-devel
 BuildRequires:  fty-asset-accessor-devel
+BuildRequires:  fty-utils-devel
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
@@ -110,6 +111,7 @@ Requires:       fty-security-wallet-devel
 Requires:       fty-common-nut-devel
 Requires:       fty-asset-devel
 Requires:       fty-asset-accessor-devel
+Requires:       fty-utils-devel
 
 %description devel
 42ity service for discovering devices development tools

@@ -40,6 +40,7 @@ Build-Depends: debhelper (>= 9),
     libfty-common-nut-dev,
     libfty-asset-dev,
     libfty-asset-accessor-dev,
+    libfty-utils-dev,
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
     dh-systemd,
@@ -74,6 +75,7 @@ Depends:
     libfty-common-nut-dev,
     libfty-asset-dev,
     libfty-asset-accessor-dev,
+    libfty-utils-dev,
     libfty-discovery0 (= ${binary:Version})
 Description: fty-discovery development tools
  This package contains development files for fty-discovery:

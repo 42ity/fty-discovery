@@ -1436,6 +1436,67 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_asset_accessor
 dnl END of enabled attempts to search for libfty_asset_accessor
 
 
+was_fty_utils_check_lib_detected=no
+
+search_libfty_utils="yes"
+
+AC_ARG_WITH([libfty-utils],
+    [
+        AS_HELP_STRING([--with-libfty-utils],
+        [yes or no. Optionally specify libfty-utils prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_utils="yes"
+    ],
+    [
+        search_libfty_utils="yes"
+    ])
+AS_CASE([x"${with_libfty_utils}"],
+    [xyes], [search_libfty_utils="yes"],
+    [xno],  [search_libfty_utils="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_utils}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_utils was explicitly disabled during configuration by '--with-libfty-utils=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_utils}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_utils], [libfty-utils >= 0.0.0],
+    [
+        was_fty_utils_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty-utils"
+    ],
+    [
+        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'fty-utils' - please ensure it is set])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_utils
+    AS_CASE(["x${was_fty_utils_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_utils_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_utils_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_utils_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_utils_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_utils_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_utils_CFLAGS],[${fty_utils_synthetic_cflags}])
+                AC_SUBST([fty_utils_LIBS],[${fty_utils_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty-utils 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_utils
+
+
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 
