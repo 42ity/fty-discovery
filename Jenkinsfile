@@ -26,5 +26,9 @@
 
 @Library('etn-ipm2-jenkins') _
 
-// run with default parameters
-etn_ipm2_build_and_tests_pipeline_zproject()
+import params.ZprojectPipelineParams
+ZprojectPipelineParams parameters = new ZprojectPipelineParams()
+// run without mem check
+parameters.enableCoverity = false
+
+etn_ipm2_build_and_tests_pipeline_zproject(parameters)
