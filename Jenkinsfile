@@ -28,7 +28,5 @@
 
 import params.ZprojectPipelineParams
 ZprojectPipelineParams parameters = new ZprojectPipelineParams()
-// run without mem check
-parameters.enableCoverity = false
 
 etn_ipm2_build_and_tests_pipeline_zproject(parameters)
