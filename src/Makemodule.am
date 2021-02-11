@@ -340,7 +340,7 @@ endif
 
 cppcheck.xml:
 	@echo "Performing cppcheck static analysis..."
-	cppcheck --std=c++11 --enable=all --inconclusive --xml --xml-version=2 . 2>"$@"
+	cppcheck --std=c++17 --enable=all --inconclusive --xml --xml-version=2 . 2>"$@"
 	@echo "The cppcheck static analysis is done"
 
 # Note: this recipe tests that the Git-based workspace reports no changed

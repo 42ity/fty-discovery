@@ -1291,6 +1291,212 @@ dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_common_nut
 dnl END of enabled attempts to search for libfty_common_nut
 
 
+was_fty_asset_check_lib_detected=no
+
+search_libfty_asset="yes"
+
+AC_ARG_WITH([libfty-asset],
+    [
+        AS_HELP_STRING([--with-libfty-asset],
+        [yes or no. Optionally specify libfty-asset prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_asset="yes"
+    ],
+    [
+        search_libfty_asset="yes"
+    ])
+AS_CASE([x"${with_libfty_asset}"],
+    [xyes], [search_libfty_asset="yes"],
+    [xno],  [search_libfty_asset="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_asset}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_asset was explicitly disabled during configuration by '--with-libfty-asset=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_asset}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_asset], [libfty-asset >= 0.0.0],
+    [
+        was_fty_asset_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty-asset"
+    ],
+    [
+        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'fty-asset' - please ensure it is set])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_asset
+    AS_CASE(["x${was_fty_asset_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_asset_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_asset_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_asset_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_asset_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_asset_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_asset_CFLAGS],[${fty_asset_synthetic_cflags}])
+                AC_SUBST([fty_asset_LIBS],[${fty_asset_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty-asset 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_asset
+
+
+was_fty_asset_accessor_check_lib_detected=no
+
+search_libfty_asset_accessor="yes"
+
+AC_ARG_WITH([libfty-asset-accessor],
+    [
+        AS_HELP_STRING([--with-libfty-asset-accessor],
+        [yes or no. Optionally specify libfty-asset-accessor prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_asset_accessor="yes"
+    ],
+    [
+        search_libfty_asset_accessor="yes"
+    ])
+AS_CASE([x"${with_libfty_asset_accessor}"],
+    [xyes], [search_libfty_asset_accessor="yes"],
+    [xno],  [search_libfty_asset_accessor="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_asset_accessor}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_asset_accessor was explicitly disabled during configuration by '--with-libfty-asset-accessor=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_asset_accessor}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_asset_accessor], [libfty-asset-accessor >= 0.0.0],
+    [
+        was_fty_asset_accessor_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty-asset-accessor"
+    ],
+    [
+        AC_MSG_NOTICE([Package libfty-asset-accessor not found; falling back to defined compilability tests])
+
+        fty_asset_accessor_synthetic_cflags=""
+        fty_asset_accessor_synthetic_libs="-lfty-asset-accessor"
+
+        if test -n "${with_libfty_asset_accessor}" && test x"${with_libfty_asset_accessor}" != xyes && test x"${with_libfty_asset_accessor}" != xno; then
+            if test -r "${with_libfty_asset_accessor}/include/fty_asset_accessor.h"; then
+                fty_asset_accessor_synthetic_cflags="-I${with_libfty_asset_accessor}/include"
+                fty_asset_accessor_synthetic_libs="-L${with_libfty_asset_accessor}/lib -lfty-asset-accessor"
+            else
+            AC_MSG_ERROR([Header file ${with_libfty-asset-accessor}/include/fty_asset_accessor.h was not found. Please check libfty-asset-accessor prefix])
+            fi
+        else
+            AC_CHECK_HEADER([fty_asset_accessor.h], [],
+            AC_MSG_ERROR([Header file fty_asset_accessor.h was not found in default search paths])
+                )
+        fi
+
+        AC_CHECK_LIB([fty-asset-accessor], [fty-asset-accessor-test],
+            [
+                was_fty_asset_accessor_check_lib_detected=yes
+                PKGCFG_LIBS_PRIVATE="$PKGCFG_LIBS_PRIVATE -lfty-asset-accessor"
+            ],
+            [AC_MSG_ERROR([cannot link with -lfty-asset-accessor, install libfty-asset-accessor])])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_asset_accessor
+    AS_CASE(["x${was_fty_asset_accessor_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_asset_accessor_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_asset_accessor_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_asset_accessor_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_asset_accessor_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_asset_accessor_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_asset_accessor_CFLAGS],[${fty_asset_accessor_synthetic_cflags}])
+                AC_SUBST([fty_asset_accessor_LIBS],[${fty_asset_accessor_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty-asset-accessor 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_asset_accessor
+
+
+was_fty_utils_check_lib_detected=no
+
+search_libfty_utils="yes"
+
+AC_ARG_WITH([libfty-utils],
+    [
+        AS_HELP_STRING([--with-libfty-utils],
+        [yes or no. Optionally specify libfty-utils prefix (directory where its include/ and lib/ are located), but that is only used if pkgconfig metadata is not found first])
+    ],
+    [
+        search_libfty_utils="yes"
+    ],
+    [
+        search_libfty_utils="yes"
+    ])
+AS_CASE([x"${with_libfty_utils}"],
+    [xyes], [search_libfty_utils="yes"],
+    [xno],  [search_libfty_utils="no"])
+
+dnl We do not abort right now, because the maintainer/developer may have
+dnl something particular in mind, e.g. to build just parts of a project.
+AS_IF([test x"${search_libfty_utils}" = xno],
+    [AC_MSG_WARN([Required dependency on fty_utils was explicitly disabled during configuration by '--with-libfty-utils=no'; subsequent full build of fty-discovery may fail])])
+
+AS_IF([test x"${search_libfty_utils}" = xyes], [
+    # Archive previously detected and supplied flags
+    PRE_SEARCH_CFLAGS="${CFLAGS}"
+    PRE_SEARCH_LIBS="${LIBS}"
+
+    found_pkgconfig=""
+    PKG_CHECK_MODULES([fty_utils], [libfty-utils >= 0.0.0],
+    [
+        was_fty_utils_check_lib_detected=pkgcfg
+        found_pkgconfig="libfty-utils"
+    ],
+    [
+        AC_MSG_WARN([Attribute 'test' is not set on zproject dependency 'fty-utils' - please ensure it is set])
+    ])
+
+dnl END of PKG_CHECK_MODULES and/or direct tests for libfty_utils
+    AS_CASE(["x${was_fty_utils_check_lib_detected}"],
+        [xpkgcfg], [
+                PKGCFG_NAMES_PRIVATE="$PKGCFG_NAMES_PRIVATE ${found_pkgconfig}"
+                CFLAGS="${fty_utils_CFLAGS} ${CFLAGS}"
+                LIBS="${fty_utils_LIBS} ${LIBS}"
+            ],
+        [xyes], [
+                CFLAGS="${fty_utils_synthetic_cflags} ${CFLAGS}"
+                LDFLAGS="${fty_utils_synthetic_libs} ${LDFLAGS}"
+                LIBS="${fty_utils_synthetic_libs} ${LIBS}"
+
+                AC_SUBST([fty_utils_CFLAGS],[${fty_utils_synthetic_cflags}])
+                AC_SUBST([fty_utils_LIBS],[${fty_utils_synthetic_libs}])
+            ],
+        [xno], [
+            AC_MSG_ERROR([Cannot find pkg-config metadata for libfty-utils 0.0.0 or higher])
+    ])
+])
+dnl END of enabled attempts to search for libfty_utils
+
+
 CFLAGS="${PREVIOUS_CFLAGS}"
 LIBS="${PREVIOUS_LIBS}"
 
@@ -1625,7 +1831,7 @@ AM_CONDITIONAL([ENABLE_GCC_STD_REGEX], [test x$enable_gcc_std_regex != xno])
 AS_IF([test -n "$CXX"],[AS_IF([$CXX --version 2>&1 | grep 'Free Software Foundation' > /dev/null && test "x$GCC" = "xyes"],
   [AS_IF([test "x$enable_gcc_std_regex" = "xyes" || test "x$enable_gcc_std_regex" = "xauto"],
     [AC_MSG_CHECKING([for GNU C++11 support level expected by gcc-4.9 release or newer])
-     CXXFLAGS="$CXXFLAGS --std=c++11"
+     CXXFLAGS="$CXXFLAGS --std=c++17"
      AC_LANG_PUSH([C++])
      AC_TRY_RUN([/* Note: private macros in use, test can break over time */
 #include <regex>
