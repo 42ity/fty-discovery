@@ -46,7 +46,7 @@ struct ScanResult {
     fty::nut::DeviceConfigurations deviceConfigurations;
 };
 
-static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain = "");
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain, const std::string& modbusAddress);
 
 bool ip_present(discovered_devices_t *device_discovered, std::string ip);
 
@@ -137,13 +137,22 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
         }
     }
 
+    std::string deviceSerial;
+
     for(int i = startDevice; i <= endDevice; i++) {
+        deviceSerial.clear();
+
         fty_proto_t *fmsg = fty_proto_new(FTY_PROTO_ASSET);
 
         // Map inventory data.
         auto mappedDump = fty::nut::performMapping(*mappings, dump, i);
         for (auto property : mappedDump) {
             fty_proto_ext_insert(fmsg, property.first.c_str(), "%s", property.second.c_str());
+        }
+
+        auto serialFound = mappedDump.find("serial_no");
+        if(serialFound != mappedDump.end()) {
+            deviceSerial = serialFound->second;
         }
 
         // Try to obtain DNS name ("hostname" + "dns.1" attributes)
@@ -184,7 +193,11 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
         int startSensor = 0, endSensor = 0;
         {
             // First, check for new style and daisychained sensors
-            auto item = dump.find("ambient.count");
+            std::string ambientCount = "ambient.count";
+            if(i != 0) {    // for daisy chained devices, the ambient count is stored in device.X.ambient.count
+                ambientCount = "device." + std::to_string(i) + ".ambient.count";
+            }
+            auto item = dump.find(ambientCount);
             if(item != dump.end() && !streq(item->second.c_str(), "1")) {
                 startSensor = 1;
                 endSensor = std::stoi(item->second);
@@ -204,8 +217,9 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
                     }
                 }                
             }
-            log_debug("Discovered %i sensor(s)", endSensor);
         }
+
+        log_debug("Discovered %i sensor(s)", endSensor);
 
         assets.emplace_back(fmsg);
 
@@ -223,27 +237,104 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             // FIXME: id_parent == current device!
             // FIXME: => location = parent ename
 
-            // FIXME: parent == "<type> (<ip.1>)"
-            // Some special cases.
-            fty_proto_aux_insert(fsmsg, "name", "sensor-%s-%d", fty_proto_ext_string(fmsg, "ip.1", "127.0.0.1"), i);
-            fty_proto_aux_insert(fsmsg, "type", "device");
-            fty_proto_aux_insert(fsmsg, "subtype", "sensor");
-            fty_proto_aux_insert(fsmsg, "parent", "%s", ip.c_str());
-            fty_proto_ext_insert(fsmsg, "parent_name.1", "%s (%s)", type.c_str(), ip.c_str());
-            if (i != 0) {
-                fty_proto_ext_insert(fsmsg, "port", "%" PRIi32, i);
+            // get sensor serial number (mandatory)
+            std::string sensorSerialNumber;
+            auto item = ambientMappedDump.find("serial_no");
+            if(item == ambientMappedDump.end()) {
+                log_error("No serial number for sensor number %i", i);
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
+            sensorSerialNumber = item->second;
+
+            // look for parent serial number (optional)
+            item = ambientMappedDump.find("parent_serial");
+            std::string parentSerial;
+            if(item != ambientMappedDump.end()) {
+                parentSerial = item->second;
             }
 
-            if (!fty_proto_ext_string(fsmsg, "manufacturer", nullptr) || !fty_proto_ext_string(fsmsg, "model", nullptr)) {
-                log_error("No manufacturer or model for sensor number %i", i);
+            // look for sensor model (mandatory)
+            std::string sensorModel;
+            item = ambientMappedDump.find("model");
+            // model field could be not present, if there is parent_serial field -> EMP002
+            if(item != ambientMappedDump.end()) {
+                sensorModel = item->second;
+                // some devices report Eaton EMPDT1H1C2 instead of EMPDT1H1C2
+                if(sensorModel.compare("Eaton EMPDT1H1C2") == 0) {
+                    sensorModel = "EMPDT1H1C2";
+                }
+            } else if(!parentSerial.empty()){
+                sensorModel = "EMPDT1H1C2";
+            } else {
+                log_error("No model for sensor number %i", i);
                 fty_proto_destroy(&fsmsg);
                 continue;
             }
 
-            fty_proto_print(fsmsg); // FIXME: debug
+            // look for manufacturer (mandatory)
+            item = ambientMappedDump.find("manufacturer");
+            std::string sensorManufacturer;
+            if(item != ambientMappedDump.end()) {
+                sensorManufacturer = item->second;
+            } else {
+                log_error("No manufacturer for sensor number %i", i);
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
+
+            // define parent name (parent_name.1 field)
+            std::string parentName = type + " (" + ip + ")";
+            if(!deviceSerial.empty()) {
+                parentName = deviceSerial;
+            }
+
+            // set parent identifier as the first available of:
+            // - parentSerial
+            // - deviceSerial
+            // - ip
+            std::string parentIdentifier = [&] () {
+                if(!parentSerial.empty()) {
+                    return parentSerial;
+                } else if(!deviceSerial.empty()){
+                    return deviceSerial;
+                }
+                return ip;
+            } ();
+
+            // set unique sensor external name
+            // default name may be duplicated (i.e., EMPDT1H1C2 @1)
+            std::string externalName = "sensor " + sensorModel + " (" + sensorSerialNumber + ")";
+
+            fty_proto_aux_insert(fsmsg, "name", sensorSerialNumber.c_str());
+            fty_proto_aux_insert(fsmsg, "type", "device");
+            fty_proto_aux_insert(fsmsg, "subtype", "sensor");
+            fty_proto_aux_insert(fsmsg, "parent", parentIdentifier.c_str());
+            fty_proto_ext_insert(fsmsg, "name", externalName.c_str());
+            fty_proto_ext_insert(fsmsg, "model", sensorModel.c_str());
+            fty_proto_ext_insert(fsmsg, "parent_name.1", parentName.c_str());
+
+            // model dependent checks
+            if(sensorModel.compare("EMPDT1H1C2") == 0) {
+                // look for modbus address (mandatory)
+                std::string modbusAddress;
+                item = ambientMappedDump.find("modbus_address");
+                if(item != ambientMappedDump.end()) {
+                    modbusAddress = item->second;
+                } else {
+                    log_error("No modbus address for sensor number %i", i);
+                    fty_proto_destroy(&fsmsg);
+                    continue;
+                }
+            } else {
+                // currently other models are not supported in auto discovery
+                log_error("Invalid sensor model %s", sensorModel.c_str());
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
             // FIXME: also dry contacts?
             // FIXME: needed?
-            log_debug("Added sensor %i", i);
+            log_debug("Added new sensor (%d of %d): SERIAL: %s - TYPE: %s - PARENT: %s", i, endSensor, sensorSerialNumber.c_str(), sensorModel.c_str(), parentIdentifier.c_str());
             assets.emplace_back(fsmsg);
         }
     }
@@ -372,8 +463,9 @@ dump_data_actor(zsock_t *pipe, void *args) {
 
                     //add the endpoint data
                     std::string daisyChain(fty_proto_ext_string(asset, "daisy_chain", ""));
+                    std::string modbusAddress(fty_proto_ext_string(asset, "modbus_address", ""));
 
-                    for(const auto item : getEndpointExtAttributs(*cpsr, daisyChain))
+                    for(const auto item : getEndpointExtAttributs(*cpsr, daisyChain, modbusAddress))
                     {
                         fty_proto_ext_insert(asset, item.first.c_str(), "%s", item.second.c_str());
                     }
@@ -541,14 +633,18 @@ create_pool_dumpdata(const ScanResult &result, discovered_devices_t *devices, zs
     return stop_now;
 }
 
-static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain)
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain, const std::string& modbusAddress)
 {
     std::map<std::string, std::string> extAttributs;
 
     if(scanResult.nutDriver == "snmp-ups") {
         extAttributs["endpoint.1.protocol"] = "nut_snmp";
         extAttributs["endpoint.1.port"] = "161";
-        extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+        if(modbusAddress.empty()) {
+            extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+        } else {
+            extAttributs["endpoint.1.sub_address"] = modbusAddress;
+        }
 
         if(scanResult.documents.size() > 0) {
             extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = scanResult.documents[0]->getId();
@@ -560,7 +656,11 @@ static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResu
     } else if( scanResult.nutDriver == "netxml-ups" ) {
         extAttributs["endpoint.1.protocol"] = "nut_xml_pdc";
         extAttributs["endpoint.1.port"] = "80";
-        extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+        if(modbusAddress.empty()) {
+            extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+        } else {
+            extAttributs["endpoint.1.sub_address"] = modbusAddress;
+        }
     }
 
     return extAttributs;
