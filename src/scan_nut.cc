@@ -638,26 +638,25 @@ static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResu
     std::map<std::string, std::string> extAttributs;
 
     if(scanResult.nutDriver == "snmp-ups") {
-        extAttributs["endpoint.1.protocol"] = "nut_snmp";
-        extAttributs["endpoint.1.port"] = "161";
         if(modbusAddress.empty()) {
+            extAttributs["endpoint.1.protocol"] = "nut_snmp";
+            extAttributs["endpoint.1.port"] = "161";
             extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
-        } else {
+
+            if(scanResult.documents.size() > 0) {
+                extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = scanResult.documents[0]->getId();
+            } else {
+                extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = "";
+            }
+        } else {    // sensor needs only modbus address
             extAttributs["endpoint.1.sub_address"] = modbusAddress;
         }
 
-        if(scanResult.documents.size() > 0) {
-            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = scanResult.documents[0]->getId();
-        } else {
-            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = "";
-        }
-
-
     } else if( scanResult.nutDriver == "netxml-ups" ) {
-        extAttributs["endpoint.1.protocol"] = "nut_xml_pdc";
-        extAttributs["endpoint.1.port"] = "80";
         if(modbusAddress.empty()) {
             extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+            extAttributs["endpoint.1.protocol"] = "nut_xml_pdc";
+            extAttributs["endpoint.1.port"] = "80";
         } else {
             extAttributs["endpoint.1.sub_address"] = modbusAddress;
         }
