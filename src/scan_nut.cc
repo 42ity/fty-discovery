@@ -312,7 +312,6 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             fty_proto_aux_insert(fsmsg, "parent", parentIdentifier.c_str());
             fty_proto_ext_insert(fsmsg, "name", externalName.c_str());
             fty_proto_ext_insert(fsmsg, "model", sensorModel.c_str());
-            fty_proto_ext_insert(fsmsg, "parent_name.1", parentName.c_str());
 
             // model dependent checks
             if(sensorModel.compare("EMPDT1H1C2") == 0) {
