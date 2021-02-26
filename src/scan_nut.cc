@@ -238,8 +238,22 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             // FIXME: => location = parent ename
 
             // get sensor serial number (mandatory)
+            auto item = ambientMappedDump.find("present");
+            if(item == ambientMappedDump.end()) {
+                log_error("No present field for sensor number %i", i);
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
+
+            if(item->second != "yes") {
+                log_warning("Sensor %i is not present", i);
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
+
+            // get sensor serial number (mandatory)
             std::string sensorSerialNumber;
-            auto item = ambientMappedDump.find("serial_no");
+            item = ambientMappedDump.find("serial_no");
             if(item == ambientMappedDump.end()) {
                 log_error("No serial number for sensor number %i", i);
                 fty_proto_destroy(&fsmsg);
