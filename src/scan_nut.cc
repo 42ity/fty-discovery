@@ -668,11 +668,11 @@ static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResu
             } else {
                 extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = "";
             }
-        } else {    // sensor needs only modbus address
+        } else {
             if(streq(sensor.c_str(), "EMPDT1H1C2")) {
                 extAttributs["endpoint.1.sub_address"] = modbusAddress;
             } else {
-                log_error("Sensor model %s is not not supported", sensor.c_str());
+                log_warning("Sensor model %s is not supported", sensor.c_str());
             }
         }
     } else if( scanResult.nutDriver == "netxml-ups" ) {
@@ -684,7 +684,7 @@ static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResu
             if(streq(sensor.c_str(), "EMPDT1H1C2")) {
                 extAttributs["endpoint.1.sub_address"] = modbusAddress;
             } else {
-                log_error("Sensor model %s is not not supported", sensor.c_str());
+                log_warning("Sensor model %s is not supported", sensor.c_str());
             }
         }
     }
