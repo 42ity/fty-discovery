@@ -736,6 +736,9 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
             fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
         }
 
+        // update parent name
+        fty_proto_ext_insert(asset, "parent_name.1", parentName.c_str());
+
         // update parent ID (overwrite default)
         auto parentId = fty::AssetAccessor::assetInameToID(parentName);
         if(!parentId) {

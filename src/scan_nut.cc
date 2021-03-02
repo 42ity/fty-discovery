@@ -46,7 +46,7 @@ struct ScanResult {
     fty::nut::DeviceConfigurations deviceConfigurations;
 };
 
-static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain, const std::string& modbusAddress);
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string& sensor, const std::string & daisyChain, const std::string& modbusAddress);
 
 bool ip_present(discovered_devices_t *device_discovered, std::string ip);
 
@@ -237,9 +237,23 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             // FIXME: id_parent == current device!
             // FIXME: => location = parent ename
 
+            // check if sensor is physically present (may be reported in NUT scan, but not present)
+            auto item = ambientMappedDump.find("present");
+            if(item == ambientMappedDump.end()) {
+                log_error("No present field for sensor number %i", i);
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
+
+            if(item->second != "yes") {
+                log_warning("Sensor %i is not present", i);
+                fty_proto_destroy(&fsmsg);
+                continue;
+            }
+
             // get sensor serial number (mandatory)
             std::string sensorSerialNumber;
-            auto item = ambientMappedDump.find("serial_no");
+            item = ambientMappedDump.find("serial_no");
             if(item == ambientMappedDump.end()) {
                 log_error("No serial number for sensor number %i", i);
                 fty_proto_destroy(&fsmsg);
@@ -312,7 +326,6 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             fty_proto_aux_insert(fsmsg, "parent", parentIdentifier.c_str());
             fty_proto_ext_insert(fsmsg, "name", externalName.c_str());
             fty_proto_ext_insert(fsmsg, "model", sensorModel.c_str());
-            fty_proto_ext_insert(fsmsg, "parent_name.1", parentName.c_str());
 
             // model dependent checks
             if(sensorModel.compare("EMPDT1H1C2") == 0) {
@@ -458,14 +471,21 @@ dump_data_actor(zsock_t *pipe, void *args) {
 
                 for (auto i = assets.cbegin(); i != assets.cend(); i++) {
                     fty_proto_t *asset = *i;
+                    // get asset subtype
+                    std::string subtype(fty_proto_aux_string(asset, "subtype", ""));
+                    std::string sensor;
+                    if(streq(subtype.c_str(), "sensor")) {
+                        // if the device is a sensor, but the model is not present, we need to fill the field anyway
+                        sensor = fty_proto_ext_string(asset, "model", "unknown");
+                    }
 
-                    log_debug("Processing asset %s (%s - %s)", fty_proto_aux_string(asset, "name", "iname"), fty_proto_aux_string(asset, "type", "error"), fty_proto_aux_string(asset, "subtype", "error"));
+                    log_debug("Processing asset %s (%s - %s)", fty_proto_aux_string(asset, "name", "iname"), type.c_str(), subtype.c_str());
 
                     //add the endpoint data
                     std::string daisyChain(fty_proto_ext_string(asset, "daisy_chain", ""));
                     std::string modbusAddress(fty_proto_ext_string(asset, "modbus_address", ""));
 
-                    for(const auto item : getEndpointExtAttributs(*cpsr, daisyChain, modbusAddress))
+                    for(const auto item : getEndpointExtAttributs(*cpsr, sensor, daisyChain, modbusAddress))
                     {
                         fty_proto_ext_insert(asset, item.first.c_str(), "%s", item.second.c_str());
                     }
@@ -633,33 +653,39 @@ create_pool_dumpdata(const ScanResult &result, discovered_devices_t *devices, zs
     return stop_now;
 }
 
-static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string & daisyChain, const std::string& modbusAddress)
+static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResult & scanResult, const std::string& sensor, const std::string & daisyChain, const std::string& modbusAddress)
 {
     std::map<std::string, std::string> extAttributs;
 
     if(scanResult.nutDriver == "snmp-ups") {
-        extAttributs["endpoint.1.protocol"] = "nut_snmp";
-        extAttributs["endpoint.1.port"] = "161";
-        if(modbusAddress.empty()) {
+        if(sensor.empty()) { // not a sensor
+            extAttributs["endpoint.1.protocol"] = "nut_snmp";
+            extAttributs["endpoint.1.port"] = "161";
             extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+
+            if(scanResult.documents.size() > 0) {
+                extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = scanResult.documents[0]->getId();
+            } else {
+                extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = "";
+            }
         } else {
-            extAttributs["endpoint.1.sub_address"] = modbusAddress;
+            if(streq(sensor.c_str(), "EMPDT1H1C2")) {
+                extAttributs["endpoint.1.sub_address"] = modbusAddress;
+            } else {
+                log_warning("Sensor model %s is not supported", sensor.c_str());
+            }
         }
-
-        if(scanResult.documents.size() > 0) {
-            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = scanResult.documents[0]->getId();
-        } else {
-            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = "";
-        }
-
-
     } else if( scanResult.nutDriver == "netxml-ups" ) {
-        extAttributs["endpoint.1.protocol"] = "nut_xml_pdc";
-        extAttributs["endpoint.1.port"] = "80";
-        if(modbusAddress.empty()) {
+        if(sensor.empty()) { // not a sensor
             extAttributs["endpoint.1.sub_address"] = (daisyChain == "0") ? "" : daisyChain;
+            extAttributs["endpoint.1.protocol"] = "nut_xml_pdc";
+            extAttributs["endpoint.1.port"] = "80";
         } else {
-            extAttributs["endpoint.1.sub_address"] = modbusAddress;
+            if(streq(sensor.c_str(), "EMPDT1H1C2")) {
+                extAttributs["endpoint.1.sub_address"] = modbusAddress;
+            } else {
+                log_warning("Sensor model %s is not supported", sensor.c_str());
+            }
         }
     }
 
