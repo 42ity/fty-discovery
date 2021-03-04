@@ -33,6 +33,7 @@
 #include <algorithm>
 
 #include <map>
+#include <set>
 
 static const std::string SECW_SOCKET_PATH = "/run/fty-security-wallet/secw.socket";
 
@@ -137,10 +138,10 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
         }
     }
 
-    std::string deviceSerial;
+    std::set<std::string> discoveredSerialSet;
 
     for(int i = startDevice; i <= endDevice; i++) {
-        deviceSerial.clear();
+        std::string deviceSerial;
 
         fty_proto_t *fmsg = fty_proto_new(FTY_PROTO_ASSET);
 
@@ -260,6 +261,16 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
                 continue;
             }
             sensorSerialNumber = item->second;
+
+            // check if sensor was already discovered
+            if(auto f = discoveredSerialSet.find(sensorSerialNumber); f != discoveredSerialSet.end()) {
+                log_warning("Sensor %s already discovered. Skipping", sensorSerialNumber.c_str());
+                fty_proto_destroy(&fsmsg);
+                continue;
+            } else {
+                // add sensor serial to set of discovered devices
+                discoveredSerialSet.insert(sensorSerialNumber);
+            }
 
             // look for parent serial number (optional)
             item = ambientMappedDump.find("parent_serial");
