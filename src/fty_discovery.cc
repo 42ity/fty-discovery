@@ -76,6 +76,53 @@ int main (int argc, char *argv [])
     std::string logConfigFile;
     zconfig_t *zconf = zconfig_load (config);
     if (zconf) {
+        auto val = std::string(zconfig_get(zconf, "discovery/protocols", "none"));
+
+        if(!val.compare("none")) {
+            zconfig_put(zconf, "discovery/protocols", "");
+            int result = zconfig_save(zconf, config);
+            if(result != 0)
+            {
+                log_error("Impossible to save the config file <%s>, error: %i",config, result);
+            }
+        }
+
+        val = std::string(zconfig_get(zconf, "disabled", "none"));
+
+        if(!val.compare("none")) {
+            zconfig_put(zconf, "disabled", "");
+            zconfig_put(zconf, "disabled/scans_disabled", "");
+            zconfig_put(zconf, "disabled/ips_disabled", "");
+            int result = zconfig_save(zconf, config);
+            if(result != 0)
+            {
+                log_error("Impossible to save the config file <%s>, error: %i",config, result);
+            }
+        }else {
+            val = std::string(zconfig_get(zconf, "disabled/scans_disabled", "none"));
+            if(!val.compare("none")) {
+                zconfig_put(zconf, "disabled/scans_disabled", "");
+                int result = zconfig_save(zconf, config);
+                if(result != 0)
+                {
+                    log_error("Impossible to save the config file <%s>, error: %i",config, result);
+                }
+            }
+            val = std::string(zconfig_get(zconf, "disabled/ips_disabled", "none"));
+            if(!val.compare("none")) {
+                zconfig_put(zconf, "disabled/ips_disabled", "");
+                int result = zconfig_save(zconf, config);
+                if(result != 0)
+                {
+                    log_error("Impossible to save the config file <%s>, error: %i",config, result);
+                }
+            }
+        }
+
+
+
+
+
         logConfigFile = std::string(zconfig_get(zconf, "log/config", "/etc/fty/ftylog.cfg"));
         if (!logConfigFile.empty()) {
             ManageFtyLog::getInstanceFtylog()->setConfigFile(logConfigFile);
