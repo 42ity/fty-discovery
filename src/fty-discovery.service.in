@@ -17,6 +17,9 @@ BindsTo=fty-security-wallet.service
 [Service]
 Type=simple
 User=discovery-monitoring-daemon
+ExecStartPre=+/bin/chown wwww-data /etc/fty-discovery/fty-discovery.cfg
+ExecStartPre=+/bin/chgrp discovery-monitoring-daemon /etc/fty-discovery/fty-discovery.cfg
+ExecStartPre=+/bin/chmod ug+rw /etc/fty-discovery/fty-discovery.cfg
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios
 EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
 EnvironmentFile=-@prefix@/share/fty/etc/default/fty
