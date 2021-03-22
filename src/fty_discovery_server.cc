@@ -544,19 +544,32 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
             return;
         }
         // to identify a device, use serial number (if available), otherwise the IP:
-        const std::string deviceIdField = (serial ? "serial_no" : "ip.1");
         const std::string deviceIdentifier = (serial ? serial : ip);
 
         bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
-        // FIXME
-        if (!daisy_chain && assets_find(self->assets, deviceIdField.c_str(), deviceIdentifier.c_str())) {
-            log_info("Asset %s already exists", deviceIdentifier.c_str());
+
+        // to identify a device, use serial number (if available), otherwise the IP:
+        auto found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
+            [&](const std::pair<std::string, std::string> el) {
+                return streq(el.second.c_str(), serial);
+            });
+
+        if(found != self->devices_discovered.device_list.end()) {
+            log_info("Asset with identifier %s already exists", serial);
+            fty_proto_destroy(&asset);
+            return;
+        }
+
+        if (!daisy_chain && assets_find(self->assets, "ip.1", ip)) {
+            log_info("Asset with IP %s already exists", ip);
+            fty_proto_destroy(&asset);
             return;
         }
 
         const char *uuid = fty_proto_ext_string(asset, "uuid", NULL);
         if (uuid && assets_find(self->assets, "uuid", uuid)) {
             log_info("Asset with uuid %s already exists", uuid);
+            fty_proto_destroy(&asset);
             return;
         }
 
@@ -589,20 +602,6 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         char mbstr[100];
         if (std::strftime(mbstr, sizeof (mbstr), "%FT%T%z", std::localtime(&timestamp))) {
             fty_proto_ext_insert(asset, "create_ts", "%s", mbstr);
-        }
-
-        std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
-        if(!daisy_chain) {
-            auto found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
-            [&](const std::pair<std::string, std::string> el) {
-                return streq(el.second.c_str(), deviceIdentifier.c_str());
-            });
-
-            if(found != self->devices_discovered.device_list.end()) {
-                log_info("Asset %s already exists", deviceIdentifier.c_str());
-                fty_proto_destroy(&asset);
-                return;
-            }
         }
 
         for (const auto& property : self->default_values_aux) {
