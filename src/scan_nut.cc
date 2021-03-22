@@ -128,6 +128,8 @@ s_valid_dumpdata (const fty::nut::DeviceConfiguration &dump)
 bool
 s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut::DeviceConfiguration& dump, const fty::nut::KeyValues* mappings, const fty::nut::KeyValues* sensorMappings, const std::string &ip, const std::string &type)
 {
+    std::vector<fty_proto_t*> sensors;
+
     // Set up iteration limits according to daisy-chain configuration.
     int startDevice = 0, endDevice = 0;
     {
@@ -359,8 +361,12 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             // FIXME: also dry contacts?
             // FIXME: needed?
             log_debug("Added new sensor (%d of %d): SERIAL: %s - TYPE: %s - PARENT: %s", i, endSensor, sensorSerialNumber.c_str(), sensorModel.c_str(), parentIdentifier.c_str());
-            assets.emplace_back(fsmsg);
+            sensors.emplace_back(fsmsg);
         }
+    }
+
+    for(const auto& s : sensors) {
+        assets.push_back(s);
     }
 
     return !assets.empty();
