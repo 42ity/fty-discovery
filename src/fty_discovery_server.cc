@@ -739,13 +739,13 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
         fty_proto_ext_insert(asset, "parent_name.1", parentName.c_str());
 
         // update parent ID (overwrite default)
-        auto parentId = fty::AssetAccessor::assetInameToID(parentName);
-        if(!parentId) {
+        auto parentId = DBAssets::name_to_asset_id(parentName);
+        if(parentId < 0) {
             log_info("Could not query parent ID of sensor %s", serialNo.c_str());
             fty_proto_destroy(&asset);
             return;
         }
-        fty_proto_aux_insert(asset, "parent", fty::convert<std::string, uint32_t>(parentId.value()).c_str());
+        fty_proto_aux_insert(asset, "parent", fty::convert<std::string, uint32_t>(parentId).c_str());
         log_info("Found new sensor %s with parent %s", serialNo.c_str(), parentName.c_str());
 
         // send create message
