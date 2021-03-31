@@ -1,4 +1,4 @@
-usr/bin/fty-discovery
+usr/bin/fty-discovery-server
 etc/fty-discovery/fty-discovery.cfg
-lib/systemd/system/fty-discovery.service
+usr/lib/systemd/system/fty-discovery.service
 

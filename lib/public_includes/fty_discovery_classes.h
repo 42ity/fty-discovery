@@ -30,7 +30,7 @@
 #include "platform.h"
 
 //  External API
-#include "../include/fty_discovery.h"
+#include "fty_discovery.h"
 
 //  Opaque class structures to allow forward references
 #ifndef CIDR_T_DEFINED
