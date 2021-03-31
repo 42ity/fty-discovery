@@ -34,7 +34,7 @@ Environment='SYSTEMD_UNIT_FULLNAME=%n'
 Environment="NUT_ALTPIDPATH=\"\""
 Environment="NUT_STATEPATH=/tmp"
 EnvironmentFile=@sysconfdir@/default/bios-db-rw
-ExecStart=@prefix@/bin/fty-discovery --agent
+ExecStart=@prefix@/bin/fty-discovery-server --agent
 Restart=always
 
 [Install]
