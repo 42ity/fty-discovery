@@ -32,12 +32,12 @@
 
 
 bool
-scan_dns (fty_proto_t *msg, const char *address, zconfig_t *config)
+scan_dns (fty_proto_t *msg, const char *address, zconfig_t* /* config */)
 {
     if (!msg || !address) return false;
 
     struct sockaddr_in sa_in;
-    struct sockaddr *sa = (sockaddr *)&sa_in;    /* input */
+    struct sockaddr *sa = reinterpret_cast<sockaddr *>(&sa_in);    /* input */
     socklen_t len = sizeof (sockaddr_in);        /* input */
 
     char dns_name[NI_MAXHOST];
@@ -67,7 +67,7 @@ scan_dns (fty_proto_t *msg, const char *address, zconfig_t *config)
 //  Self test of this class
 
 void
-scan_dns_test (bool verbose)
+scan_dns_test (bool /* verbose */)
 {
     printf (" * scan_dns: ");
 

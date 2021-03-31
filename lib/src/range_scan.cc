@@ -66,9 +66,9 @@ range_scan_new (const char *range)
 int
 range_scan_progress (range_scan_t *self)
 {
-    int result = self->cursor * 100 / self->size;
+    int64_t result = self->cursor * 100 / self->size;
     if (result > 100) result = 100;
-    return result;
+    return fty::convert<int>(result);
 }
 
 //  --------------------------------------------------------------------------
@@ -113,17 +113,17 @@ range_scan_actor (zsock_t *pipe, void *args)
             zstr_send (pipe, REQ_DONE);
             return;
         }
-        argv = (zlist_t *) args;
+        argv = static_cast<zlist_t *>(args);
         if(! argv || zlist_size(argv) != 4) {
             log_error ("Error in parameters");
             zstr_send (pipe, REQ_DONE);
             zlist_destroy(&argv);
             return;
         }
-        params = (range_scan_args_t *) zlist_first(argv);
-        params2 = (discovered_devices_t *) zlist_next(argv);
-        mappings = (const fty::nut::KeyValues *) zlist_next(argv);
-        sensorMappings = (const fty::nut::KeyValues *) zlist_next(argv);
+        params = static_cast<range_scan_args_t *>(zlist_first(argv));
+        params2 = static_cast<discovered_devices_t *>(zlist_next(argv));
+        mappings = static_cast<const fty::nut::KeyValues *>(zlist_next(argv));
+        sensorMappings = static_cast<const fty::nut::KeyValues *>(zlist_next(argv));
         if (! params || (params->ranges.size() < 1) || !params->config || !params2) {
             log_error ("Scanning range not defined!");
             zstr_send (pipe, REQ_DONE);
@@ -228,7 +228,7 @@ range_scan_actor (zsock_t *pipe, void *args)
 //  Self test of this class
 
 void
-range_scan_test (bool verbose)
+range_scan_test (bool /* verbose */)
 {
     printf (" * range_scan: ");
 

@@ -95,7 +95,7 @@ CIDRAddress& CIDRAddress::operator++() {
   // do nothing for networks?
   if( cidr_get_proto(_cidr) == CIDR_IPV4 ) {
     cidr_to_inaddr(_cidr, &inaddr);
-    bytes = (unsigned char *)&inaddr.s_addr;
+    bytes = reinterpret_cast<unsigned char*>(&inaddr.s_addr);
     for(i=3; i>=0; i--) {
       bytes[i]++;
       if( bytes[i] != 0 ) { break; }
@@ -125,7 +125,7 @@ CIDRAddress& CIDRAddress::operator--() {
   // do nothing for networks?
   if( cidr_get_proto(_cidr) == CIDR_IPV4 ) {
     cidr_to_inaddr(_cidr, &inaddr);
-    bytes = (unsigned char *)&inaddr.s_addr;
+    bytes = reinterpret_cast<unsigned char*>(&inaddr.s_addr);
     for(i=3; i>=0; i--) {
       bytes[i]--;
       if( bytes[i] != 255 ) { break; }
@@ -330,9 +330,15 @@ bool CIDRAddress::set(const struct sockaddr* address) {
     if( ! address ) return false;
     switch( address->sa_family ) {
     case AF_INET:
-        return set( &( ((struct sockaddr_in *)address)->sin_addr ) );
+      {
+          auto sin_addr = &(reinterpret_cast<const struct sockaddr_in *>(address))->sin_addr;
+          return set(sin_addr);
+      }
     case AF_INET6:
-        return set( &( ((struct sockaddr_in6 *)address)->sin6_addr ) );
+      {
+          auto sin6_addr = &(reinterpret_cast<const struct sockaddr_in6 *>(address))->sin6_addr;
+          return set(sin6_addr);
+      }
     }
     return false;
 }
@@ -395,8 +401,8 @@ int CIDRAddress::compare(const CIDRAddress &a2) const {
   if( (proto1 == CIDR_IPV4) && (proto2 == CIDR_IPV4) ) {
     cidr_to_inaddr(_cidr, &inaddr1);
     cidr_to_inaddr(a2._cidr, &inaddr2);
-    bytes1 = (unsigned char *)&inaddr1.s_addr;
-    bytes2 = (unsigned char *)&inaddr2.s_addr;
+    bytes1 = reinterpret_cast<unsigned char*>(&inaddr1.s_addr);
+    bytes2 = reinterpret_cast<unsigned char*>(&inaddr2.s_addr);
     for(i=0; i<=3; i++) {
       if( bytes1[i] < bytes2[i] ) return -1; //im smaller
       if( bytes1[i] > bytes2[i] ) return +1; //im bigger
@@ -406,8 +412,8 @@ int CIDRAddress::compare(const CIDRAddress &a2) const {
   if( (proto1 == CIDR_IPV6) && (proto2 == CIDR_IPV6) ) {
     cidr_to_in6addr(_cidr, &in6addr1);
     cidr_to_in6addr(a2._cidr, &in6addr2);
-    bytes1 = (unsigned char *)&in6addr1.s6_addr;
-    bytes2 = (unsigned char *)&in6addr2.s6_addr;
+    bytes1 = reinterpret_cast<unsigned char*>(&in6addr1.s6_addr);
+    bytes2 = reinterpret_cast<unsigned char*>(&in6addr2.s6_addr);
     for(i=0; i<=15; i++) {
       if( bytes1[i] < bytes2[i] ) return -1; //im smaller
       if( bytes1[i] > bytes2[i] ) return +1; //im bigger
@@ -683,7 +689,7 @@ CIDRList::~CIDRList(){
 }
 
 void
-cidr_test (bool verbose)
+cidr_test (bool /* verbose */)
 {
     printf (" * cidr: ");
 
