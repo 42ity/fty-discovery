@@ -46,7 +46,7 @@ assets_new (void)
     assert (self);
     //  Initialize class properties here
     self->assets = zhashx_new();
-    zhashx_set_destructor (self->assets, (void (*)(void**))fty_proto_destroy);
+    zhashx_set_destructor (self->assets, reinterpret_cast<void (*)(void**)>(fty_proto_destroy));
     self->lastupdate = zclock_mono ();
     return self;
 }
@@ -109,9 +109,10 @@ bool
 s_assets_has_attribute (fty_proto_t *asset, const char *key, const char *value)
 {
     // try whether exact key exists
-    const char *avalue = fty_proto_ext_string (asset, key, NULL);
-    if (avalue) return streq (avalue, value);
-
+    {
+        const char *avalue = fty_proto_ext_string (asset, key, NULL);
+        if (avalue) return streq (avalue, value);
+    }
     // try indexed key
     int idx = 1;
     while (true) {
@@ -132,12 +133,12 @@ assets_find (assets_t *self, const char *key, const char *value)
 {
     if (!self || !key || !*value) return NULL;
 
-    fty_proto_t *asset = (fty_proto_t *) zhashx_first (self->assets);
+    fty_proto_t *asset = static_cast<fty_proto_t *>(zhashx_first (self->assets));
     while (asset) {
         if (s_assets_has_attribute (asset, key, value)) {
             return asset;
         }
-        asset = (fty_proto_t *) zhashx_next (self->assets);
+        asset = static_cast<fty_proto_t *> (zhashx_next (self->assets));
     }
     return NULL;
 }
@@ -157,7 +158,7 @@ assets_last_change (assets_t *self)
 //  Self test of this class
 
 void
-assets_test (bool verbose)
+assets_test (bool /* verbose */)
 {
     printf (" * assets: ");
 

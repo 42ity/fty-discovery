@@ -31,6 +31,7 @@
 #include <cxxtools/split.h>
 #include <cxxtools/regex.h>
 #include <algorithm>
+#include <fty/convert.h>
 
 #include <map>
 #include <set>
@@ -59,10 +60,10 @@ std::pair<std::string, std::string> s_nut_key_and_value (std::string &line)
     cxxtools::RegexSMatch match;
 
     if (! regname.match (line, match, 0)) return std::make_pair ("", "");
-    std::string name = line.substr (match.offsetBegin (0), match.offsetEnd(0) - match.offsetBegin (0));
+    std::string name = line.substr (fty::convert<size_t>(match.offsetBegin (0)), fty::convert<size_t>(match.offsetEnd(0) - match.offsetBegin (0)));
 
     if (! regvalue.match (line, match, 0)) return  std::make_pair ("", "");
-    std::string value = line.substr (match.offsetBegin (0) + 1, match.offsetEnd(0) - match.offsetBegin (0) - 2);
+    std::string value = line.substr (fty::convert<size_t>(match.offsetBegin (0)) + 1, fty::convert<size_t>(match.offsetEnd(0) - match.offsetBegin (0)) - 2);
 
     return std::make_pair (name, value);
 }
@@ -193,7 +194,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
         // Set up iteration limits according to daisy-chain configuration.
         // FIXME: check if indexed sensors collection is present, to discard
         // legacy sensor (ambient.{temperature,humidity})
-        int startSensor = 0, endSensor = 0;
+        size_t startSensor = 0, endSensor = 0;
         {
             // First, check for new style and daisychained sensors
             std::string ambientCount = "ambient.count";
@@ -203,7 +204,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             auto item = dump.find(ambientCount);
             if(item != dump.end() && !streq(item->second.c_str(), "1")) {
                 startSensor = 1;
-                endSensor = std::stoi(item->second);
+                endSensor = fty::convert<size_t>(item->second);
             }
             else {
                 // Otherwise, fallback to checking for legacy sensors
@@ -226,13 +227,13 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
 
         assets.emplace_back(fmsg);
 
-        for(int i = startSensor; i <= endSensor; i++) {
+        for(size_t s = startSensor; s <= endSensor; s++) {
             fty_proto_t *fsmsg = fty_proto_new(FTY_PROTO_ASSET);
 
             // Map inventory data.
             // FIXME: limit to ambient.*
             // FIXME: use a dedicated mapping?
-            auto ambientMappedDump = fty::nut::performMapping(*sensorMappings, dump, i);
+            auto ambientMappedDump = fty::nut::performMapping(*sensorMappings, dump, fty::convert<int>(s));
             for (auto property : ambientMappedDump) {
                 fty_proto_ext_insert(fsmsg, property.first.c_str(), "%s", property.second.c_str());
             }
@@ -243,13 +244,13 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             // check if sensor is physically present (may be reported in NUT scan, but not present)
             auto item = ambientMappedDump.find("present");
             if(item == ambientMappedDump.end()) {
-                log_error("No present field for sensor number %i", i);
+                log_error("No present field for sensor number %i", s);
                 fty_proto_destroy(&fsmsg);
                 continue;
             }
 
             if(item->second != "yes") {
-                log_warning("Sensor %i is not present", i);
+                log_warning("Sensor %i is not present", s);
                 fty_proto_destroy(&fsmsg);
                 continue;
             }
@@ -258,7 +259,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             std::string sensorSerialNumber;
             item = ambientMappedDump.find("serial_no");
             if(item == ambientMappedDump.end()) {
-                log_error("No serial number for sensor number %i", i);
+                log_error("No serial number for sensor number %i", s);
                 fty_proto_destroy(&fsmsg);
                 continue;
             }
@@ -294,7 +295,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             } else if(!parentSerial.empty()){
                 sensorModel = "EMPDT1H1C2";
             } else {
-                log_error("No model for sensor number %i", i);
+                log_error("No model for sensor number %i", s);
                 fty_proto_destroy(&fsmsg);
                 continue;
             }
@@ -305,7 +306,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             if(item != ambientMappedDump.end()) {
                 sensorManufacturer = item->second;
             } else {
-                log_error("No manufacturer for sensor number %i", i);
+                log_error("No manufacturer for sensor number %i", s);
                 fty_proto_destroy(&fsmsg);
                 continue;
             }
@@ -348,7 +349,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
                 if(item != ambientMappedDump.end()) {
                     modbusAddress = item->second;
                 } else {
-                    log_error("No modbus address for sensor number %i", i);
+                    log_error("No modbus address for sensor number %i", s);
                     fty_proto_destroy(&fsmsg);
                     continue;
                 }
@@ -360,7 +361,7 @@ s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut:
             }
             // FIXME: also dry contacts?
             // FIXME: needed?
-            log_debug("Added new sensor (%d of %d): SERIAL: %s - TYPE: %s - PARENT: %s", i, endSensor, sensorSerialNumber.c_str(), sensorModel.c_str(), parentIdentifier.c_str());
+            log_debug("Added new sensor (%d of %d): SERIAL: %s - TYPE: %s - PARENT: %s", s, endSensor, sensorSerialNumber.c_str(), sensorModel.c_str(), parentIdentifier.c_str());
             sensors.emplace_back(fsmsg);
         }
     }
@@ -429,7 +430,7 @@ bool inform_and_wait(zsock_t* pipe) {
 void
 dump_data_actor(zsock_t *pipe, void *args) {
     zsock_signal (pipe, 0);
-    zlist_t *argv = (zlist_t *)args;
+    zlist_t *argv = static_cast<zlist_t *>(args);
     bool valid = true;
     NutOutput *initialAsset;
     const ScanResult *cpsr;
@@ -479,7 +480,7 @@ dump_data_actor(zsock_t *pipe, void *args) {
         const std::string ip = initialAsset->ip;
         const std::string type = "device";
 
-        fty::nut::DeviceConfiguration nutdata = fty::nut::dumpDevice(cpsr->nutDriver, addr, loop_nb, loop_iter_time, cpsr->documents);
+        fty::nut::DeviceConfiguration nutdata = fty::nut::dumpDevice(cpsr->nutDriver, addr, fty::convert<unsigned>(loop_nb), fty::convert<unsigned>(loop_iter_time), cpsr->documents);
 
         if (!nutdata.empty()) {
             std::vector<fty_proto_t*> assets;
@@ -561,7 +562,7 @@ create_pool_dumpdata(const ScanResult &result, discovered_devices_t *devices, zs
     }
 
     char* strNbPool = zconfig_get(config, CFG_PARAM_MAX_DUMPPOOL_NUMBER, DEFAULT_MAX_DUMPPOOL_NUMBER);
-    const size_t number_max_pool = std::stoi(strNbPool);
+    const size_t number_max_pool = fty::convert<size_t>(strNbPool);
 
     s_nut_output_to_messages(listDiscovered, result.deviceConfigurations, devices);
     size_t number_asset_view = 0;
@@ -724,7 +725,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
         return;
     }
 
-    zlist_t *argv = (zlist_t *)args;
+    zlist_t *argv = static_cast<zlist_t *>(args);
     if (!argv || zlist_size(argv) != 5) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
@@ -734,11 +735,11 @@ scan_nut_actor(zsock_t *pipe, void *args)
         return;
     }
 
-    CIDRList *listAddr = (CIDRList *) zlist_first(argv);
-    discovered_devices_t *devices = (discovered_devices_t*) zlist_next(argv);
-    const fty::nut::KeyValues *mappings = (const fty::nut::KeyValues*) zlist_next(argv);
-    const fty::nut::KeyValues *sensorMappings = (const fty::nut::KeyValues*) zlist_next(argv);
-    const std::set<std::string> *documentNames = (const std::set<std::string>*) zlist_next(argv);
+    CIDRList *listAddr = static_cast<CIDRList *> (zlist_first(argv));
+    discovered_devices_t *devices = static_cast<discovered_devices_t*> (zlist_next(argv));
+    const fty::nut::KeyValues *mappings = static_cast<const fty::nut::KeyValues*> (zlist_next(argv));
+    const fty::nut::KeyValues *sensorMappings = static_cast<const fty::nut::KeyValues*> (zlist_next(argv));
+    const std::set<std::string> *documentNames = static_cast<const std::set<std::string>*> (zlist_next(argv));
     if (!listAddr || !devices || !mappings || !sensorMappings || !documentNames) {
         log_error ("%s : actor created without config or devices list", __FUNCTION__);
         zlist_destroy(&argv);
@@ -805,7 +806,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
                 fty::nut::SCAN_PROTOCOL_SNMP,
                 listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
                 listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
-                timeout,
+                fty::convert<unsigned>(timeout),
                 result.documents
             );
 
@@ -821,7 +822,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
                 fty::nut::SCAN_PROTOCOL_SNMP,
                 listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
                 listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
-                timeout,
+                fty::convert<unsigned>(timeout),
                 result.documents
             );
 
@@ -836,7 +837,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
             fty::nut::SCAN_PROTOCOL_NETXML,
             listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
             listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX),
-            timeout
+            fty::convert<unsigned>(timeout)
         );
 
         results.emplace_back(result);
@@ -888,7 +889,7 @@ scan_nut_actor(zsock_t *pipe, void *args)
 //  Self test of this class
 
 void
-scan_nut_test (bool verbose)
+scan_nut_test (bool /* verbose */)
 {
     printf (" * scan_nut: ");
 

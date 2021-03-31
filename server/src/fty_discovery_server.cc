@@ -121,10 +121,10 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
     *scan_size = 0;
     for (unsigned int iPosScan = 0; iPosScan < list_scan->size(); iPosScan++) {
         std::string scan = list_scan->at(iPosScan);
-        int pos = scan.find("-");
+        size_t pos = scan.find("-");
 
         //if subnet
-        if (pos == -1) {
+        if (pos == std::string::npos) {
             CIDRAddress addrCIDR(scan);
 
             if (addrCIDR.prefix() != -1) {
@@ -151,7 +151,7 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
                 return false;
             }
 
-            int posC = rangeStart.find_last_of(".");
+            size_t posC = rangeStart.find_last_of(".");
             int64_t size1 = 0;
             std::string startOfAddr = rangeStart.substr(0, posC);
             size1 += atoi(rangeStart.substr(posC + 1).c_str());
@@ -188,12 +188,12 @@ bool compute_scans_size(std::vector<std::string>* list_scan, int64_t* scan_size)
             (*scan_size) += (size2 - size1) + 1;
 
             pos = rangeStart.find("/");
-            if (pos != -1) {
+            if (pos != std::string::npos) {
                 rangeStart = rangeStart.substr(0, pos);
             }
 
             pos = rangeEnd.find("/");
-            if (pos != -1) {
+            if (pos != std::string::npos) {
                 rangeEnd = rangeEnd.substr(0, pos);
             }
             std::string correct_range = rangeStart + "/0-" + rangeEnd + "/0";
@@ -313,7 +313,7 @@ void configure_local_scan(fty_discovery_server_t *self) {
                 self->scan_size += (1 << (32 - prefix));
 
 
-            CIDRAddress addrCidr(addr, prefix);
+            CIDRAddress addrCidr(addr, fty::convert<unsigned int>(prefix));
 
             addrmask.clear();
             addrmask.assign(addrCidr.network().toString());
@@ -396,11 +396,11 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             link_t l;
 
             //when link to no source, the file will have "0"
-            l.src = (iname == "0") ? 0 : DBAssets::name_to_asset_id(iname);
+            l.src = (iname == "0") ? 0 : fty::convert<uint32_t>(DBAssets::name_to_asset_id(iname));
             l.dest = 0;
             l.src_out = nullptr;
             l.dest_in = nullptr;
-            l.type = std::stoul(zconfig_get(link, "type", "1"));
+            l.type = fty::convert<uint16_t>(std::stoul(zconfig_get(link, "type", "1")));
 
             if (l.src > 0) {
                 self->default_values_links.emplace_back(l);
@@ -472,7 +472,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
     } else if(streq(strType, DISCOVERY_TYPE_IP)) {
 
         self->configuration_scan.type = TYPE_IPSCAN;
-        self->configuration_scan.scan_size = listIp.size();
+        self->configuration_scan.scan_size = fty::convert<int64_t>(listIp.size());
         self->configuration_scan.scan_list.clear();
         self->configuration_scan.scan_list = listIp;
 
@@ -481,7 +481,7 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
         fullList.insert(fullList.end(), list_scans.begin(), list_scans.end());
 
         self->configuration_scan.type = TYPE_FULLSCAN;
-        self->configuration_scan.scan_size = ( listIp.size() + sizeTemp );
+        self->configuration_scan.scan_size = fty::convert<int64_t>( listIp.size() ) + sizeTemp ;
         self->configuration_scan.scan_list.clear();
         self->configuration_scan.scan_list = fullList;
 
@@ -659,7 +659,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
                 // create asset links
                 for (auto& link : self->default_values_links) {
 
-                    link.dest = DBAssets::name_to_asset_id(iname);
+                    link.dest = fty::convert<uint32_t>(DBAssets::name_to_asset_id(iname));
                 }
                 auto conn = tntdb::connectCached(DBConn::url);
                 DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
@@ -759,7 +759,7 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
             fty_proto_destroy(&asset);
             return;
         }
-        fty_proto_aux_insert(asset, "parent", fty::convert<std::string, uint32_t>(parentId).c_str());
+        fty_proto_aux_insert(asset, "parent", fty::convert<std::string>(parentId).c_str());
         log_info("Found new sensor %s with parent %s", serialNo.c_str(), parentName.c_str());
 
         // send create message
@@ -919,7 +919,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
 
                 } else if (streq(strType, DISCOVERY_TYPE_IP)) {
                     self->configuration_scan.type = TYPE_IPSCAN;
-                    self->configuration_scan.scan_size = listIp.size();
+                    self->configuration_scan.scan_size = fty::convert<int64_t>(listIp.size());
                     self->configuration_scan.scan_list = listIp;
 
                 } else  if (streq(strType, DISCOVERY_TYPE_FULL)) {
@@ -927,7 +927,7 @@ s_handle_pipe(fty_discovery_server_t* self, zmsg_t *message, zpoller_t *poller) 
                     fullList.insert(fullList.end(), list_scans.begin(), list_scans.end());
 
                     self->configuration_scan.type = TYPE_FULLSCAN;
-                    self->configuration_scan.scan_size = (listIp.size() + sizeTemp);
+                    self->configuration_scan.scan_size = fty::convert<int64_t>(listIp.size()) + sizeTemp;
                     self->configuration_scan.scan_list = fullList;
                 }
 
@@ -1150,7 +1150,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                             zmsg_t *zmfalse = zmsg_new();
                             std::string next_scan = self->localscan_subscan.back();
 
-                            int ms_range_pos = next_scan.find("-");
+                            int ms_range_pos = fty::convert<int>(next_scan.find("-"));
                             if (ms_range_pos == -1) {
                                 //Subnet
                                 zmsg_addstr(zmfalse, next_scan.c_str());
@@ -1159,10 +1159,10 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                             } else {
                                 //range
 
-                                zmsg_addstr(zmfalse, next_scan.substr(0, ms_range_pos).c_str());
+                                zmsg_addstr(zmfalse, next_scan.substr(0, fty::convert<size_t>(ms_range_pos)).c_str());
                                 char *firstIP = zmsg_popstr(zmfalse);
 
-                                zmsg_addstr(zmfalse, next_scan.substr(ms_range_pos + 1).c_str());
+                                zmsg_addstr(zmfalse, next_scan.substr(fty::convert<size_t>(ms_range_pos) + 1).c_str());
                                 self->range_scan_config.ranges.push_back(std::make_pair(firstIP, zmsg_popstr(zmfalse)));
                             }
 
@@ -1350,7 +1350,7 @@ s_handle_range_scanner(fty_discovery_server_t* self,
 //  fty_discovery_server actor
 
 void
-fty_discovery_server(zsock_t *pipe, void *args) {
+fty_discovery_server(zsock_t *pipe, void * /* args */ ) {
     fty_discovery_server_t *self = fty_discovery_server_new();
     zpoller_t *poller = zpoller_new(pipe, mlm_client_msgpipe(self->mlm), NULL);
     zsock_signal(pipe, 0);
@@ -1480,7 +1480,7 @@ fty_discovery_server_destroy(fty_discovery_server_t **self_p) {
 //  Self test of this class
 
 void
-fty_discovery_server_test(bool verbose) {
+fty_discovery_server_test(bool /* verbose */) {
     printf(" * ftydiscovery: ");
 
     //  @selftest
