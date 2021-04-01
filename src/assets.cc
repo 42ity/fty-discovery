@@ -19,25 +19,7 @@
     =========================================================================
 */
 
-/*
-@header
-    assets - Cache of assets
-@discuss
-@end
-*/
-
-#include "fty_discovery_classes.h"
-
-//  Structure of our class
-
-struct _assets_t {
-    zhashx_t *assets;
-    int64_t lastupdate;
-};
-
-
-//  --------------------------------------------------------------------------
-//  Create a new assets
+#include "assets.h"
 
 assets_t *
 assets_new (void)

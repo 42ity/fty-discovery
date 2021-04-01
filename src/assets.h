@@ -18,44 +18,34 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
+#pragma once
 
-#ifndef ASSETS_H_INCLUDED
-#define ASSETS_H_INCLUDED
+#include <ftyproto.h>
+#include <czmq.h> 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+typedef struct _assets_t {
+    zhashx_t *assets;
+    int64_t lastupdate;
+} assets_t;
 
 //  @interface
 //  Create a new assets
-FTY_DISCOVERY_PRIVATE assets_t *
-    assets_new (void);
+assets_t * assets_new (void);
 
 //  Destroy the assets
-FTY_DISCOVERY_PRIVATE void
-    assets_destroy (assets_t **self_p);
+void assets_destroy (assets_t **self_p);
 
 //  Put one asset into cache
-FTY_DISCOVERY_PRIVATE void
-    assets_put (assets_t *self, fty_proto_t **msg_p);
+void assets_put (assets_t *self, fty_proto_t **msg_p);
 
 //  Find asset by ext attribute
-FTY_DISCOVERY_PRIVATE fty_proto_t *
-    assets_find (assets_t *self, const char *key, const char *value);
+fty_proto_t * assets_find (assets_t *self, const char *key, const char *value);
 
 //  return the zclock_mono time in ms when last change happened (create or
 //  delete, not update)
-FTY_DISCOVERY_PRIVATE int64_t
-    assets_last_change (assets_t *self);
+int64_t assets_last_change (assets_t *self);
 
 //  Self test of this class
-FTY_DISCOVERY_PRIVATE void
-    assets_test (bool verbose);
+void assets_test (bool verbose);
 
 //  @end
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
