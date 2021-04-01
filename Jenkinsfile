@@ -1,32 +1,14 @@
-/*
-    fty-discovery - 42ity service for discovering devices
-
-    Copyright (C) 2014 - 2020 Eaton
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-    NOTE : This Jenkins pipeline script only handles the self-testing of your
-    project. If you also want the successful codebase published or deployed,
-    you can define a helper job - see the reference implementation skeleton at
-    https://github.com/zeromq/zproject/blob/master/Jenkinsfile-deploy.example
-
-*/
+#!/usr/bin/env groovy
 
 @Library('etn-ipm2-jenkins') _
 
-import params.ZprojectPipelineParams
-ZprojectPipelineParams parameters = new ZprojectPipelineParams()
+//We want only release build and deploy in OBS
+//We disabled debug build with tests
 
-etn_ipm2_build_and_tests_pipeline_zproject(parameters)
+// import params.CmakePipelineParams
+// CmakePipelineParams parameters = new CmakePipelineParams()
+// parameters.debugBuildRunMemcheck = false
+// parameters.debugBuildRunCoverage = false
+
+etn_ipm2_build_and_tests_pipeline_cmake(/* parameters */)
+
