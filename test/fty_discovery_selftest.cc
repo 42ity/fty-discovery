@@ -26,8 +26,13 @@
 ################################################################################
     =========================================================================
 */
-
-#include "fty_discovery_classes.h"
+#include "fty_discovery_server.h"
+#include "assets.h"
+#include "cidr.h"
+#include "device_scan.h"
+#include "range_scan.h"
+#include "scan_dns.h"
+#include "scan_nut.h"
 
 typedef struct {
     const char *testname;           // test name, can be called from command line this way

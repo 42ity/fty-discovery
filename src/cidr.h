@@ -18,14 +18,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
+#pragma once
 
-#ifndef CIDR_H_INCLUDED
-#define CIDR_H_INCLUDED
-
-extern "C" {
-#include <libcidr.h>
-}
-
+#include "libcidr.h"
 #include <string>
 #include <vector>
 
@@ -533,4 +528,3 @@ private:
 void
     cidr_test (bool verbose);
 
-#endif
