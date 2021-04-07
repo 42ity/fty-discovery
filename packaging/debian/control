@@ -38,8 +38,6 @@ Build-Depends:
     libfty-common-db-dev,
     libfty-security-wallet-dev,
     libfty-common-nut-dev,
-    libfty-asset-dev,
-    libfty-asset-accessor-dev,
     libfty-utils-dev,
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
@@ -49,6 +47,9 @@ Build-Depends:
 
 Package: fty-discovery
 Architecture: any
+Section: net
+Priority: optional
 Depends:    ${shlibs:Depends},
             ${misc:Depends}
-Description: fty-discovery service
+Description: 42ity service for discovering devices
+ 42ity service for discovering devices
