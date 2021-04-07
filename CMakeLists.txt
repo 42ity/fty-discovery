@@ -23,8 +23,6 @@ etn_target(static ${PROJECT_NAME}-static
     USES
         czmq
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-        fty-asset-accessor
-        fty_common
         fty_common_db
         fty_common_logging
         fty_common_nut
@@ -45,8 +43,6 @@ etn_target(exe ${PROJECT_NAME}-server
         cidr
         czmq
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-        fty-asset-accessor
-        fty_common
         fty_common_db
         fty_common_logging
         fty_common_nut
