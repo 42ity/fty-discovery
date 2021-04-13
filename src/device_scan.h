@@ -37,7 +37,3 @@ zactor_t * device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty
 
 //  One device scan actor
 void device_scan_actor (zsock_t *pipe, void *args);
-
-//  Self test of this class
-void device_scan_test (bool verbose);
-

@@ -1435,21 +1435,3 @@ void fty_discovery_server_destroy(fty_discovery_server_t** self_p)
         *self_p = NULL;
     }
 }
-
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-void fty_discovery_server_test(bool /* verbose */)
-{
-    printf(" * ftydiscovery: ");
-
-    //  @selftest
-    //  Simple create/destroy test
-    zactor_t* self = zactor_new(fty_discovery_server, NULL);
-    assert(self);
-    zclock_sleep(500);
-    zactor_destroy(&self);
-    //  @end
-    printf("OK\n");
-}

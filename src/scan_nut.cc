@@ -887,17 +887,3 @@ void scan_nut_actor(zsock_t* pipe, void* args)
     delete listAddr;
     log_debug("scan nut actor exited");
 }
-
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-void scan_nut_test(bool /* verbose */)
-{
-    printf(" * scan_nut: ");
-
-    //  @selftest
-    //  Simple create/destroy test
-    //  @end
-    printf("OK\n");
-}

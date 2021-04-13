@@ -45,7 +45,4 @@ fty_proto_t * assets_find (assets_t *self, const char *key, const char *value);
 //  delete, not update)
 int64_t assets_last_change (assets_t *self);
 
-//  Self test of this class
-void assets_test (bool verbose);
-
 //  @end

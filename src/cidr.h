@@ -522,9 +522,3 @@ private:
   // simple increment address of 1 eventually go at the beginning
   bool _nextSimple(CIDRAddress& address);
 };
-
-
-//  Self test of this class
-void
-    cidr_test (bool verbose);
-
