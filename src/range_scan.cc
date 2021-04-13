@@ -205,22 +205,3 @@ void range_scan_actor(zsock_t* pipe, void* args)
     zpoller_destroy(&poller);
     zstr_send(pipe, REQ_DONE);
 }
-
-//  --------------------------------------------------------------------------
-//  Self test of this class
-
-void range_scan_test(bool /* verbose */)
-{
-    printf(" * range_scan: ");
-
-    //  @selftest
-    //  Simple create/destroy test
-    range_scan_t* self = range_scan_new("127.0.0.0/24");
-    assert(self);
-    assert(self->size == 256);
-    self->cursor = 128;
-    assert(range_scan_progress(self) == 50);
-    range_scan_destroy(&self);
-    //  @end
-    printf("OK\n");
-}

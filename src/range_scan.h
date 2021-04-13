@@ -48,8 +48,3 @@ int range_scan_progress(range_scan_t* self);
 
 //  Actor for range scan
 void range_scan_actor(zsock_t* pipe, void* args);
-
-//  Self test of this class
-void range_scan_test(bool verbose);
-
-//  @end

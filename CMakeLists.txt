@@ -78,9 +78,15 @@ if(BUILD_TESTING)
     # Create a target for the tests
     etn_test(${PROJECT_NAME}-test
         SOURCES
+            test/main.cpp
+            test/assets.cpp
+            test/cidr.cpp
+            test/device-scan.cpp
+            test/fty-discovery-server.cpp
+            test/range-scan.cpp
+            test/scan-dns.cpp
+            test/scan-nut.cpp
             src/fty_discovery_server.cc
-            test/fty_discovery_selftest.cc
-            test/fty_discovery_private_selftest.cc
         INCLUDE_DIRS
             src
         USES

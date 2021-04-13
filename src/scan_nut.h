@@ -27,8 +27,3 @@
 //  Scan IP address using nut-scanner
 //  One device scan actor
 void scan_nut_actor (zsock_t *pipe, void *args);
-
-//  Self test of this class
-void scan_nut_test (bool verbose);
-
-//  @end

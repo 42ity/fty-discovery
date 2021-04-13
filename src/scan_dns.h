@@ -25,8 +25,3 @@
 //  @interface
 //  Do dns resolving
 bool scan_dns(fty_proto_t* msg, const char* address, zconfig_t* config);
-
-//  Self test of this class
-void scan_dns_test(bool verbose);
-
-//  @end
