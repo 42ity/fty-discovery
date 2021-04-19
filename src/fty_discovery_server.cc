@@ -747,7 +747,8 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
         // add logical asset (sensor location) if in device centric mode
         if(self->device_centric) {
-            const std::string logicalAsset(self->default_values_aux.at("parent"));
+            auto logicalAssetId = fty::convert<uint32_t>(self->default_values_aux.at("parent"));
+            const std::string logicalAsset(DBAssets::id_to_name_ext_name(logicalAssetId).first);
             fty_proto_ext_insert(asset, "logical_asset", logicalAsset.c_str());
         }
 
