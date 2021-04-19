@@ -68,6 +68,7 @@ struct _fty_discovery_server_t {
     int64_t nb_sts_discovered;
     int64_t nb_sensor_discovered;
     int32_t status_scan;
+    bool device_centric;
     bool ongoing_stop;
     std::vector<std::string> localscan_subscan;
     range_scan_args_t range_scan_config;
@@ -366,7 +367,13 @@ bool compute_configuration_file(fty_discovery_server_t *self) {
             // the config API call returns the parent internal name, while fty-proto-t needs to carry the database ID
             if(configName == "parent") {
                 std::string parentIname(zconfig_value(item));
-                self->default_values_aux[zconfig_name(item)] = (parentIname == "0" || parentIname == "") ? "0" : std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
+                if (parentIname == "0" || parentIname == "") {
+                    self->default_values_aux[zconfig_name(item)] = "0";
+                    self->device_centric = false;
+                } else {
+                    self->default_values_aux[zconfig_name(item)] = std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
+                    self->device_centric = true;
+                }
             } else {
                 self->default_values_aux[zconfig_name(item)] = zconfig_value(item);
             }
@@ -737,6 +744,12 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
 
         // update parent name
         fty_proto_ext_insert(asset, "parent_name.1", parentName.c_str());
+
+        // add logical asset (sensor location) if in device centric mode
+        if(self->device_centric) {
+            const std::string logicalAsset(self->default_values_aux.at("parent"));
+            fty_proto_ext_insert(asset, "logical_asset", logicalAsset.c_str());
+        }
 
         // update parent ID (overwrite default)
         auto parentId = DBAssets::name_to_asset_id(parentName);
@@ -1406,6 +1419,7 @@ fty_discovery_server_new() {
     self->nb_ups_discovered = 0;
     self->nb_sensor_discovered = 0;    
     self->scan_size = 0;
+    self->device_centric = false;
     self->ongoing_stop = false;
     self->status_scan = -1;
     self->range_scan_config.config = strdup(FTY_DISCOVERY_CFG_FILE);
