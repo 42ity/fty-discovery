@@ -29,6 +29,7 @@
 #include <cxxtools/split.h>
 #include <fty/convert.h>
 #include <fty_common_nut.h>
+#include <fty_log.h>
 #include <ftyproto.h>
 #include <map>
 #include <secw_consumer_accessor.h>

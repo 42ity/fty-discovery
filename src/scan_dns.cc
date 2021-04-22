@@ -21,6 +21,7 @@
 
 
 #include "scan_dns.h"
+#include <fty_log.h>
 #include <sys/socket.h> /* for AF_INET */
 
 

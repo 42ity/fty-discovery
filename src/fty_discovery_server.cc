@@ -32,6 +32,7 @@
 #include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
 #include <czmq.h>
+#include <fty_log.h>
 #include <fty/expected.h>
 #include <ifaddrs.h>
 #include <malamute.h>

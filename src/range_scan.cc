@@ -24,6 +24,7 @@
 #include "device_scan.h"
 #include "fty_discovery_server.h"
 #include <fty/convert.h>
+#include <fty_log.h>
 
 
 //  --------------------------------------------------------------------------

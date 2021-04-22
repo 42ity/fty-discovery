@@ -23,6 +23,7 @@
 #include "cidr.h"
 #include "scan_nut.h"
 #include <fty/convert.h>
+#include <fty_log.h>
 
 bool device_scan_scan(zlist_t* listScans, discovered_devices_t* devices, zsock_t* pipe,
     const fty::nut::KeyValues* mappings, const fty::nut::KeyValues* sensorMappings,
