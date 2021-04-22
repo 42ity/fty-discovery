@@ -34,7 +34,7 @@ Build-Depends:
     libtntdb-dev,
     libfty-common-dev,
     libfty-common-logging-dev,
-    libfty-proto-dev (>= 1.0.0),
+    libfty-proto-dev,
     libfty-common-db-dev,
     libfty-security-wallet-dev,
     libfty-common-nut-dev,
