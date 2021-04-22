@@ -28,6 +28,7 @@
 #include <mutex>
 #include <string>
 #include <malamute.h>
+#include <fty_common_nut.h>
 
 
 #define FTY_DISCOVERY_ACTOR_NAME "fty-discovery"
