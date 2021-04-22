@@ -27,6 +27,7 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <malamute.h>
 
 
 #define FTY_DISCOVERY_ACTOR_NAME "fty-discovery"
