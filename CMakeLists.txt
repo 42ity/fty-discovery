@@ -72,41 +72,19 @@ etn_configure_file(
 
 ##############################################################################################################
 
-if(BUILD_TESTING)
-    enable_testing()
-
-    # Create a target for the tests
-    etn_test(${PROJECT_NAME}-test
-        SOURCES
-            test/main.cpp
-            test/assets.cpp
-            test/cidr.cpp
-            test/device-scan.cpp
-            test/fty-discovery-server.cpp
-            test/range-scan.cpp
-            test/scan-dns.cpp
-            test/scan-nut.cpp
-            src/fty_discovery_server.cc
-        INCLUDE_DIRS
-            src
-        USES
-            ${PROJECT_NAME}-static
-            cidr
-            czmq
-            cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-            fty-asset-accessor
-            fty_common
-            fty_common_db
-            fty_common_logging
-            fty_common_nut
-            fty_common_socket
-            fty_proto
-            fty_security_wallet
-            fty-utils
-            mlm
-            tntdb
-    )
-    
-endif()
+etn_test_target(${PROJECT_NAME}-server
+    SOURCES
+        test/main.cpp
+        test/assets.cpp
+        test/cidr.cpp
+        test/device-scan.cpp
+        test/fty-discovery-server.cpp
+        test/range-scan.cpp
+        test/scan-dns.cpp
+        test/scan-nut.cpp
+        src/fty_discovery_server.cc
+    PUBLIC_INCLUDE_DIR
+        src
+)
 
 ##############################################################################################################
