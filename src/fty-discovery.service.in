@@ -1,5 +1,5 @@
 [Unit]
-Description=fty-discovery service
+Description=@PROJECT_NAME@ service
 After=malamute.service network.target fty-db.target
 Requires=malamute.service network.target fty-db.target
 
@@ -20,21 +20,21 @@ User=discovery-monitoring-daemon
 ExecStartPre=+/bin/chown www-data /etc/fty-discovery/fty-discovery.cfg
 ExecStartPre=+/bin/chgrp discovery-monitoring-daemon /etc/fty-discovery/fty-discovery.cfg
 ExecStartPre=+/bin/chmod ug+rw /etc/fty-discovery/fty-discovery.cfg
-EnvironmentFile=-@prefix@/share/bios/etc/default/bios
-EnvironmentFile=-@prefix@/share/bios/etc/default/bios__%n.conf
-EnvironmentFile=-@prefix@/share/fty/etc/default/fty
-EnvironmentFile=-@prefix@/share/fty/etc/default/fty__%n.conf
-EnvironmentFile=-@sysconfdir@/default/bios
-EnvironmentFile=-@sysconfdir@/default/bios__%n.conf
-EnvironmentFile=-@sysconfdir@/default/fty
-EnvironmentFile=-@sysconfdir@/default/fty__%n.conf
+EnvironmentFile=-@CMAKE_INSTALL_FULL_DATAROOTDIR@/bios/etc/default/bios
+EnvironmentFile=-@CMAKE_INSTALL_FULL_DATAROOTDIR@/bios/etc/default/bios__%n.conf
+EnvironmentFile=-@CMAKE_INSTALL_FULL_DATAROOTDIR@/fty/etc/default/fty
+EnvironmentFile=-@CMAKE_INSTALL_FULL_DATAROOTDIR@/fty/etc/default/fty__%n.conf
+EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/bios
+EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/bios__%n.conf
+EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/fty
+EnvironmentFile=-@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/fty__%n.conf
 Environment="PATH=/usr/sbin:/usr/bin:/sbin:/bin:/lib/nut"
-Environment="prefix=@prefix@"
+Environment="prefix=@CMAKE_INSTALL_PREFIX@"
 Environment='SYSTEMD_UNIT_FULLNAME=%n'
 Environment="NUT_ALTPIDPATH=\"\""
 Environment="NUT_STATEPATH=/tmp"
-EnvironmentFile=@sysconfdir@/default/bios-db-rw
-ExecStart=@prefix@/bin/fty-discovery-server --agent
+EnvironmentFile=@CMAKE_INSTALL_FULL_SYSCONFDIR@/default/bios-db-rw
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/@PROJECT_NAME@-server --agent
 Restart=always
 
 [Install]
