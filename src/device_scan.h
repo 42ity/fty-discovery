@@ -18,32 +18,22 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
+#pragma once
+#include <czmq.h>
+#include <mutex>
+#include <map>
+#include <fty_common_nut.h>
+#include "fty_discovery_server.h"
 
-#ifndef DEVICE_SCAN_H_INCLUDED
-#define DEVICE_SCAN_H_INCLUDED
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* typedef struct _discovered_devices_t {
+    std::mutex mtx_list;
+    std::map<std::string, std::string> device_list;
+} discovered_devices_t; */
 
 //  @interface
 
 //  Create a new device_scan
-FTY_DISCOVERY_PRIVATE zactor_t *
-    device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings);
+zactor_t * device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings);
 
 //  One device scan actor
-FTY_DISCOVERY_PRIVATE void
-    device_scan_actor (zsock_t *pipe, void *args);
-
-//  Self test of this class
-FTY_DISCOVERY_PRIVATE void
-    device_scan_test (bool verbose);
-
-//  @end
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+void device_scan_actor (zsock_t *pipe, void *args);
