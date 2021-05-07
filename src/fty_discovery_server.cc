@@ -551,18 +551,23 @@ ftydiscovery_create_asset(fty_discovery_server_t *self, zmsg_t **msg_p) {
             return;
         }
         // to identify a device, use serial number (if available), otherwise the IP:
-        const std::string deviceIdentifier = (serial ? serial : ip);
+        const std::string deviceIdentifier = (serial && !streq(serial, "") ? serial : ip);
+        if (deviceIdentifier.empty()) {
+            log_info("Asset with empty identifier");
+            fty_proto_destroy(&asset);
+            return;
+        }
 
         bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
 
         // to identify a device, use serial number (if available), otherwise the IP:
         auto found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
             [&](const std::pair<std::string, std::string> el) {
-                return streq(el.second.c_str(), serial);
+                return (el.second == deviceIdentifier);
             });
 
         if(found != self->devices_discovered.device_list.end()) {
-            log_info("Asset with identifier %s already exists", serial);
+            log_info("Asset with identifier %s already exists", deviceIdentifier.c_str());
             fty_proto_destroy(&asset);
             return;
         }
@@ -1211,7 +1216,7 @@ s_handle_mailbox(fty_discovery_server_t* self, zmsg_t *msg, zpoller_t *poller) {
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_ups_discovered);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_epdu_discovered);
                 zmsg_addstrf(reply, "%" PRIi64, self->nb_sts_discovered);
-                zmsg_addstrf(reply, "%" PRIi64, self->nb_sensor_discovered);                
+                zmsg_addstrf(reply, "%" PRIi64, self->nb_sensor_discovered);
             } else {
                 zmsg_addstr(reply, RESP_OK);
                 zmsg_addstrf(reply, "%" PRIi32, -1);
@@ -1418,7 +1423,7 @@ fty_discovery_server_new() {
     self->nb_epdu_discovered = 0;
     self->nb_sts_discovered = 0;
     self->nb_ups_discovered = 0;
-    self->nb_sensor_discovered = 0;    
+    self->nb_sensor_discovered = 0;
     self->scan_size = 0;
     self->device_centric = false;
     self->ongoing_stop = false;
