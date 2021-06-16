@@ -20,29 +20,26 @@
 */
 #pragma once
 
-#include <ftyproto.h>
-#include <czmq.h> 
+#include <czmq.h>
+#include <fty_proto.h>
 
-typedef struct _assets_t {
-    zhashx_t *assets;
-    int64_t lastupdate;
-} assets_t;
+struct assets_t
+{
+    zhashx_t* assets;
+    int64_t   lastupdate;
+};
 
-//  @interface
-//  Create a new assets
-assets_t * assets_new (void);
+/// Create a new assets
+assets_t* assets_new(void);
 
-//  Destroy the assets
-void assets_destroy (assets_t **self_p);
+/// Destroy the assets
+void assets_destroy(assets_t** self_p);
 
-//  Put one asset into cache
-void assets_put (assets_t *self, fty_proto_t **msg_p);
+/// Put one asset into cache
+void assets_put(assets_t* self, fty_proto_t** msg_p);
 
-//  Find asset by ext attribute
-fty_proto_t * assets_find (assets_t *self, const char *key, const char *value);
+/// Find asset by ext attribute
+fty_proto_t* assets_find(assets_t* self, const char* key, const char* value);
 
-//  return the zclock_mono time in ms when last change happened (create or
-//  delete, not update)
-int64_t assets_last_change (assets_t *self);
-
-//  @end
+/// return the zclock_mono time in ms when last change happened (create or delete, not update)
+int64_t assets_last_change(assets_t* self);

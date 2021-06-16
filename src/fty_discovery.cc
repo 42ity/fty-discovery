@@ -19,13 +19,6 @@
     =========================================================================
 */
 
-/*
-@header
-    fty_discovery - Agent performing device discovery in network
-@discuss
-@end
-*/
-
 #include "fty_discovery_server.h"
 #include <fty_common.h>
 

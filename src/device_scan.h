@@ -19,21 +19,16 @@
     =========================================================================
 */
 #pragma once
-#include <czmq.h>
-#include <mutex>
-#include <map>
-#include <fty_common_nut.h>
+
 #include "fty_discovery_server.h"
+#include <czmq.h>
+#include <fty_common_nut.h>
+#include <map>
+#include <mutex>
 
-/* typedef struct _discovered_devices_t {
-    std::mutex mtx_list;
-    std::map<std::string, std::string> device_list;
-} discovered_devices_t; */
+/// Create a new device_scan
+zactor_t* device_scan_new(zlist_t* arg0, discovered_devices_t* arg1, const fty::nut::KeyValues* mappings,
+    const fty::nut::KeyValues* sensorMappings);
 
-//  @interface
-
-//  Create a new device_scan
-zactor_t * device_scan_new (zlist_t *arg0, discovered_devices_t *arg1, const fty::nut::KeyValues *mappings, const fty::nut::KeyValues *sensorMappings);
-
-//  One device scan actor
-void device_scan_actor (zsock_t *pipe, void *args);
+/// One device scan actor
+void device_scan_actor(zsock_t* pipe, void* args);

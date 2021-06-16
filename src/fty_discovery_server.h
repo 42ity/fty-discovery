@@ -24,11 +24,11 @@
 #include "assets.h"
 #include "range_scan.h"
 #include <fty_common_db.h>
+#include <fty_common_nut.h>
+#include <malamute.h>
 #include <map>
 #include <mutex>
 #include <string>
-#include <malamute.h>
-#include <fty_common_nut.h>
 
 
 #define FTY_DISCOVERY_ACTOR_NAME "fty-discovery"
@@ -148,14 +148,13 @@ typedef struct _fty_discovery_server_t
     std::vector<link_t>                default_values_links;
 } fty_discovery_server_t;
 
-//  @interface
-//  Create a new fty_discovery_server
+/// Create a new fty_discovery_server
 fty_discovery_server_t* fty_discovery_server_new(void);
 
-//  Destroy the fty_discovery_server
+/// Destroy the fty_discovery_server
 void fty_discovery_server_destroy(fty_discovery_server_t** self_p);
 
-//  ftydiscovery actor
+/// ftydiscovery actor
 void fty_discovery_server(zsock_t* pipe, void* args);
 
 std::string getDiscoveryConfigFile();

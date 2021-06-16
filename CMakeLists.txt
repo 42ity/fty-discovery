@@ -15,34 +15,21 @@ find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake)
 etn_target(static ${PROJECT_NAME}-static
     SOURCES
         src/assets.cc
+        src/assets.h
         src/cidr.cc
+        src/cidr.h
         src/device_scan.cc
+        src/device_scan.h
         src/range_scan.cc
+        src/range_scan.h
         src/scan_dns.cc
+        src/scan_dns.h
         src/scan_nut.cc
+        src/scan_nut.h
     USES
         czmq
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
-        fty_common_db
-        fty_common_logging
-        fty_common_nut
-        fty_proto
-        fty_security_wallet
-        fty-utils
-        mlm
-        tntdb
-    PRIVATE
-)
-##############################################################################################################
-etn_target(exe ${PROJECT_NAME}-server
-    SOURCES
-        src/fty_discovery_server.cc
-        src/fty_discovery.cc
-    USES
-        ${PROJECT_NAME}-static
-        cidr
-        czmq
-        cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
+        fty_common
         fty_common_db
         fty_common_logging
         fty_common_nut
@@ -52,7 +39,22 @@ etn_target(exe ${PROJECT_NAME}-server
         fty-utils
         mlm
         tntdb
+        cidr
+    PRIVATE
 )
+
+##############################################################################################################
+
+etn_target(exe ${PROJECT_NAME}-server
+    SOURCES
+        src/fty_discovery_server.cc
+        src/fty_discovery_server.h
+        src/fty_discovery.cc
+    USES
+        ${PROJECT_NAME}-static
+)
+
+##############################################################################################################
 
 #install systemd config
 

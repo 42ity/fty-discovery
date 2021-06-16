@@ -20,8 +20,7 @@
 */
 #pragma once
 #include <czmq.h>
-#include <ftyproto.h>
+#include <fty_proto.h>
 
-//  @interface
-//  Do dns resolving
+/// Do dns resolving
 bool scan_dns(fty_proto_t* msg, const char* address, zconfig_t* config);

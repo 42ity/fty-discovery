@@ -29,8 +29,9 @@
 #include <cxxtools/split.h>
 #include <fty/convert.h>
 #include <fty_common_nut.h>
+#include <fty_common_socket_sync_client.h>
 #include <fty_log.h>
-#include <ftyproto.h>
+#include <fty_proto.h>
 #include <map>
 #include <secw_consumer_accessor.h>
 #include <secw_document.h>
@@ -519,7 +520,7 @@ void dump_data_actor(zsock_t* pipe, void* args)
                     std::string daisyChain(fty_proto_ext_string(asset, "daisy_chain", ""));
                     std::string modbusAddress(fty_proto_ext_string(asset, "modbus_address", ""));
 
-                    for (const auto item : getEndpointExtAttributs(*cpsr, sensor, daisyChain, modbusAddress)) {
+                    for (const auto& item : getEndpointExtAttributs(*cpsr, sensor, daisyChain, modbusAddress)) {
                         fty_proto_ext_insert(asset, item.first.c_str(), "%s", item.second.c_str());
                     }
 
