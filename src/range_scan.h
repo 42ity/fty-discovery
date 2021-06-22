@@ -23,12 +23,12 @@
 #include <czmq.h>
 #include <vector>
 
-typedef struct _range_scan_t
+struct range_scan_t
 {
     char*   range;
     int64_t size;
     int64_t cursor;
-} range_scan_t;
+};
 
 typedef struct _range_scan_args_t
 {
@@ -36,15 +36,14 @@ typedef struct _range_scan_args_t
     char*                                config;
 } range_scan_args_t;
 
-//  @interface
-//  Create a new range_scan
+/// Create a new range_scan
 range_scan_t* range_scan_new(const char* range);
 
-//  Destroy the range_scan
+/// Destroy the range_scan
 void range_scan_destroy(range_scan_t** self_p);
 
-//  report progress in % (0 - 100);
+/// report progress in % (0 - 100);
 int range_scan_progress(range_scan_t* self);
 
-//  Actor for range scan
+/// Actor for range scan
 void range_scan_actor(zsock_t* pipe, void* args);

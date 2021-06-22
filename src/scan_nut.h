@@ -21,9 +21,8 @@
 
 #pragma once
 
-#include <czmq.h> 
+#include <czmq.h>
 
-//  @interface
-//  Scan IP address using nut-scanner
-//  One device scan actor
-void scan_nut_actor (zsock_t *pipe, void *args);
+/// Scan IP address using nut-scanner
+/// One device scan actor
+void scan_nut_actor(zsock_t* pipe, void* args);

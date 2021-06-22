@@ -33,7 +33,7 @@
 range_scan_t* range_scan_new(const char* range)
 {
     assert(range);
-    range_scan_t* self = (range_scan_t*)zmalloc(sizeof(range_scan_t));
+    range_scan_t* self = static_cast<range_scan_t*>(zmalloc(sizeof(range_scan_t)));
     assert(self);
     //  Initialize class properties here
     self->range   = strdup(range);

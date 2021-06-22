@@ -32,8 +32,9 @@
 #include <cxxtools/jsonserializer.h>
 #include <cxxtools/serializationinfo.h>
 #include <czmq.h>
-#include <fty_log.h>
 #include <fty/expected.h>
+#include <fty_common_nut.h>
+#include <fty_log.h>
 #include <ifaddrs.h>
 #include <malamute.h>
 #include <map>
@@ -44,7 +45,6 @@
 #include <sys/types.h>
 #include <utility>
 #include <vector>
-#include <fty_common_nut.h>
 
 
 static std::string discovery_config_file = FTY_DISCOVERY_CFG_FILE;
@@ -346,9 +346,10 @@ bool compute_configuration_file(fty_discovery_server_t* self)
                 std::string parentIname(zconfig_value(item));
                 if (parentIname == "0" || parentIname == "") {
                     self->default_values_aux[zconfig_name(item)] = "0";
-                    self->device_centric = false;
+                    self->device_centric                         = false;
                 } else {
-                    self->default_values_aux[zconfig_name(item)] = std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
+                    self->default_values_aux[zconfig_name(item)] =
+                        std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
                     self->device_centric = true;
                 }
             } else {
@@ -497,13 +498,13 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
 {
     if (!self || !msg_p)
         return;
-    if (!is_fty_proto(*msg_p))
+    if (!fty_proto_is(*msg_p))
         return;
 
     // DEBUG: list discovered devices
     {
         std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
-        for (const auto el : self->devices_discovered.device_list) {
+        for (const auto& el : self->devices_discovered.device_list) {
             log_debug("Found device %s - %s in discovered list", el.first.c_str(), el.second.c_str());
         }
     }
@@ -723,8 +724,8 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         fty_proto_ext_insert(asset, "parent_name.1", parentName.c_str());
 
         // add logical asset (sensor location) if in device centric mode
-        if(self->device_centric) {
-            auto logicalAssetId = fty::convert<uint32_t>(self->default_values_aux.at("parent"));
+        if (self->device_centric) {
+            auto              logicalAssetId = fty::convert<uint32_t>(self->default_values_aux.at("parent"));
             const std::string logicalAsset(DBAssets::id_to_name_ext_name(logicalAssetId).first);
             fty_proto_ext_insert(asset, "logical_asset", logicalAsset.c_str());
         }
@@ -1029,7 +1030,7 @@ bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* message, zpoller
 
 void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_t* poller)
 {
-    if (is_fty_proto(msg)) {
+    if (fty_proto_is(msg)) {
         fty_proto_t* fmsg = fty_proto_decode(&msg);
         log_debug("Adding asset to self->assets");
         assets_put(self->assets, &fmsg);
@@ -1219,7 +1220,7 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
 
 void static s_handle_stream(fty_discovery_server_t* self, zmsg_t* message)
 {
-    if (is_fty_proto(message)) {
+    if (fty_proto_is(message)) {
         // handle fty_proto protocol here
         fty_proto_t* fmsg = fty_proto_decode(&message);
 
@@ -1369,7 +1370,7 @@ void fty_discovery_server(zsock_t* pipe, void* /* args */)
 
 fty_discovery_server_t* fty_discovery_server_new()
 {
-    fty_discovery_server_t* self = (fty_discovery_server_t*)zmalloc(sizeof(fty_discovery_server_t));
+    fty_discovery_server_t* self = static_cast<fty_discovery_server_t*>(zmalloc(sizeof(fty_discovery_server_t)));
     assert(self);
     //  Initialize class properties here
     self->mlm                            = mlm_client_new();
