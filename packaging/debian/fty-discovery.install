@@ -1,4 +1,0 @@
-usr/bin/fty-discovery
-etc/fty-discovery/fty-discovery.cfg
-lib/systemd/system/fty-discovery.service
-

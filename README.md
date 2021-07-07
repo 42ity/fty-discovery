@@ -7,17 +7,16 @@ The default configuration values are in fty-discovery.cfg file (section default)
 ## How to build
 To build fty-discovery project run:
 ```bash
-./autogen.sh [clean]
-./configure
+mkdir build ** cd build
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=usr -DBUILD_TESTING=On ..
 make
-make check # to run self-test
 ```
 ## How to run
 
 To run fty-discovery project:
 #### from within the source tree, run:
 ```bash
-./src/fty-discovey
+./src/fty-discovery-server
 ```
 The available options are:
 * -v for verbose mode;

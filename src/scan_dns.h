@@ -18,27 +18,9 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
+#pragma once
+#include <czmq.h>
+#include <fty_proto.h>
 
-#ifndef SCAN_DNS_H_INCLUDED
-#define SCAN_DNS_H_INCLUDED
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//  @interface
-//  Do dns resolving
-FTY_DISCOVERY_PRIVATE bool
-    scan_dns (fty_proto_t *msg, const char *address, zconfig_t *config);
-
-//  Self test of this class
-FTY_DISCOVERY_PRIVATE void
-    scan_dns_test (bool verbose);
-
-//  @end
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+/// Do dns resolving
+bool scan_dns(fty_proto_t* msg, const char* address, zconfig_t* config);
