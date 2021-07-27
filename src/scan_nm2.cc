@@ -185,5 +185,6 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
         }
     }
 
+    delete listAddr;
     logDebug("NM2: scan actor exited");
 }
