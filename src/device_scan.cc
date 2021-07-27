@@ -22,6 +22,7 @@
 #include "device_scan.h"
 #include "cidr.h"
 #include "scan_nut.h"
+#include "scan_nm2.h"
 #include <fty/convert.h>
 #include <fty_log.h>
 
@@ -34,15 +35,37 @@ bool device_scan_scan(zlist_t* listScans, discovered_devices_t* devices, zsock_t
     std::vector<zactor_t*> listActor;
     bool                   term = false;
     while (listAddr != NULL) {
-        zlist_t* args = zlist_new();
-        zlist_append(args, listAddr);
-        zlist_append(args, devices);
-        zlist_append(args, const_cast<void*>(static_cast<const void*>(mappings)));
-        zlist_append(args, const_cast<void*>(static_cast<const void*>(sensorMappings)));
-        zlist_append(args, const_cast<void*>(static_cast<const void*>(&documentIds)));
-        zactor_t* scan_nut = zactor_new(scan_nut_actor, args);
-        zpoller_add(poller, scan_nut);
-        listActor.push_back(scan_nut);
+        {
+            zlist_t* args = zlist_new();
+            zlist_append(args, listAddr);
+            zlist_append(args, devices);
+            zlist_append(args, const_cast<void*>(static_cast<const void*>(mappings)));
+            zlist_append(args, const_cast<void*>(static_cast<const void*>(sensorMappings)));
+            zlist_append(args, const_cast<void*>(static_cast<const void*>(&documentIds)));
+
+            zactor_t* scan_nut = zactor_new(scan_nut_actor, args);
+            zpoller_add(poller, scan_nut);
+            listActor.push_back(scan_nut);
+        }
+
+        {
+            //listAddr deletes in nut scanner :(, clone it for nm2 actor
+            CIDRList* cloned = new CIDRList;
+            CIDRAddress addr;
+            while(listAddr->next(addr)) {
+                cloned->add(addr);
+            }
+
+            zlist_t* args = zlist_new();
+            zlist_append(args, cloned);
+            zlist_append(args, devices);
+
+            zactor_t* scan_nm2 = zactor_new(scan_nm2_actor, args);
+            zpoller_add(poller, scan_nm2);
+            listActor.push_back(scan_nm2);
+        }
+
+
         listAddr = static_cast<CIDRList*>(zlist_next(listScans));
     }
 

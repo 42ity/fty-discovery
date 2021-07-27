@@ -4,14 +4,14 @@ IncludeCategories:
   - Regex:           '^"'
     Priority:        1
 
-AlignAfterOpenBracket: DontAlign
+AlignAfterOpenBracket: AlwaysBreak
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
 AlignEscapedNewlinesLeft: false
 AlignOperands:   true
 AlignTrailingComments: true
 AlignConsecutiveMacros: true
-AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: true
 AccessModifierOffset: -4
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
@@ -26,11 +26,11 @@ AlwaysBreakTemplateDeclarations: true
 #AlwaysBreakAfterReturnType: All
 
 BinPackArguments: true
-BinPackParameters: true
+BinPackParameters: false
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
-ColumnLimit: 120
+ColumnLimit: 140
 BreakConstructorInitializers: BeforeComma
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 CommentPragmas:  '^ IWYU pragma:'

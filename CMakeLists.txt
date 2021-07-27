@@ -26,6 +26,10 @@ etn_target(static ${PROJECT_NAME}-static
         src/scan_dns.h
         src/scan_nut.cc
         src/scan_nut.h
+        src/scan_nm2.cc
+        src/scan_nm2.h
+        src/neon.cc
+        src/neon.h
     USES
         czmq
         cxxtools  # cxxtools cannot be use as public because we do not have the cmake package yet
@@ -37,9 +41,11 @@ etn_target(static ${PROJECT_NAME}-static
         fty_proto
         fty_security_wallet
         fty-utils
+        fty-pack
         mlm
         tntdb
         cidr
+        neon
     PRIVATE
 )
 
