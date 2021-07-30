@@ -526,18 +526,23 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
             return;
         }
         // to identify a device, use serial number (if available), otherwise the IP:
-        const std::string deviceIdentifier = (serial ? serial : ip);
+        const std::string deviceIdentifier = (serial && !streq(serial, "") ? serial : ip);
+        if (deviceIdentifier.empty()) {
+            log_info("Asset with empty identifier");
+            fty_proto_destroy(&asset);
+            return;
+        }
 
         bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
 
         // to identify a device, use serial number (if available), otherwise the IP:
-        auto found = std::find_if(self->devices_discovered.device_list.begin(),
-            self->devices_discovered.device_list.end(), [&](const std::pair<std::string, std::string> el) {
-                return streq(el.second.c_str(), serial);
+        auto found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
+            [&](const std::pair<std::string, std::string> el) {
+                return (el.second == deviceIdentifier);
             });
 
-        if (found != self->devices_discovered.device_list.end()) {
-            log_info("Asset with identifier %s already exists", serial);
+        if(found != self->devices_discovered.device_list.end()) {
+            log_info("Asset with identifier %s already exists", deviceIdentifier.c_str());
             fty_proto_destroy(&asset);
             return;
         }
