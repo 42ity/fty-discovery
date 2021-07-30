@@ -18,11 +18,11 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 Source:         fty-discovery
-Section:        net
-Priority:       optional
 Maintainer:     fty-discovery Developers <eatonipcopensource@eaton.com>
-Standards-Version: 4.0.1.0
-Build-Depends: debhelper (>= 9),
+Build-Depends:
+    cmake (>=3.0),
+    debhelper (>= 9),
+    fty-cmake-dev,
     pkg-config,
     libssl-dev,
     libcidr0-dev,
@@ -34,12 +34,10 @@ Build-Depends: debhelper (>= 9),
     libtntdb-dev,
     libfty-common-dev,
     libfty-common-logging-dev,
-    libfty-proto-dev (>= 1.0.0),
+    libfty-proto-dev,
     libfty-common-db-dev,
     libfty-security-wallet-dev,
     libfty-common-nut-dev,
-    libfty-asset-dev,
-    libfty-asset-accessor-dev,
     libfty-utils-dev,
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
@@ -47,54 +45,11 @@ Build-Depends: debhelper (>= 9),
     asciidoc-base | asciidoc, xmlto,
     dh-autoreconf
 
-Package: libfty-discovery0
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: fty-discovery shared library
- This package contains shared library for fty-discovery:
- 42ity service for discovering devices
-
-Package: libfty-discovery-dev
-Architecture: any
-Section: libdevel
-Depends:
-    ${misc:Depends},
-    libssl-dev,
-    libcidr0-dev,
-    libsodium-dev,
-    libzmq3-dev,
-    libczmq-dev (>= 3.0.2),
-    libcxxtools-dev,
-    libmlm-dev (>= 1.0.0),
-    libtntdb-dev,
-    libfty-common-dev,
-    libfty-common-logging-dev,
-    libfty-proto-dev (>= 1.0.0),
-    libfty-common-db-dev,
-    libfty-security-wallet-dev,
-    libfty-common-nut-dev,
-    libfty-asset-dev,
-    libfty-asset-accessor-dev,
-    libfty-utils-dev,
-    libfty-discovery0 (= ${binary:Version})
-Description: fty-discovery development tools
- This package contains development files for fty-discovery:
- 42ity service for discovering devices
-
 Package: fty-discovery
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
-Description: runnable binaries from fty-discovery
- Main package for fty-discovery:
- 42ity service for discovering devices
-
-Package: fty-discovery-dbg
-Architecture: any
-Section: debug
+Section: net
 Priority: optional
-Depends:
-    fty-discovery (= ${binary:Version}),
-    ${misc:Depends}
-Description: fty-discovery debugging symbols
- This package contains the debugging symbols for fty-discovery:
- 42ity service for discovering devices.
+Depends:    ${shlibs:Depends},
+            ${misc:Depends}
+Description: 42ity service for discovering devices
+ 42ity service for discovering devices

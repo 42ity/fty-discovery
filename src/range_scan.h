@@ -19,43 +19,31 @@
     =========================================================================
 */
 
-#ifndef RANGE_SCAN_H_INCLUDED
-#define RANGE_SCAN_H_INCLUDED
+#pragma once
+#include <czmq.h>
+#include <vector>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+struct range_scan_t
+{
+    char*   range;
+    int64_t size;
+    int64_t cursor;
+};
 
-typedef struct _range_scan_args_t {
+typedef struct _range_scan_args_t
+{
     std::vector<std::pair<char*, char*>> ranges;
-    char *config;
+    char*                                config;
 } range_scan_args_t;
 
-//  @interface
-//  Create a new range_scan
-FTY_DISCOVERY_PRIVATE range_scan_t *
-    range_scan_new (const char* range);
+/// Create a new range_scan
+range_scan_t* range_scan_new(const char* range);
 
-//  Destroy the range_scan
-FTY_DISCOVERY_PRIVATE void
-    range_scan_destroy (range_scan_t **self_p);
+/// Destroy the range_scan
+void range_scan_destroy(range_scan_t** self_p);
 
-//  report progress in % (0 - 100);
-FTY_DISCOVERY_PRIVATE int
-    range_scan_progress (range_scan_t *self);
+/// report progress in % (0 - 100);
+int range_scan_progress(range_scan_t* self);
 
-//  Actor for range scan
-FTY_DISCOVERY_PRIVATE void
-    range_scan_actor (zsock_t *pipe, void *args);
-
-//  Self test of this class
-FTY_DISCOVERY_PRIVATE void
-    range_scan_test (bool verbose);
-
-//  @end
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+/// Actor for range scan
+void range_scan_actor(zsock_t* pipe, void* args);

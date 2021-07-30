@@ -1,11 +1,5 @@
-<!-- For "starting_year" we note the first commit of the repository.
-     For "copyright" this is usually the life timespan of the project
-     since a lot of the code and/or design ideas migrate around.
-// -->
-<starting_year>2017</starting_year>
-<!-- Note that although this component started in 2017, it did
-     so as a spin-off from older codebase starting from 2015 -->
-<license>
+fty-discovery - 42ity service for discovering devices
+
 Copyright (C) 2014 - 2020 Eaton
 
 This program is free software; you can redistribute it and/or modify
@@ -21,4 +15,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along
 with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-</license>
