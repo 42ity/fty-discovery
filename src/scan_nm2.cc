@@ -1,9 +1,9 @@
 #include "scan_nm2.h"
 #include "cidr.h"
 #include "fty_discovery_server.h"
+#include "neon.h"
 #include <fty_log.h>
 #include <pack/pack.h>
-#include "neon.h"
 
 // =========================================================================================================================================
 
@@ -27,11 +27,33 @@ struct Card : public pack::Node
         META(Identification, uuid, vendor, manufacturer, product, serialNumber, name, physicalName, type, location, contact, macAddress);
     };
 
+    struct Services : public pack::Node
+    {
+        struct Member : public pack::Node
+        {
+            pack::String path       = FIELD("path");
+            pack::String id         = FIELD("id");
+            pack::String type       = FIELD("type");
+            pack::String name       = FIELD("name");
+            pack::String deviceType = FIELD("device-type");
+
+            using pack::Node::Node;
+            META(Member, path, id, type, name, deviceType);
+        };
+
+        pack::Int32              count   = FIELD("members-count");
+        pack::ObjectList<Member> members = FIELD("members");
+
+        using pack::Node::Node;
+        META(Services, count, members);
+    };
+
     pack::String   name           = FIELD("name");
     Identification identification = FIELD("identification");
+    Services       services       = FIELD("services");
 
     using pack::Node::Node;
-    META(Card, name, identification);
+    META(Card, name, identification, services);
 };
 
 // =========================================================================================================================================
@@ -50,9 +72,21 @@ public:
         if (auto ret = ne.get("etn/v1/comm")) {
             Card card;
             if (auto resp = pack::json::deserialize(*ret, card)) {
-                logDebug("Card is \n{}\n", card.dump());
+                std::optional<Card::Services::Member> power;
 
-                return createAssetProto(card);
+                for (const auto& mem : card.services.members) {
+                    if (mem.path == "/etn/v1/comm/services/powerdistributions1") {
+                        power = mem;
+                        break;
+                    }
+                }
+
+                if (power != std::nullopt) {
+                    logDebug("Card is \n{}\n", card.dump());
+                    return createAssetProto(card, *power);
+                } else {
+                    return fty::unexpected("this is not a power device");
+                }
             } else {
                 return fty::unexpected("Error deserialize card {}", resp.error());
             }
@@ -61,22 +95,26 @@ public:
     }
 
 private:
-    fty_proto_t* createAssetProto(const Card& card)
+    fty_proto_t* createAssetProto(const Card& card, const Card::Services::Member& power)
     {
         fty_proto_t* msg = fty_proto_new(FTY_PROTO_ASSET);
 
+
         fty_proto_aux_insert(msg, "name", card.name.value().c_str());
         fty_proto_aux_insert(msg, "type", "device");
-        fty_proto_aux_insert(msg, "subtype", "ups");
-        //fty_proto_aux_insert(msg, "subtype", card.identification.type.value().c_str());
+        fty_proto_aux_insert(msg, "subtype", power.deviceType.value().c_str());
+        fty_proto_aux_insert(msg, "status", "nonactive");
+        // fty_proto_aux_insert(msg, "subtype", card.identification.type.value().c_str());
 
         fty_proto_ext_insert(msg, "name", "%s", card.identification.physicalName.value().c_str());
         fty_proto_ext_insert(msg, "ip.1", "%s", m_address.c_str());
         fty_proto_ext_insert(msg, "manufacturer", "%s", card.identification.manufacturer.value().c_str());
-        fty_proto_ext_insert(msg, "model", "%s", card.identification.product.value().c_str());
+        fty_proto_ext_insert(msg, "model", "%s", power.name.value().c_str());
         fty_proto_ext_insert(msg, "device.contact", "%s", card.identification.contact.value().c_str());
         fty_proto_ext_insert(msg, "device.location", "%s", card.identification.location.value().c_str());
         fty_proto_ext_insert(msg, "serial_no", "%s", card.identification.serialNumber.value().c_str());
+        fty_proto_ext_insert(msg, "endpoint.1.protocol", "nut_powercom");
+        fty_proto_ext_insert(msg, "endpoint.1.nut_powercom.secw_credential_id", "");
 
         return msg;
     }
@@ -157,8 +195,8 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
     while (listAddr->next(addr)) {
         std::string ip = addr.toString();
 
-        const auto& list = devices->device_list;
-        auto found = std::find_if(list.begin(), list.end(), [&](const std::pair<std::string, std::string>& el) {
+        const auto& list  = devices->device_list;
+        auto        found = std::find_if(list.begin(), list.end(), [&](const std::pair<std::string, std::string>& el) {
             return ip == el.second;
         });
 

@@ -587,10 +587,14 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         }
 
         for (const auto& property : self->default_values_aux) {
-            fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+            if (!fty_proto_aux_string(asset, property.first.c_str(), nullptr)) {
+                fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+            }
         }
         for (const auto& property : self->default_values_ext) {
-            fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
+            if (!fty_proto_ext_string(asset, property.first.c_str(), nullptr)) {
+                fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
+            }
         }
 
         log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
