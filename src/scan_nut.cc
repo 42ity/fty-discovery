@@ -136,7 +136,7 @@ bool s_valid_dumpdata(const fty::nut::DeviceConfiguration& dump)
 }
 
 
-bool s_nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut::DeviceConfiguration& dump,
+bool nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut::DeviceConfiguration& dump,
     const fty::nut::KeyValues* mappings, const fty::nut::KeyValues* sensorMappings, const std::string& ip,
     const std::string& type)
 {
@@ -500,7 +500,7 @@ void dump_data_actor(zsock_t* pipe, void* args)
         if (!nutdata.empty()) {
             std::vector<fty_proto_t*> assets;
             if (s_valid_dumpdata(nutdata) &&
-                s_nut_dumpdata_to_fty_message(assets, nutdata, mappings, sensorMappings, ip, type)) {
+                nut_dumpdata_to_fty_message(assets, nutdata, mappings, sensorMappings, ip, type)) {
                 log_debug("Dump data for %s (%s) succeeded.", addr.c_str(), cpsr->nutDriver.c_str());
 
                 for (auto i = assets.cbegin(); i != assets.cend(); i++) {

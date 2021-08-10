@@ -22,7 +22,12 @@
 #pragma once
 
 #include <czmq.h>
+#include <fty_common_nut.h>
+#include <fty_proto.h>
 
 /// Scan IP address using nut-scanner
 /// One device scan actor
 void scan_nut_actor(zsock_t* pipe, void* args);
+bool nut_dumpdata_to_fty_message(std::vector<fty_proto_t*>& assets, const fty::nut::DeviceConfiguration& dump,
+    const fty::nut::KeyValues* mappings, const fty::nut::KeyValues* sensorMappings, const std::string& ip,
+    const std::string& type);
