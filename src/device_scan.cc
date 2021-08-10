@@ -59,6 +59,8 @@ bool device_scan_scan(zlist_t* listScans, discovered_devices_t* devices, zsock_t
             zlist_t* args = zlist_new();
             zlist_append(args, cloned);
             zlist_append(args, devices);
+            zlist_append(args, const_cast<void*>(static_cast<const void*>(&documentIds)));
+            zlist_append(args, const_cast<void*>(static_cast<const void*>(mappings)));
 
             zactor_t* scan_nm2 = zactor_new(scan_nm2_actor, args);
             zpoller_add(poller, scan_nm2);

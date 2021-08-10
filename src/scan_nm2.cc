@@ -2,8 +2,14 @@
 #include "cidr.h"
 #include "fty_discovery_server.h"
 #include "neon.h"
+#include <filesystem>
+#include <fty/expected.h>
+#include <fty/process.h>
+#include <fty_common_socket_sync_client.h>
 #include <fty_log.h>
+#include <fty_security_wallet.h>
 #include <pack/pack.h>
+#include <fty_common_nut_convert.h>
 
 // =========================================================================================================================================
 
@@ -61,8 +67,10 @@ struct Card : public pack::Node
 class NM2Scanner
 {
 public:
-    NM2Scanner(const std::string& address)
+    NM2Scanner(const std::string& address, const std::vector<secw::UserAndPasswordPtr>& creds, fty::nut::KeyValues* mapping)
         : m_address(address)
+        , m_creds(creds)
+        , m_mapping(mapping)
     {
     }
 
@@ -116,11 +124,84 @@ private:
         fty_proto_ext_insert(msg, "endpoint.1.protocol", "nut_powercom");
         fty_proto_ext_insert(msg, "endpoint.1.nut_powercom.secw_credential_id", "");
 
+        if (scan(msg)) {
+            fty_proto_aux_insert(msg, "status", "active");
+        }
+
         return msg;
     }
 
+    bool scan(fty_proto_t* msg)
+    {
+        static std::regex rex("([a-z0-9\\.]+)\\s*:\\s+(.*)");
+        auto path = findExecutable("etn-nut-powerconnect");
+        if (!path) {
+            logWarn(path.error());
+            return false;
+        }
+
+        std::string output;
+        for (const auto& cred : m_creds) {
+            fty::Process process(*path, {"-x", fmt::format("port={}", m_address), "-d", "1"});
+
+            process.addArgument("-x");
+            process.addArgument(fmt::format("username={}", cred->getUsername()));
+
+            process.addArgument("-x");
+            process.addArgument(fmt::format("password={}", cred->getPassword()));
+
+            if (auto ret = process.run()) {
+                if (auto res = process.wait()) {
+                    if (*res == 0) {
+                        fty_proto_ext_insert(msg, "endpoint.1.nut_powercom.secw_credential_id", cred->getId().c_str());
+                        output = process.readAllStandardOutput();
+                        break;
+                    }
+                } else {
+                    logWarn("Cannot wait 'etn-nut-powerconnect', error: {}", res.error());
+                }
+            } else {
+                logWarn("Cannot run 'etn-nut-powerconnect', error: {}", ret.error());
+            }
+        }
+
+        if (!output.empty()) {
+            std::map<std::string, std::string> dump;
+            std::stringstream ss(output);
+            for (std::string line; std::getline(ss, line);) {
+                auto [key, value] = fty::split<std::string, std::string>(line, rex);
+                dump.emplace(key, value);
+            }
+
+            auto mappedDump = fty::nut::performMapping(*m_mapping, dump, 0);
+            for (const auto&[key, value] : mappedDump) {
+                fty_proto_ext_insert(msg, key.c_str(), "%s", value.c_str());
+            }
+        }
+
+        logDebug("Nut powercom: {}", output);
+        return !output.empty();
+    }
+
+    fty::Expected<std::string> findExecutable(const std::string& name) const
+    {
+        static std::vector<std::filesystem::path> paths =
+            {"/usr/lib/nut", "/lib/nut", "/home/jes/workspace/fty/build/Debug/deps-runtime/bin"};
+
+        for (const auto& path : paths) {
+            auto check = path / name;
+            if (std::filesystem::exists(check) && access(check.c_str(), X_OK) == 0) {
+                return (path / name).string();
+            }
+        }
+
+        return fty::unexpected("Executable {} was not found", name);
+    }
+
 private:
-    std::string m_address;
+    std::string                           m_address;
+    std::vector<secw::UserAndPasswordPtr> m_creds;
+    fty::nut::KeyValues*                  m_mapping = nullptr;
 };
 
 // =========================================================================================================================================
@@ -178,17 +259,37 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
     }
 
     zlist_t* argv = static_cast<zlist_t*>(args);
-    if (!argv || zlist_size(argv) != 2) {
+    if (!argv || zlist_size(argv) != 4) {
         log_error("{} : actor created without config or devices list", __FUNCTION__);
         return;
     }
 
-    CIDRList*             listAddr = static_cast<CIDRList*>(zlist_first(argv));
-    discovered_devices_t* devices  = static_cast<discovered_devices_t*>(zlist_next(argv));
+    CIDRList*              listAddr    = static_cast<CIDRList*>(zlist_first(argv));
+    discovered_devices_t*  devices     = static_cast<discovered_devices_t*>(zlist_next(argv));
+    std::set<std::string>* documentIds = static_cast<std::set<std::string>*>(zlist_next(argv));
+    fty::nut::KeyValues*   mappings    = static_cast<fty::nut::KeyValues*>(zlist_next(argv));
 
-    if (!listAddr || !devices) {
+    if (!listAddr || !devices || !documentIds || !mappings) {
         logError("{} : actor created without config or devices list", __FUNCTION__);
         return;
+    }
+
+    fty::SocketSyncClient secwSyncClient("/run/fty-security-wallet/secw.socket");
+    auto                  client = secw::ConsumerAccessor(secwSyncClient);
+
+    std::vector<secw::UserAndPasswordPtr> creds;
+
+    for (const auto& doc : *documentIds) {
+        try {
+            auto secCred = client.getDocumentWithPrivateData("default", doc);
+            if (auto cred = secw::UserAndPassword::tryToCast(secCred)) {
+                creds.push_back(cred);
+            }
+        } catch (const std::runtime_error& err) {
+            continue;
+        } catch (const secw::SecwException& err) {
+            continue;
+        }
     }
 
     CIDRAddress addr;
@@ -205,7 +306,7 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
             continue;
         }
 
-        NM2Scanner scanner(ip);
+        NM2Scanner scanner(ip, creds, mappings);
         if (auto ret = scanner.resolve()) {
             if (*ret) {
                 logDebug("NM2 resolved address {}", ip);

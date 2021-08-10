@@ -46,6 +46,7 @@ etn_target(static ${PROJECT_NAME}-static
         tntdb
         cidr
         neon
+        stdc++fs
     PRIVATE
 )
 
