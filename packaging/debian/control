@@ -41,7 +41,6 @@ Build-Depends:
     libfty-utils-dev,
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
-    dh-systemd,
     asciidoc-base | asciidoc, xmlto,
     dh-autoreconf
 
