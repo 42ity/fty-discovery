@@ -105,7 +105,7 @@ public:
                 return fty::unexpected("Error deserialize card {}", resp.error());
             }
         } else {
-            return fty::unexpected("Not a powercom device, error: {}", ret.error());
+            return fty::unexpected("Not a powercom device {}, error: {}", m_address, ret.error());
         }
     }
 
@@ -331,21 +331,10 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
     while (listAddr->next(addr)) {
         std::string ip = addr.toString();
 
-        const auto& list  = devices->device_list;
-        auto        found = std::find_if(list.begin(), list.end(), [&](const std::pair<std::string, std::string>& el) {
-            return ip == el.second;
-        });
-
-        if (found != list.end()) {
-            logDebug("NM2 address {} already exists", ip);
-            continue;
-        }
-
         NM2Scanner scanner(ip, creds, mapping, sensorMapping);
         if (auto ret = scanner.resolve()) {
             logDebug("NM2 resolved address: '{}' device count: {}", ip, ret->size());
             for (auto& asset : *ret) {
-                fty_proto_print(asset);
                 zmsg_t* reply = fty_proto_encode(&asset);
                 zmsg_pushstr(reply, "FOUND");
                 zmsg_send(&reply, pipe);

@@ -391,8 +391,8 @@ bool ip_present(discovered_devices_t* device_discovered, std::string ip)
     std::lock_guard<std::mutex> lock(device_discovered->mtx_list);
 
     const auto& device_list = device_discovered->device_list;
-    auto found = std::find_if(device_list.begin(), device_list.end(), [&](std::pair<std::string, std::string> el) {
-        return ip == el.second;
+    auto found = std::find_if(device_list.begin(), device_list.end(), [&](const auto& el) {
+        return ip == el.first;
     });
 
     bool present = (found != device_list.end());

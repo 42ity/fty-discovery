@@ -108,8 +108,14 @@
 
 typedef struct _discovered_devices_t
 {
+    struct DevInfo
+    {
+        bool existing = false;
+        std::string protocol;
+        std::string name;
+    };
     std::mutex                         mtx_list;
-    std::map<std::string, std::string> device_list;
+    std::map<std::string, DevInfo> device_list;
 } discovered_devices_t;
 
 typedef struct _configuration_scan_t
