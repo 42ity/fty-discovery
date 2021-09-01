@@ -97,7 +97,7 @@ public:
 
                 if (power != std::nullopt) {
                     logDebug("Card is \n{}\n", card.dump());
-                    return createAssetProto(card, *power);
+                    return createAssetProto();
                 } else {
                     return fty::unexpected("this is not a power device");
                 }
@@ -110,30 +110,12 @@ public:
     }
 
 private:
-    std::vector<fty_proto_t*> createAssetProto(const Card& card, const Card::Services::Member& power)
+    fty::Expected<std::vector<fty_proto_t*>> createAssetProto()
     {
         std::vector<fty_proto_t*> ret;
 
         if (!scan(ret)) {
-            fty_proto_t* msg = fty_proto_new(FTY_PROTO_ASSET);
-
-            fty_proto_aux_insert(msg, "name", card.name.value().c_str());
-            fty_proto_aux_insert(msg, "type", "device");
-            fty_proto_aux_insert(msg, "subtype", power.deviceType.value().c_str());
-            fty_proto_aux_insert(msg, "status", "nonactive");
-            // fty_proto_aux_insert(msg, "subtype", card.identification.type.value().c_str());
-
-            fty_proto_ext_insert(msg, "name", "%s", card.identification.physicalName.value().c_str());
-            fty_proto_ext_insert(msg, "ip.1", "%s", m_address.c_str());
-            fty_proto_ext_insert(msg, "manufacturer", "%s", card.identification.manufacturer.value().c_str());
-            fty_proto_ext_insert(msg, "model", "%s", power.name.value().c_str());
-            fty_proto_ext_insert(msg, "device.contact", "%s", card.identification.contact.value().c_str());
-            fty_proto_ext_insert(msg, "device.location", "%s", card.identification.location.value().c_str());
-            fty_proto_ext_insert(msg, "serial_no", "%s", card.identification.serialNumber.value().c_str());
-            fty_proto_ext_insert(msg, "endpoint.1.protocol", "nut_powercom");
-            fty_proto_ext_insert(msg, "endpoint.1.nut_powercom.secw_credential_id", "");
-
-            ret.push_back(msg);
+            return fty::unexpected("Scan was unsuccessful");
         }
 
         return ret;

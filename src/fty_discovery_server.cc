@@ -524,6 +524,10 @@ static std::string operation(fty_discovery_server_t* self, fty_proto_t* asset)
             } else if (protocol && streq(protocol, "nut_powercom")) {
                 logInfo("Asset with identifier {} already exists but should be updated to new protocol {}", serial, protocol);
                 fty_proto_set_name(asset, "%s", found->second.name.c_str());
+                zhash_t* ext = fty_proto_ext(asset);
+                zhash_t* extCopy = zhash_dup(ext);
+                zhash_delete(extCopy, "endpoint.1.nut_snmp.secw_credential_id");
+                fty_proto_set_ext(asset, &extCopy);
                 return "update";
             }
             return {};
