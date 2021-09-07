@@ -47,6 +47,7 @@ etn_target(static ${PROJECT_NAME}-static
         cidr
         neon
         stdc++fs
+        pthread
     PRIVATE
 )
 

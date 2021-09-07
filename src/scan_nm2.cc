@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fty/expected.h>
 #include <fty/process.h>
+#include <fty/thread-pool.h>
 #include <fty_common_nut_convert.h>
 #include <fty_common_socket_sync_client.h>
 #include <fty_log.h>
@@ -82,7 +83,8 @@ public:
 
     fty::Expected<std::vector<fty_proto_t*>> resolve()
     {
-        neon::Neon ne(m_address);
+        neon::Neon ne(m_address, 80, 5);
+        //if (auto ret = http::get(fmt::format("http://{}/etn/v1/comm", m_address), 5000)) {
         if (auto ret = ne.get("etn/v1/comm")) {
             Card card;
             if (auto resp = pack::json::deserialize(*ret, card)) {
@@ -141,18 +143,38 @@ private:
             process.addArgument("-x");
             process.addArgument(fmt::format("password={}", cred->getPassword()));
 
+            int count = 20;
             if (auto ret = process.run()) {
-                if (auto res = process.wait()) {
-                    if (*res == 0) {
+                std::string tmp;
+                while(count >= 0) {
+                    auto res = process.wait(2000);
+
+                    if (!res && res.error() == "timeout") {
+                        logWarn("Cannot wait 'etn-nut-powerconnect' {} - timeout, wait {}", m_address, count);
+                        --count;
+                        tmp += process.readAllStandardOutput();
                         credId = cred->getId();
-                        output = process.readAllStandardOutput();
+                        continue;
+                    } else if (!res) {
+                        logWarn("Cannot wait 'etn-nut-powerconnect' {}, error: {}", m_address, res.error());
+                        break;
+                    } else {
+                        credId = cred->getId();
+                        if (tmp.empty()) {
+                            tmp = process.readAllStandardOutput();
+                        } else {
+                            tmp += process.readAllStandardOutput();
+                        }
                         break;
                     }
+                }
+                if (count) {
+                    output = tmp;
                 } else {
-                    logWarn("Cannot wait 'etn-nut-powerconnect', error: {}", res.error());
+                    logError("Cannot wait 'etn-nut-powerconnect' {} - timeout", m_address);
                 }
             } else {
-                logWarn("Cannot run 'etn-nut-powerconnect', error: {}", ret.error());
+                logError("Cannot run 'etn-nut-powerconnect' {}, error: {}", m_address, ret.error());
             }
         }
 
@@ -256,6 +278,31 @@ static bool askActorTerm(zsock_t* pipe)
 
 // =========================================================================================================================================
 
+static void scan(
+    const std::vector<std::string>&              addrPool,
+    zsock_t*                                     pipe,
+    const std::vector<secw::UserAndPasswordPtr>& creds,
+    fty::nut::KeyValues*                         mapping,
+    fty::nut::KeyValues*                         sensorMapping)
+{
+    for (const auto& ip : addrPool) {
+        NM2Scanner scanner(ip, creds, mapping, sensorMapping);
+        if (auto ret = scanner.resolve()) {
+            logDebug("NM2 resolved address: '{}' device count: {}", ip, ret->size());
+            for (auto& asset : *ret) {
+                zmsg_t* reply = fty_proto_encode(&asset);
+                zmsg_pushstr(reply, "FOUND");
+                zmsg_send(&reply, pipe);
+            }
+        } else {
+            logError("Error while resolve: {}", ret.error());
+        }
+        if (zsys_interrupted || askActorTerm(pipe)) {
+            break;
+        }
+    }
+}
+
 void scan_nm2_actor(zsock_t* pipe, void* args)
 {
     zsock_signal(pipe, 0);
@@ -309,26 +356,34 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
         }
     }
 
-    CIDRAddress addr;
-    while (listAddr->next(addr)) {
-        std::string ip = addr.toString();
+    using AddrPool = std::vector<std::string>;
+    std::vector<AddrPool> addresses;
 
-        NM2Scanner scanner(ip, creds, mapping, sensorMapping);
-        if (auto ret = scanner.resolve()) {
-            logDebug("NM2 resolved address: '{}' device count: {}", ip, ret->size());
-            for (auto& asset : *ret) {
-                zmsg_t* reply = fty_proto_encode(&asset);
-                zmsg_pushstr(reply, "FOUND");
-                zmsg_send(&reply, pipe);
-            }
-        } else {
-            logError("Error while resolve: {}", ret.error());
+    CIDRAddress addr = listAddr->firstAddress();
+    int         i    = 0;
+    AddrPool    chunk;
+    while (true) {
+        if (i++ == 10) {
+            i = 0;
+            addresses.push_back(chunk);
+            chunk.clear();
         }
+        chunk.push_back(addr.toString());
 
-        if (zsys_interrupted || askActorTerm(pipe)) {
+        if (!addr.valid() || addr == listAddr->lastAddress()) {
+            addresses.push_back(chunk);
             break;
         }
+        ++addr;
     }
+    logDebug("Chunk size: {}", addresses.size());
+
+    fty::ThreadPool pool;
+    for (const auto& addrPool : addresses) {
+        pool.pushWorker(scan, addrPool, pipe, creds, mapping, sensorMapping);
+    }
+
+    pool.stop();
 
     delete listAddr;
     logDebug("NM2: scan actor exited");
