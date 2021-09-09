@@ -84,7 +84,7 @@ public:
     fty::Expected<std::vector<fty_proto_t*>> resolve()
     {
         neon::Neon ne(m_address, 80, 5);
-        //if (auto ret = http::get(fmt::format("http://{}/etn/v1/comm", m_address), 5000)) {
+        // if (auto ret = http::get(fmt::format("http://{}/etn/v1/comm", m_address), 5000)) {
         if (auto ret = ne.get("etn/v1/comm")) {
             Card card;
             if (auto resp = pack::json::deserialize(*ret, card)) {
@@ -123,6 +123,53 @@ private:
         return ret;
     }
 
+    fty::Expected<std::string> runWithCred(const secw::UserAndPasswordPtr& cred, const std::string& path)
+    {
+        logDebug("Try cred {}", cred->getName());
+        fty::Process process(path, {"-x", fmt::format("port={}", m_address), "-d", "1"});
+
+        process.addArgument("-x");
+        process.addArgument(fmt::format("username={}", cred->getUsername()));
+
+        process.addArgument("-x");
+        process.addArgument(fmt::format("password={}", cred->getPassword()));
+
+        bool result = false;
+        int count = 20;
+        if (auto ret = process.run()) {
+            std::string tmp;
+            while (count >= 0) {
+                auto res = process.wait(2000);
+
+                if (!res && res.error() == "timeout") {
+                    --count;
+                    logWarn("Cannot wait 'etn-nut-powerconnect' {} - timeout, wait {}", m_address, count);
+                    tmp += process.readAllStandardOutput();
+                    continue;
+                } else if (!res) {
+                    logWarn("Cannot wait 'etn-nut-powerconnect' {}, error: {}", m_address, res.error());
+                    break;
+                } else {
+                    if (tmp.empty()) {
+                        tmp = process.readAllStandardOutput();
+                    } else {
+                        tmp += process.readAllStandardOutput();
+                    }
+                    result = *res == 0;
+                    break;
+                }
+            }
+            if (result) {
+                return tmp;
+            } else {
+                logError("Cannot wait 'etn-nut-powerconnect' {} - timeout", m_address);
+            }
+        } else {
+            logError("Cannot run 'etn-nut-powerconnect' {}, error: {}", m_address, ret.error());
+        }
+        return fty::unexpected("Cannot get content");
+    }
+
     bool scan(std::vector<fty_proto_t*>& msgs)
     {
         static std::regex rex("([a-z0-9\\.]+)\\s*:\\s+(.*)");
@@ -135,46 +182,10 @@ private:
         std::string output;
         std::string credId;
         for (const auto& cred : m_creds) {
-            fty::Process process(*path, {"-x", fmt::format("port={}", m_address), "-d", "1"});
-
-            process.addArgument("-x");
-            process.addArgument(fmt::format("username={}", cred->getUsername()));
-
-            process.addArgument("-x");
-            process.addArgument(fmt::format("password={}", cred->getPassword()));
-
-            int count = 20;
-            if (auto ret = process.run()) {
-                std::string tmp;
-                while(count >= 0) {
-                    auto res = process.wait(2000);
-
-                    if (!res && res.error() == "timeout") {
-                        logWarn("Cannot wait 'etn-nut-powerconnect' {} - timeout, wait {}", m_address, count);
-                        --count;
-                        tmp += process.readAllStandardOutput();
-                        credId = cred->getId();
-                        continue;
-                    } else if (!res) {
-                        logWarn("Cannot wait 'etn-nut-powerconnect' {}, error: {}", m_address, res.error());
-                        break;
-                    } else {
-                        credId = cred->getId();
-                        if (tmp.empty()) {
-                            tmp = process.readAllStandardOutput();
-                        } else {
-                            tmp += process.readAllStandardOutput();
-                        }
-                        break;
-                    }
-                }
-                if (count) {
-                    output = tmp;
-                } else {
-                    logError("Cannot wait 'etn-nut-powerconnect' {} - timeout", m_address);
-                }
-            } else {
-                logError("Cannot run 'etn-nut-powerconnect' {}, error: {}", m_address, ret.error());
+            if (auto ret = runWithCred(cred, *path)) {
+                output = *ret;
+                credId = cred->getId();
+                break;
             }
         }
 
