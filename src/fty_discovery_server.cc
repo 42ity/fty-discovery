@@ -348,9 +348,8 @@ bool compute_configuration_file(fty_discovery_server_t* self)
                     self->default_values_aux[zconfig_name(item)] = "0";
                     self->device_centric                         = false;
                 } else {
-                    self->default_values_aux[zconfig_name(item)] =
-                        std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
-                    self->device_centric = true;
+                    self->default_values_aux[zconfig_name(item)] = std::to_string(DBAssets::name_to_asset_id(parentIname)).c_str();
+                    self->device_centric                         = true;
                 }
             } else {
                 self->default_values_aux[zconfig_name(item)] = zconfig_value(item);
@@ -418,8 +417,7 @@ bool compute_configuration_file(fty_discovery_server_t* self)
     // check for ipscans
     if (streq(strType, DISCOVERY_TYPE_FULL)) {
         if (listIp.empty() && list_scans.empty()) {
-            log_error("error in config file %s : can't have fullscan without ip list or without range",
-                self->range_scan_config.config);
+            log_error("error in config file %s : can't have fullscan without ip list or without range", self->range_scan_config.config);
             zconfig_destroy(&config);
             return false;
         } else if ((!listIp.empty()) && (!compute_ip_list(&listIp))) { // bad format in list
@@ -484,14 +482,63 @@ static bool s_skip_nmc_netxml(fty_proto_t* asset)
          * Very hackish, but fty-discovery should eventually be replaced by fty-discovery-ng.
          * Hopefully this doesn't cause more problems than it tries to fix...
          */
-        if (!fty::nut::scanDevice(
-                fty::nut::ScanProtocol::SCAN_PROTOCOL_NETXML, fty_proto_ext_string(asset, "ip.1", "xxx"), 5)
-                 .empty()) {
+        if (!fty::nut::scanDevice(fty::nut::ScanProtocol::SCAN_PROTOCOL_NETXML, fty_proto_ext_string(asset, "ip.1", "xxx"), 5).empty()) {
             log_warning("Skipping SNMP dump for NMC card!");
             return true;
         }
     }
     return false;
+}
+
+static std::string operation(fty_discovery_server_t* self, fty_proto_t* asset)
+{
+    const char*       serial           = fty_proto_ext_string(asset, "serial_no", NULL);
+    const char*       ip               = fty_proto_ext_string(asset, "ip.1", NULL);
+    const std::string deviceIdentifier = (serial ? serial : ip);
+
+    std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
+
+    logDebug("Check {}", deviceIdentifier);
+    // to identify a device, use serial number (if available), otherwise the IP:
+    auto found = self->devices_discovered.device_list.find(deviceIdentifier);
+
+    if (found != self->devices_discovered.device_list.end()) {
+        logDebug("{} found in existing devices", deviceIdentifier);
+        if (found->second.existing) {
+            logInfo("Asset with identifier {} already exists and cannot be updated", deviceIdentifier);
+            return {};
+        } else {
+            const char* protocol = fty_proto_ext_string(asset, "endpoint.1.protocol", NULL);
+            if (!protocol) {
+                if (const char* parent = fty_proto_aux_string(asset, "parent", nullptr); parent) {
+                    if (self->devices_discovered.device_list.count(parent)) {
+                        protocol = self->devices_discovered.device_list.at(parent).protocol.c_str();
+                    }
+                }
+            }
+            logDebug("check protocol {} == {}", protocol ? protocol : "null", found->second.protocol);
+
+            if (protocol && protocol == found->second.protocol) {
+                logInfo("Asset with identifier {} already exists and has same protocol ({})", serial, protocol);
+                return {};
+            } else if (protocol && streq(protocol, "nut_powercom")) {
+                logInfo("Asset with identifier {} already exists but should be updated to new protocol {}", serial, protocol);
+                fty_proto_set_name(asset, "%s", found->second.name.c_str());
+                zhash_t* ext = fty_proto_ext(asset);
+                zhash_t* extCopy = zhash_dup(ext);
+                zhash_delete(extCopy, "endpoint.1.nut_snmp.secw_credential_id");
+                fty_proto_set_ext(asset, &extCopy);
+                return "update";
+            }
+            return {};
+        }
+    } else {
+        logDebug("Not found in '{}'", deviceIdentifier);
+        for (const auto& [uuid, info] : self->devices_discovered.device_list) {
+            logDebug("Exising device {} - uuid:'{}' ({}) in discovered list, origin: {}", info.name, uuid, info.protocol, info.existing);
+        }
+    }
+    return "create-force";
 }
 
 void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
@@ -504,8 +551,8 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
     // DEBUG: list discovered devices
     {
         std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
-        for (const auto& el : self->devices_discovered.device_list) {
-            log_debug("Found device %s - %s in discovered list", el.first.c_str(), el.second.c_str());
+        for (const auto& [uuid, info] : self->devices_discovered.device_list) {
+            logDebug("Found device {} - {} ({}) in discovered list, origin: {}", info.name, uuid, info.protocol, info.existing);
         }
     }
 
@@ -535,14 +582,9 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
 
         bool daisy_chain = fty_proto_ext_string(asset, "daisy_chain", NULL) != NULL;
 
-        // to identify a device, use serial number (if available), otherwise the IP:
-        auto found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
-            [&](const std::pair<std::string, std::string> el) {
-                return (el.second == deviceIdentifier);
-            });
-
-        if(found != self->devices_discovered.device_list.end()) {
-            log_info("Asset with identifier %s already exists", deviceIdentifier.c_str());
+        if (auto op = operation(self, asset); !op.empty()) {
+            fty_proto_set_operation(asset, op.c_str());
+        } else {
             fty_proto_destroy(&asset);
             return;
         }
@@ -592,15 +634,18 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         }
 
         for (const auto& property : self->default_values_aux) {
-            fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+            if (!fty_proto_aux_string(asset, property.first.c_str(), nullptr)) {
+                fty_proto_aux_insert(asset, property.first.c_str(), property.second.c_str());
+            }
         }
         for (const auto& property : self->default_values_ext) {
-            fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
+            if (!fty_proto_ext_string(asset, property.first.c_str(), nullptr)) {
+                fty_proto_ext_insert(asset, property.first.c_str(), property.second.c_str());
+            }
         }
 
         log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
 
-        fty_proto_set_operation(asset, "create-force");
         if (!s_skip_nmc_netxml(asset)) {
             fty_proto_t* assetDup = fty_proto_dup(asset);
             zmsg_t*      msg      = fty_proto_encode(&assetDup);
@@ -621,7 +666,7 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
                 char* str_resp = zmsg_popstr(response);
 
                 if (!str_resp || !streq(str_resp, "OK")) {
-                    log_error("Error during asset creation.");
+                    logError("Error during asset creation. error: {}", str_resp ? str_resp : "empty");
                     fty_proto_destroy(&asset);
                     return;
                 }
@@ -644,7 +689,10 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
                 auto conn = tntdb::connectCached(DBConn::url);
                 DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
 
-                self->devices_discovered.device_list[str_resp] = deviceIdentifier;
+                const char* prot = fty_proto_ext_string(asset, "endpoint.1.protocol", NULL);
+
+                logDebug("Added device {} {} ({})", str_resp, deviceIdentifier, prot ? prot : "nut_snmp");
+                self->devices_discovered.device_list[deviceIdentifier] = {false, prot ? prot : "nut_snmp", str_resp};
                 zstr_free(&str_resp);
 
                 name = fty_proto_aux_string(asset, "subtype", "error");
@@ -684,18 +732,14 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
             fty_proto_ext_insert(asset, "name", "sensor %s (%s)", model.c_str(), serialNo.c_str());
         }
 
-        std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
-        // check sensor was already discovered
-        auto found = std::find_if(self->devices_discovered.device_list.begin(),
-            self->devices_discovered.device_list.end(), [&](const std::pair<std::string, std::string> el) {
-                return el.second == serialNo;
-            });
-
-        if (found != self->devices_discovered.device_list.end()) {
-            log_info("Sensor %s already exists", serialNo.c_str());
+        if (auto op = operation(self, asset); !op.empty()) {
+            fty_proto_set_operation(asset, op.c_str());
+            logDebug("Sensor operation is {}", op);
+        } else {
             fty_proto_destroy(&asset);
             return;
         }
+
 
         // add timestamp
         std::time_t timestamp = std::time(NULL);
@@ -705,17 +749,14 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         }
 
         // check if parent of the sensor exists already (the internal name is needed to create the asset properly)
-        found = std::find_if(self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
-            [&](const std::pair<std::string, std::string> el) {
-                return el.second == parent;
-            });
+        auto found = self->devices_discovered.device_list.find(parent);
 
         if (found == self->devices_discovered.device_list.end()) {
             log_info("Could not find parent of sensor %s", serialNo.c_str());
             fty_proto_destroy(&asset);
             return;
         }
-        std::string parentName = found->first;
+        std::string parentName = found->second.name;
 
         // add default properties properties (defined in discovery configuration)
         for (const auto& property : self->default_values_aux) {
@@ -736,6 +777,7 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         }
 
         // update parent ID (overwrite default)
+        logDebug("Sensor parentname is {}", !parentName.empty() ? parentName : "null");
         auto parentId = DBAssets::name_to_asset_id(parentName);
         if (parentId < 0) {
             log_info("Could not query parent ID of sensor %s", serialNo.c_str());
@@ -746,7 +788,6 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         log_info("Found new sensor %s with parent %s", serialNo.c_str(), parentName.c_str());
 
         // send create message
-        fty_proto_set_operation(asset, "create-force");
         fty_proto_t* assetDup = fty_proto_dup(asset);
         zmsg_t*      msg      = fty_proto_encode(&assetDup);
         zmsg_pushstrf(msg, "%s", "READONLY");
@@ -785,7 +826,8 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
             auto conn = tntdb::connectCached(DBConn::url);
             DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
 
-            self->devices_discovered.device_list[str_resp] = serialNo;
+            logDebug("Added sensor {} {} ({})", str_resp, serialNo, found->second.protocol);
+            self->devices_discovered.device_list[serialNo] = {false, found->second.protocol, str_resp};
             zstr_free(&str_resp);
 
             self->nb_sensor_discovered++;
@@ -882,8 +924,7 @@ bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* message, zpoller
             log_error("error in config file %s : can't have ipscan without ip list", self->range_scan_config.config);
         } else if ((listIp.empty() && listIp.empty()) && streq(strType, DISCOVERY_TYPE_FULL)) {
             valid = false;
-            log_error("error in config file %s : can't have fullscan without ip list or range",
-                self->range_scan_config.config);
+            log_error("error in config file %s : can't have fullscan without ip list or range", self->range_scan_config.config);
         } else {
             int64_t sizeTemp = 0;
             if (compute_scans_size(&list_scans, &sizeTemp) && compute_ip_list(&listIp)) {
@@ -928,8 +969,7 @@ bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* message, zpoller
             // Load general mapping
             try {
                 self->nut_mapping_inventory = fty::nut::loadMapping(mappingPath, "inventoryMapping");
-                log_info(
-                    "Mapping file '%s' loaded, %d inventory mappings", mappingPath, self->nut_mapping_inventory.size());
+                log_info("Mapping file '%s' loaded, %d inventory mappings", mappingPath, self->nut_mapping_inventory.size());
             } catch (std::exception& e) {
                 log_error("Couldn't load mapping file '%s': %s", mappingPath, e.what());
                 valid = false;
@@ -937,7 +977,8 @@ bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* message, zpoller
             // Load sensor specific mapping
             try {
                 self->nut_sensor_mapping_inventory = fty::nut::loadMapping(mappingPath, "sensorInventoryMapping");
-                log_info("Sensor mapping file '%s' loaded, %d sensor inventory mappings", mappingPath,
+                log_info(
+                    "Sensor mapping file '%s' loaded, %d sensor inventory mappings", mappingPath,
                     self->nut_sensor_mapping_inventory.size());
             } catch (std::exception& e) {
                 log_error("Couldn't load sensor mapping file '%s': %s", mappingPath, e.what());
@@ -1089,11 +1130,11 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
                                 zmsg_t* zmfalse = zmsg_new();
                                 zmsg_addstr(zmfalse, self->localscan_subscan.back().c_str());
                                 char* secondNull = NULL;
-                                self->range_scan_config.ranges.push_back(
-                                    std::make_pair(zmsg_popstr(zmfalse), secondNull));
+                                self->range_scan_config.ranges.push_back(std::make_pair(zmsg_popstr(zmfalse), secondNull));
 
-                                log_debug("Range scanner requested for %s with config file %s",
-                                    self->range_scan_config.ranges.back().first, self->range_scan_config.config);
+                                log_debug(
+                                    "Range scanner requested for %s with config file %s", self->range_scan_config.ranges.back().first,
+                                    self->range_scan_config.config);
                                 zmsg_destroy(&zmfalse);
                                 self->localscan_subscan.pop_back();
                             }
@@ -1113,9 +1154,9 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
                         }
 
 
-                    } else if ((self->configuration_scan.type == TYPE_MULTISCAN) ||
-                               (self->configuration_scan.type == TYPE_IPSCAN) ||
-                               (self->configuration_scan.type == TYPE_FULLSCAN)) {
+                    } else if (
+                        (self->configuration_scan.type == TYPE_MULTISCAN) || (self->configuration_scan.type == TYPE_IPSCAN) ||
+                        (self->configuration_scan.type == TYPE_FULLSCAN)) {
 
                         log_debug("Configuring rangeScan...");
                         // Launch rangeScan
@@ -1131,8 +1172,7 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
                                 // Subnet
                                 zmsg_addstr(zmfalse, next_scan.c_str());
                                 char* secondNull = NULL;
-                                self->range_scan_config.ranges.push_back(
-                                    std::make_pair(zmsg_popstr(zmfalse), secondNull));
+                                self->range_scan_config.ranges.push_back(std::make_pair(zmsg_popstr(zmfalse), secondNull));
                             } else {
                                 // range
 
@@ -1143,8 +1183,7 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
                                 self->range_scan_config.ranges.push_back(std::make_pair(firstIP, zmsg_popstr(zmfalse)));
                             }
 
-                            log_debug("Range scanner requested for %s with config file %s", next_scan.c_str(),
-                                self->range_scan_config.config);
+                            log_debug("Range scanner requested for %s with config file %s", next_scan.c_str(), self->range_scan_config.config);
 
                             zmsg_destroy(&zmfalse);
                             self->localscan_subscan.pop_back();
@@ -1168,8 +1207,8 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
                     zmsg_addstr(reply, RESP_ERR);
                 }
             }
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm),
-                mlm_client_tracker(self->mlm), 1000, &reply);
+            mlm_client_sendto(
+                self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm), mlm_client_tracker(self->mlm), 1000, &reply);
             zstr_free(&zuuid);
         } else if (streq(cmd, REQ_PROGRESS)) {
             // PROGRESS
@@ -1190,8 +1229,8 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
                 zmsg_addstr(reply, RESP_OK);
                 zmsg_addstrf(reply, "%" PRIi32, -1);
             }
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm),
-                mlm_client_tracker(self->mlm), 1000, &reply);
+            mlm_client_sendto(
+                self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm), mlm_client_tracker(self->mlm), 1000, &reply);
             zstr_free(&zuuid);
         } else if (streq(cmd, REQ_STOPSCAN)) {
             // STOPSCAN
@@ -1201,8 +1240,8 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
             zmsg_addstr(reply, zuuid);
             zmsg_addstr(reply, RESP_OK);
 
-            mlm_client_sendto(self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm),
-                mlm_client_tracker(self->mlm), 1000, &reply);
+            mlm_client_sendto(
+                self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm), mlm_client_tracker(self->mlm), 1000, &reply);
             if (self->range_scanner && !self->ongoing_stop) {
                 self->status_scan  = STATUS_STOPPED;
                 self->ongoing_stop = true;
@@ -1235,23 +1274,57 @@ void static s_handle_stream(fty_discovery_server_t* self, zmsg_t* message)
 
             // TODO : Remove as soon as we can this ugly hack of "_no_not_really"
             if (streq(operation, FTY_PROTO_ASSET_OP_DELETE) && !zhash_lookup(fty_proto_aux(fmsg), "_no_not_really")) {
-                const char*                 iname = fty_proto_name(fmsg);
+                const char*                 serial_no = fty_proto_ext_string(fmsg, "serial_no", NULL);
+                const char*                 ip        = fty_proto_ext_string(fmsg, "ip.1", NULL);
                 std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
-                self->devices_discovered.device_list.erase(iname);
+                if (serial_no) {
+                    self->devices_discovered.device_list.erase(serial_no);
+                } else if (ip) {
+                    logWarn("Removing by ip {}", ip);
+                    self->devices_discovered.device_list.erase(ip);
+                } else {
+                    if (const char* iname = fty_proto_name(fmsg); iname) {
+                        logWarn("Removing {} with no serial or ip address", iname);
+
+                        auto found = std::find_if(
+                            self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(), [&](const auto& it) {
+                                return it.second.name == iname;
+                            });
+                        if (found != self->devices_discovered.device_list.end()) {
+                            self->devices_discovered.device_list.erase(found);
+                        }
+                    }
+                }
             } else if (streq(operation, FTY_PROTO_ASSET_OP_CREATE) || streq(operation, FTY_PROTO_ASSET_OP_UPDATE)) {
                 const char* serial_no = fty_proto_ext_string(fmsg, "serial_no", NULL);
+                const char* prot      = fty_proto_ext_string(fmsg, "endpoint.1.protocol", NULL);
                 const char* ip        = fty_proto_ext_string(fmsg, "ip.1", NULL);
                 const char* iname     = fty_proto_name(fmsg);
                 if (serial_no) {
+                    if (self->devices_discovered.device_list.count(serial_no)) {
+                        return;
+                    }
+
+                    if (!prot) {
+                        if (const char* parent = fty_proto_aux_string(fmsg, "parent_name.1", nullptr); parent) {
+                            auto found = std::find_if(
+                                self->devices_discovered.device_list.begin(), self->devices_discovered.device_list.end(),
+                                [&](const auto& it) {
+                                    return it.second.name == parent;
+                                });
+                            if (found != self->devices_discovered.device_list.end()) {
+                                prot = found->second.protocol.c_str();
+                            }
+                        }
+                    }
+
                     std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
-                    self->devices_discovered.device_list[iname] = serial_no;
+                    self->devices_discovered.device_list[serial_no] = {true, prot ? prot : "nut_snmp", iname};
                 } else if (ip) {
                     std::lock_guard<std::mutex> lock(self->devices_discovered.mtx_list);
-                    self->devices_discovered.device_list[iname] = ip;
+                    self->devices_discovered.device_list[ip] = {true, prot ? prot : "nut_snmp", iname};
                 } else {
-                    log_warning(
-                        "Neither serial nor IP address are available for asset %s: may be duplicated during discovery",
-                        iname);
+                    log_warning("Neither serial nor IP address are available for asset %s: may be duplicated during discovery", iname);
                 }
             }
         }
@@ -1352,8 +1425,9 @@ void fty_discovery_server(zsock_t* pipe, void* /* args */)
         if (self->range_scan_config.ranges.size() > 0 && !self->range_scanner) {
             if (zclock_mono() - assets_last_change(self->assets) > 5000) {
                 // no asset change for last 5 secs => we can start range scan
-                log_debug("Range scanner start for %s with config file %s",
-                    self->range_scan_config.ranges.front().first, self->range_scan_config.config);
+                log_debug(
+                    "Range scanner start for %s with config file %s", self->range_scan_config.ranges.front().first,
+                    self->range_scan_config.config);
                 // create range scanner
                 // TODO: send list of IPs to skip
                 reset_nb_discovered(self);
@@ -1395,7 +1469,7 @@ fty_discovery_server_t* fty_discovery_server_new()
     self->configuration_scan.type        = TYPE_LOCALSCAN;
     self->configuration_scan.scan_size   = 0;
     self->percent                        = NULL;
-    self->devices_discovered.device_list = std::map<std::string, std::string>();
+    self->devices_discovered.device_list = std::map<std::string, _discovered_devices_t::DevInfo>();
     self->nut_mapping_inventory          = fty::nut::KeyValues();
     self->nut_sensor_mapping_inventory   = fty::nut::KeyValues();
     self->default_values_aux             = std::map<std::string, std::string>();

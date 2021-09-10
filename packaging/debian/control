@@ -39,6 +39,8 @@ Build-Depends:
     libfty-security-wallet-dev,
     libfty-common-nut-dev,
     libfty-utils-dev,
+    libfty-pack-dev,
+    libneon27-dev,
     gcc (>= 4.9.0), g++ (>= 4.9.0),
     systemd,
     asciidoc-base | asciidoc, xmlto,
