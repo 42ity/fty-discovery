@@ -45,8 +45,6 @@
 #include <sys/types.h>
 #include <utility>
 #include <vector>
-#include <bits/stl_vector.h>
-
 
 static std::string discovery_config_file = FTY_DISCOVERY_CFG_FILE;
 
