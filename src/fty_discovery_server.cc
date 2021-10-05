@@ -45,6 +45,7 @@
 #include <sys/types.h>
 #include <utility>
 #include <vector>
+#include <bits/stl_vector.h>
 
 
 static std::string discovery_config_file = FTY_DISCOVERY_CFG_FILE;
@@ -824,7 +825,18 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
             std::string iname(str_resp);
 
             auto conn = tntdb::connectCached(DBConn::url);
-            DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
+
+            // Add link between sensor and its parent
+            std::vector<link_t> sensor_links {
+              {
+                fty::convert<uint32_t>(DBAssets::name_to_asset_id(parentName)), // src = parent id
+                fty::convert<uint32_t>(DBAssets::name_to_asset_id(iname)), // dest = sensor id
+                nullptr, // src_out
+                nullptr, // dest_in
+                1        // power type
+              }
+            };
+            DBAssetsInsert::insert_into_asset_links(conn, sensor_links);
 
             logDebug("Added sensor {} {} ({})", str_resp, serialNo, found->second.protocol);
             self->devices_discovered.device_list[serialNo] = {false, found->second.protocol, str_resp};
