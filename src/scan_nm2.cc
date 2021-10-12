@@ -329,12 +329,18 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
 
     if (!args) {
         logError("{} : actor created without parameters", __FUNCTION__);
+        zmsg_t* reply = zmsg_new();
+        zmsg_pushstr(reply, REQ_DONE);
+        zmsg_send(&reply, pipe);
         return;
     }
 
     zlist_t* argv = static_cast<zlist_t*>(args);
     if (!argv || zlist_size(argv) != 5) {
         log_error("{} : actor created without config or devices list", __FUNCTION__);
+        zmsg_t* reply = zmsg_new();
+        zmsg_pushstr(reply, REQ_DONE);
+        zmsg_send(&reply, pipe);
         return;
     }
 
@@ -346,6 +352,9 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
 
     if (!listAddr || !devices || !documentIds || !mapping || !sensorMapping) {
         logError("{} : actor created without config or devices list", __FUNCTION__);
+        zmsg_t* reply = zmsg_new();
+        zmsg_pushstr(reply, REQ_DONE);
+        zmsg_send(&reply, pipe);
         return;
     }
 
@@ -396,6 +405,9 @@ void scan_nm2_actor(zsock_t* pipe, void* args)
 
     pool.stop();
 
+    zmsg_t* reply = zmsg_new();
+    zmsg_pushstr(reply, REQ_DONE);
+    zmsg_send(&reply, pipe);
     delete listAddr;
     logDebug("NM2: scan actor exited");
 }
