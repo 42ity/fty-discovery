@@ -715,9 +715,9 @@ static std::map<std::string, std::string> getEndpointExtAttributs(const ScanResu
         extAttributs["endpoint.1.port"] = "161";
 
         if(scanResult.documents.size() > 0) {
-            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = scanResult.documents[0]->getId();
+            extAttributs["endpoint.1.nut_snmp_dmf.secw_credential_id"] = scanResult.documents[0]->getId();
         } else {
-            extAttributs["endpoint.1.nut_snmp.secw_credential_id"] = "";
+            extAttributs["endpoint.1.nut_snmp_dmf.secw_credential_id"] = "";
         }
     } else if (scanResult.nutDriver == "netxml-ups") {
         if (sensor.empty()) { // not a sensor
@@ -824,7 +824,20 @@ void scan_nut_actor(zsock_t* pipe, void* args)
     // SNMPv3 scan.
     {
         for (const auto& credential : credentialsV3) {
-            ScanResult result("snmp-ups", {credential}); // FIXME: H2 differentiate snmp-ups/-dfm? or do separate scans (current method)
+            ScanResult result("snmp-ups", {credential});
+
+            result.deviceConfigurations = fty::nut::scanRangeDevices(fty::nut::SCAN_PROTOCOL_SNMP,
+                listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
+                listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX), fty::convert<unsigned>(timeout),
+                result.documents);
+
+            results.emplace_back(result);
+        }
+    }
+    // SNMPv3 scan / DMF mode.
+    {
+        for (const auto& credential : credentialsV3) {
+            ScanResult result("snmp-ups-dmf", {credential});
 
             result.deviceConfigurations = fty::nut::scanRangeDevices(fty::nut::SCAN_PROTOCOL_SNMP_DMF,
                 listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
@@ -837,7 +850,20 @@ void scan_nut_actor(zsock_t* pipe, void* args)
     // SNMPv1 scan.
     {
         for (const auto& credential : credentialsV1) {
-            ScanResult result("snmp-ups", {credential}); // FIXME: H2 differentiate snmp-ups/-dfm?
+            ScanResult result("snmp-ups", {credential});
+
+            result.deviceConfigurations = fty::nut::scanRangeDevices(fty::nut::SCAN_PROTOCOL_SNMP,
+                listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
+                listAddr->lastAddress().toString(CIDR_WITHOUT_PREFIX), fty::convert<unsigned>(timeout),
+                result.documents);
+
+            results.emplace_back(result);
+        }
+    }
+    // SNMPv1 scan / DMF mode.
+    {
+        for (const auto& credential : credentialsV1) {
+            ScanResult result("snmp-ups-dmf", {credential});
 
             result.deviceConfigurations = fty::nut::scanRangeDevices(fty::nut::SCAN_PROTOCOL_SNMP_DMF,
                 listAddr->firstAddress().toString(CIDR_WITHOUT_PREFIX),
