@@ -644,6 +644,13 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
             }
         }
 
+        // In device centric view for sts, add missing default value for ext attributes
+        if (self->device_centric && streq(name, "sts")) {
+            fty_proto_ext_insert(asset, "outlet.count", "1");
+            fty_proto_ext_insert(asset, "outlet_numbering_orientation", "left");
+            fty_proto_ext_insert(asset, "location_w_pos", "horizontal");  // TBD: Really needed ?
+        }
+
         log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
 
         if (!s_skip_nmc_netxml(asset)) {
@@ -687,7 +694,16 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
                     link.dest = fty::convert<uint32_t>(DBAssets::name_to_asset_id(iname));
                 }
                 auto conn = tntdb::connectCached(DBConn::url);
-                DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
+                // In device centric view for sts, add default link for the 2 inputs if default links have only one entry
+                if (self->device_centric && streq(name, "sts") && self->default_values_links.size() == 1) {
+                    std::vector<link_t> links = self->default_values_links;
+                    links.push_back(self->default_values_links[0]);
+                    DBAssetsInsert::insert_into_asset_links(conn, links);
+                }
+                // default treatment
+                else {
+                    DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
+                }
 
                 const char* prot = fty_proto_ext_string(asset, "endpoint.1.protocol", NULL);
 
@@ -820,11 +836,6 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
                 fty_proto_destroy(&asset);
                 return;
             }
-
-            std::string iname(str_resp);
-
-            auto conn = tntdb::connectCached(DBConn::url);
-            DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
 
             logDebug("Added sensor {} {} ({})", str_resp, serialNo, found->second.protocol);
             self->devices_discovered.device_list[serialNo] = {false, found->second.protocol, str_resp};
