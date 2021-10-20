@@ -581,6 +581,7 @@ fty::Expected<std::string> send_create_or_update_msg(fty_discovery_server_t* sel
 
         std::string iname(str_resp);
         zstr_free(&str_resp);
+        zmsg_destroy(&response);
         return iname;
     }
 }
