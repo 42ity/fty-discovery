@@ -91,7 +91,7 @@ public:
                 std::optional<Card::Services::Member> power;
 
                 for (const auto& mem : card.services.members) {
-                    if (mem.path == "/etn/v1/comm/services/powerdistributions1") {
+                    if (mem.path == "/etn/v1/comm/services/powerdistributions1" && mem.deviceType == "ups") {
                         power = mem;
                         break;
                     }
@@ -101,7 +101,7 @@ public:
                     logDebug("Card is \n{}\n", card.dump());
                     return createAssetProto();
                 } else {
-                    return fty::unexpected("this is not a power device");
+                    return fty::unexpected("This is not a power device supported");
                 }
             } else {
                 return fty::unexpected("Error deserialize card {}", resp.error());
