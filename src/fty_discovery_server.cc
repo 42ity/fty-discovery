@@ -541,6 +541,51 @@ static std::string operation(fty_discovery_server_t* self, fty_proto_t* asset)
     return "create-force";
 }
 
+fty::Expected<std::string> send_create_or_update_msg(fty_discovery_server_t* self, fty_proto_t* asset, bool read_only) {
+    if (!self || !asset) {
+        return fty::unexpected("Bad input parameter");
+    }
+
+    fty_proto_t* assetDup = fty_proto_dup(asset);
+    zmsg_t* msg = fty_proto_encode(&assetDup);
+    fty_proto_destroy(&assetDup);
+    zmsg_pushstrf(msg, "%s", read_only ? "READONLY" : "READWRITE");
+    logDebug("Sending create/update message");
+    int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
+    if (rv == -1) {
+        logError("Failed to send ASSET_MANIPULATION message to asset-agent");
+        return fty::unexpected("Failed to send message");
+    } else {
+        logInfo("Create/update message has been sent to asset-agent (rv = {})", rv);
+
+        zmsg_t* response = mlm_client_recv(self->mlmCreate);
+        if (!response) {
+            return fty::unexpected("No response");
+        }
+
+        char* str_resp = zmsg_popstr(response);
+
+        if (!str_resp || !streq(str_resp, "OK")) {
+            logError("Error during asset creation. error: {}", str_resp ? str_resp : "empty");
+            zmsg_destroy(&response);
+            return fty::unexpected("Bad response");
+        }
+
+        zstr_free(&str_resp);
+        str_resp = zmsg_popstr(response);
+        if (!str_resp) {
+            logError("Error during asset creation.");
+            zmsg_destroy(&response);
+            return fty::unexpected("No asset name");
+        }
+
+        std::string iname(str_resp);
+        zstr_free(&str_resp);
+        zmsg_destroy(&response);
+        return iname;
+    }
+}
+
 void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
 {
     if (!self || !msg_p)
@@ -647,39 +692,26 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         log_info("Found new asset %s with IP address %s", fty_proto_ext_string(asset, "name", ""), ip);
 
         if (!s_skip_nmc_netxml(asset)) {
-            fty_proto_t* assetDup = fty_proto_dup(asset);
-            zmsg_t*      msg      = fty_proto_encode(&assetDup);
-            zmsg_pushstrf(msg, "%s", "READONLY");
-            log_debug("Sending create message");
-            int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
-            if (rv == -1) {
-                log_error("Failed to send ASSET_MANIPULATION message to asset-agent");
-            } else {
-                log_info("Create message has been sent to asset-agent (rv = %i)", rv);
-
-                zmsg_t* response = mlm_client_recv(self->mlmCreate);
-                if (!response) {
-                    fty_proto_destroy(&asset);
-                    return;
+            // send create message
+            if (auto create = send_create_or_update_msg(self, asset, true)) {
+                std::string iname(create.value());
+                // for sts, add missing default values for ext attributes
+                if (streq(name, "sts")) {
+                    zhash_t* ext = zhash_new();
+                    zhash_autofree(ext);
+                    zhash_insert(ext, "outlet.count", static_cast<void*>(const_cast<char*>("1")));
+                    zhash_insert(ext, "outlet_numbering_orientation", static_cast<void*>( const_cast<char*>("left")));
+                    zhash_insert(ext, "location_w_pos", static_cast<void*>( const_cast<char*>("horizontal"))); // TBD: Really needed ?
+                    fty_proto_set_ext(asset, &ext);
+                    fty_proto_set_operation(asset, FTY_PROTO_ASSET_OP_UPDATE);
+                    fty_proto_set_name(asset, "%s", iname.c_str());
+                    auto update = send_create_or_update_msg(self, asset, false);
+                    if (!update) {
+                        logError("Error while send message for update: {}", update.error());
+                        fty_proto_destroy(&asset);
+                        return;
+                    }
                 }
-
-                char* str_resp = zmsg_popstr(response);
-
-                if (!str_resp || !streq(str_resp, "OK")) {
-                    logError("Error during asset creation. error: {}", str_resp ? str_resp : "empty");
-                    fty_proto_destroy(&asset);
-                    return;
-                }
-
-                zstr_free(&str_resp);
-                str_resp = zmsg_popstr(response);
-                if (!str_resp) {
-                    log_error("Error during asset creation.");
-                    fty_proto_destroy(&asset);
-                    return;
-                }
-
-                std::string iname(str_resp);
 
                 // create asset links
                 for (auto& link : self->default_values_links) {
@@ -687,13 +719,21 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
                     link.dest = fty::convert<uint32_t>(DBAssets::name_to_asset_id(iname));
                 }
                 auto conn = tntdb::connectCached(DBConn::url);
-                DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
+                // If centric view for sts, add default link for the 2 inputs if default links have only one entry
+                if (self->device_centric && streq(name, "sts") && self->default_values_links.size() == 1) {
+                    std::vector<link_t> links = self->default_values_links;
+                    links.push_back(self->default_values_links[0]);
+                    DBAssetsInsert::insert_into_asset_links(conn, links);
+                }
+                else {
+                    // default treatment
+                    DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
+                }
 
                 const char* prot = fty_proto_ext_string(asset, "endpoint.1.protocol", NULL);
 
-                logDebug("Added device {} {} ({})", str_resp, deviceIdentifier, prot ? prot : "nut_snmp");
-                self->devices_discovered.device_list[deviceIdentifier] = {false, prot ? prot : "nut_snmp", str_resp};
-                zstr_free(&str_resp);
+                logDebug("Added device {} {} ({})", iname, deviceIdentifier, prot ? prot : "nut_snmp");
+                self->devices_discovered.device_list[deviceIdentifier] = {false, prot ? prot : "nut_snmp", iname};
 
                 name = fty_proto_aux_string(asset, "subtype", "error");
                 if (streq(name, "ups"))
@@ -705,6 +745,11 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
                 if (!streq(name, "error")) {
                     self->nb_discovered++;
                 }
+            }
+            else {
+                logError("Error while send message for creation: {}", create.error());
+                fty_proto_destroy(&asset);
+                return;
             }
         }
     } else {
@@ -788,49 +833,16 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
         log_info("Found new sensor %s with parent %s", serialNo.c_str(), parentName.c_str());
 
         // send create message
-        fty_proto_t* assetDup = fty_proto_dup(asset);
-        zmsg_t*      msg      = fty_proto_encode(&assetDup);
-        zmsg_pushstrf(msg, "%s", "READONLY");
-        log_debug("Sending create message");
-        int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
+        if (auto create_sensor = send_create_or_update_msg(self, asset, true)) {
+            std::string iname(create_sensor.value());
 
-        if (rv == -1) {
-            log_error("Failed to send ASSET_MANIPULATION message to asset-agent");
-        } else {
-            log_info("Create message has been sent to asset-agent (rv = %i)", rv);
-
-            zmsg_t* response = mlm_client_recv(self->mlmCreate);
-            if (!response) {
-                fty_proto_destroy(&asset);
-                return;
-            }
-
-            char* str_resp = zmsg_popstr(response);
-
-            if (!str_resp || !streq(str_resp, "OK")) {
-                log_error("Error during asset creation.");
-                fty_proto_destroy(&asset);
-                return;
-            }
-
-            zstr_free(&str_resp);
-            str_resp = zmsg_popstr(response);
-            if (!str_resp) {
-                log_error("Error during asset creation.");
-                fty_proto_destroy(&asset);
-                return;
-            }
-
-            std::string iname(str_resp);
-
-            auto conn = tntdb::connectCached(DBConn::url);
-            DBAssetsInsert::insert_into_asset_links(conn, self->default_values_links);
-
-            logDebug("Added sensor {} {} ({})", str_resp, serialNo, found->second.protocol);
-            self->devices_discovered.device_list[serialNo] = {false, found->second.protocol, str_resp};
-            zstr_free(&str_resp);
+            logDebug("Added sensor {} {} ({})", iname, serialNo, found->second.protocol);
+            self->devices_discovered.device_list[serialNo] = {false, found->second.protocol, iname};
 
             self->nb_sensor_discovered++;
+        }
+        else {
+            logError("Error while send message for sensor creation: {}", create_sensor.error());
         }
     }
     fty_proto_destroy(&asset);
