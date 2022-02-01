@@ -91,7 +91,8 @@ public:
                 std::optional<Card::Services::Member> power;
 
                 for (const auto& mem : card.services.members) {
-                    if (mem.path == "/etn/v1/comm/services/powerdistributions1" && mem.deviceType == "ups") {
+                    if (mem.path == "/etn/v1/comm/services/powerdistributions1" &&
+                       (mem.deviceType == "ups" || mem.deviceType == "ats")) {
                         power = mem;
                         break;
                     }
