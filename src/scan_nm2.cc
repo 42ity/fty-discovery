@@ -217,6 +217,7 @@ private:
                     std::string daisyChain(fty_proto_ext_string(asset, "daisy_chain", ""));
                     fty_proto_ext_insert(asset, "endpoint.1.sub_address", (daisyChain == "0") ? "" : daisyChain.c_str());
                     fty_proto_ext_insert(asset, "endpoint.1.protocol", "nut_powercom");
+                    fty_proto_ext_insert(asset, "endpoint.1.port", "443");
                     fty_proto_ext_insert(asset, "endpoint.1.nut_powercom.secw_credential_id", credId.c_str());
                 } else {
                     std::string modbusAddress(fty_proto_ext_string(asset, "modbus_address", ""));
