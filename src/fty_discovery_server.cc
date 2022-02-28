@@ -546,12 +546,17 @@ fty::Expected<std::string> send_create_or_update_msg(fty_discovery_server_t* sel
         return fty::unexpected("Bad input parameter");
     }
 
-    fty_proto_t* assetDup = fty_proto_dup(asset);
-    zmsg_t* msg = fty_proto_encode(&assetDup);
-    fty_proto_destroy(&assetDup);
-    zmsg_pushstrf(msg, "%s", read_only ? "READONLY" : "READWRITE");
-    logDebug("Sending create/update message");
-    int rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
+    int rv = -1;
+    {
+        fty_proto_t* assetDup = fty_proto_dup(asset);
+        zmsg_t* msg = fty_proto_encode(&assetDup);
+        fty_proto_destroy(&assetDup);
+        zmsg_pushstrf(msg, "%s", read_only ? "READONLY" : "READWRITE");
+        logDebug("Sending create/update message");
+        rv = mlm_client_sendto(self->mlmCreate, "asset-agent", "ASSET_MANIPULATION", NULL, 10, &msg);
+        zmsg_destroy(&msg);
+    }
+
     if (rv == -1) {
         logError("Failed to send ASSET_MANIPULATION message to asset-agent");
         return fty::unexpected("Failed to send message");
@@ -567,6 +572,7 @@ fty::Expected<std::string> send_create_or_update_msg(fty_discovery_server_t* sel
 
         if (!str_resp || !streq(str_resp, "OK")) {
             logError("Error during asset creation. error: {}", str_resp ? str_resp : "empty");
+            zstr_free(&str_resp);
             zmsg_destroy(&response);
             return fty::unexpected("Bad response");
         }
@@ -857,8 +863,11 @@ void ftydiscovery_create_asset(fty_discovery_server_t* self, zmsg_t** msg_p)
 //  * SCAN
 //  * LOCALSCAN
 
-bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* message, zpoller_t* poller)
+bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* messageIn, zpoller_t* poller)
 {
+    if (!messageIn)
+        return true;
+    zmsg_t* message = zmsg_dup(messageIn);
     if (!message)
         return true;
     char* command = zmsg_popstr(message);
@@ -894,6 +903,8 @@ bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* message, zpoller
         zmsg_t* republish = zmsg_new();
         zmsg_addstr(republish, "$all");
         mlm_client_sendto(self->mlm, FTY_ASSET, REQ_REPUBLISH, NULL, 1000, &republish);
+        zmsg_destroy(&republish);
+        //ZZZ handle response!?
     } else if (streq(command, REQ_CONFIG)) {
         zstr_free(&self->range_scan_config.config);
         self->range_scan_config.config = zmsg_popstr(message);
@@ -1086,8 +1097,14 @@ bool static s_handle_pipe(fty_discovery_server_t* self, zmsg_t* message, zpoller
 //  * STOPSCAN
 //       REQ : <uuid>
 
-void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_t* poller)
+void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msgIn, zpoller_t* poller)
 {
+    zmsg_t* msg = zmsg_dup(msgIn);
+    if (!msg) {
+        log_error("failed to duplicate message");
+        return;
+    }
+
     if (fty_proto_is(msg)) {
         fty_proto_t* fmsg = fty_proto_decode(&msg);
         log_debug("Adding asset to self->assets");
@@ -1221,6 +1238,7 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
             }
             mlm_client_sendto(
                 self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm), mlm_client_tracker(self->mlm), 1000, &reply);
+            zmsg_destroy(&reply);
             zstr_free(&zuuid);
         } else if (streq(cmd, REQ_PROGRESS)) {
             // PROGRESS
@@ -1243,6 +1261,7 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
             }
             mlm_client_sendto(
                 self->mlm, mlm_client_sender(self->mlm), mlm_client_subject(self->mlm), mlm_client_tracker(self->mlm), 1000, &reply);
+            zmsg_destroy(&reply);
             zstr_free(&zuuid);
         } else if (streq(cmd, REQ_STOPSCAN)) {
             // STOPSCAN
@@ -1260,6 +1279,7 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
                 zstr_send(self->range_scanner, REQ_TERM);
             }
 
+            zmsg_destroy(&reply);
             zstr_free(&zuuid);
 
             self->localscan_subscan.clear();
@@ -1274,8 +1294,14 @@ void static s_handle_mailbox(fty_discovery_server_t* self, zmsg_t* msg, zpoller_
 //  --------------------------------------------------------------------------
 //  process message stream
 
-void static s_handle_stream(fty_discovery_server_t* self, zmsg_t* message)
+void static s_handle_stream(fty_discovery_server_t* self, zmsg_t* messageIn)
 {
+    zmsg_t* message = zmsg_dup(messageIn);
+    if (!message) {
+        log_error("failed to duplicate message");
+        return;
+    }
+
     if (fty_proto_is(message)) {
         // handle fty_proto protocol here
         fty_proto_t* fmsg = fty_proto_decode(&message);
@@ -1314,6 +1340,7 @@ void static s_handle_stream(fty_discovery_server_t* self, zmsg_t* message)
                 const char* iname     = fty_proto_name(fmsg);
                 if (serial_no) {
                     if (self->devices_discovered.device_list.count(serial_no)) {
+                        fty_proto_destroy(&fmsg);
                         return;
                     }
 
@@ -1410,13 +1437,16 @@ void fty_discovery_server(zsock_t* pipe, void* /* args */)
     fty_discovery_server_t* self   = fty_discovery_server_new();
     zpoller_t*              poller = zpoller_new(pipe, mlm_client_msgpipe(self->mlm), NULL);
     zsock_signal(pipe, 0);
-    zmsg_t* range_stack = zmsg_new();
 
     while (!zsys_interrupted) {
         void* which = zpoller_wait(poller, 5000);
         if (which == pipe) {
-            if (!s_handle_pipe(self, zmsg_recv(pipe), poller))
+            zmsg_t* message = zmsg_recv(pipe);
+            if (!s_handle_pipe(self, message, poller)) {
+                zmsg_destroy(&message);
                 break; // TERM
+            }
+            zmsg_destroy(&message);
         } else if (which == mlm_client_msgpipe(self->mlm)) {
             zmsg_t* message = mlm_client_recv(self->mlm);
             if (!message)
@@ -1427,11 +1457,13 @@ void fty_discovery_server(zsock_t* pipe, void* /* args */)
             } else if (streq(command, MAILBOX_CMD)) {
                 s_handle_mailbox(self, message, poller);
             }
+            zmsg_destroy(&message);
         } else if (self->range_scanner && which == self->range_scanner) {
             zmsg_t* message = zmsg_recv(self->range_scanner);
             if (!message)
                 continue;
             s_handle_range_scanner(self, message, poller, pipe);
+            zmsg_destroy(&message);
         }
         // check that scanner is NULL && we have to do scan
         if (self->range_scan_config.ranges.size() > 0 && !self->range_scanner) {
@@ -1451,9 +1483,8 @@ void fty_discovery_server(zsock_t* pipe, void* /* args */)
             }
         }
     }
-    zmsg_destroy(&range_stack);
-    fty_discovery_server_destroy(&self);
     zpoller_destroy(&poller);
+    fty_discovery_server_destroy(&self);
 }
 
 //  --------------------------------------------------------------------------
