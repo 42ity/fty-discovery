@@ -1379,8 +1379,9 @@ void static s_handle_stream(fty_discovery_server_t* self, zmsg_t* messageIn)
 //  * FOUND
 //  * POOGRESS
 
-void static s_handle_range_scanner(fty_discovery_server_t* self, zmsg_t* msg, zpoller_t* poller, zsock_t* pipe)
+void static s_handle_range_scanner(fty_discovery_server_t* self, zmsg_t* msgIn, zpoller_t* poller, zsock_t* pipe)
 {
+    zmsg_t* msg = zmsg_dup(msgIn);
     zmsg_print(msg);
     char* cmd = zmsg_popstr(msg);
     if (!cmd) {
@@ -1415,16 +1416,16 @@ void static s_handle_range_scanner(fty_discovery_server_t* self, zmsg_t* msg, zp
 
         std::string percentstr = std::to_string(self->nb_percent * 100 / self->scan_size);
 
-        if (self->percent)
-            zstr_free(&self->percent);
+        zstr_free(&self->percent);
 
         zmsg_t* zmfalse = zmsg_new();
         zmsg_addstr(zmfalse, percentstr.c_str());
         self->percent = zmsg_popstr(zmfalse);
         zmsg_destroy(&zmfalse);
         // other cmd. NOTFOUND must not be treated
-    } else if (!streq(cmd, "NOTFOUND"))
+    } else if (!streq(cmd, "NOTFOUND")) {
         log_error("s_handle_range_scanner: Unknown  command: %s.\n", cmd);
+    }
     zstr_free(&cmd);
     zmsg_destroy(&msg);
 }
