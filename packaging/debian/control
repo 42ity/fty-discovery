@@ -25,7 +25,7 @@ Build-Depends:
     fty-cmake-dev,
     pkg-config,
     libssl-dev,
-    libcidr0-dev,
+    libcidr-dev,
     libsodium-dev,
     libzmq3-dev,
     libczmq-dev (>= 3.0.2),
