@@ -2,5 +2,12 @@
 
 @Library('etn-ipm2-jenkins') _
 
-etn_ipm2_build_and_tests_pipeline_cmake( )
+import params.CmakePipelineParams
+
+CmakePipelineParams parameters = new CmakePipelineParams()
+
+// now deprecated (see fty-discovery-ng)
+parameters.enableCoverity = false
+
+etn_ipm2_build_and_tests_pipeline_cmake(parameters)
 

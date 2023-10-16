@@ -21,6 +21,7 @@
 
 #include "fty_discovery_server.h"
 #include <fty_common.h>
+#include <fty_log.h>
 
 int main(int argc, char* argv[])
 {
